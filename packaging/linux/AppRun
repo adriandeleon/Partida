@@ -2,4 +2,4 @@
 # The AppImage's entry point. The jpackage launcher finds its Java runtime from its own resolved path,
 # so it is run where it lies rather than linked.
 here="$(dirname "$(readlink -f "$0")")"
-exec "$here/usr/lib/exampleapp/bin/ExampleApp" "$@"
+exec "$here/usr/lib/partida/bin/Partida" "$@"

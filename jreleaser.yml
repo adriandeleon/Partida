@@ -11,15 +11,15 @@
 #   JRELEASER_PROJECT_VERSION=1.2.3 jreleaser package --basedir .
 
 project:
-  name: ExampleApp
+  name: Partida
   description: A keyboard-first JavaFX desktop app.
   longDescription: |
-    ExampleApp is a keyboard-first desktop application built with JavaFX. It is the same application
+    Partida is a keyboard-first desktop application built with JavaFX. It is the same application
     on Linux, macOS and Windows.
   links:
-    homepage: https://github.com/adriandeleon/ExampleApp
-    bugTracker: https://github.com/adriandeleon/ExampleApp/issues
-    license: https://github.com/adriandeleon/ExampleApp/blob/master/LICENSE
+    homepage: https://github.com/adriandeleon/Partida
+    bugTracker: https://github.com/adriandeleon/Partida/issues
+    license: https://github.com/adriandeleon/Partida/blob/master/LICENSE
   authors:
     - Adrián Arturo De León Saldivar
   copyright: Adrián Arturo De León Saldivar
@@ -33,18 +33,18 @@ project:
   stereotype: DESKTOP
   languages:
     java:
-      groupId: com.example.app
-      artifactId: exampleapp
+      groupId: com.partida
+      artifactId: partida
       version: '25'
 
 release:
   github:
     owner: adriandeleon
-    name: ExampleApp
+    name: Partida
     # JReleaser defaults to main and fails late ("Could not checkout branch main") without this.
     branch: master
     tagName: 'v{{projectVersion}}'
-    releaseName: 'ExampleApp {{projectVersion}}'
+    releaseName: 'Partida {{projectVersion}}'
     # GitHub's immutable releases reject uploads to a published release: create a draft, upload
     # everything, then publish. A re-run on the same tag needs `gh release delete vX.Y.Z` first.
     immutableRelease: true
@@ -62,10 +62,10 @@ checksum:
 distributions:
   # One distribution per packager input. A cask takes exactly one artifact, so it serves Apple
   # Silicon; Intel Macs download the macos-x64 dmg, attached through `files` below.
-  exampleapp:
+  partida:
     type: NATIVE_PACKAGE
     artifacts:
-      - path: 'artifacts/ExampleApp-{{projectVersion}}-macos-arm64.dmg'
+      - path: 'artifacts/Partida-{{projectVersion}}-macos-arm64.dmg'
         platform: osx-aarch_64
     brew:
       active: RELEASE
@@ -73,8 +73,8 @@ distributions:
       continueOnError: true
       cask:
         enabled: true
-        name: exampleapp
-        displayName: ExampleApp
+        name: partida
+        displayName: Partida
       repository:
         active: RELEASE
         owner: adriandeleon
@@ -82,27 +82,27 @@ distributions:
         branch: main
         branchPush: main
 
-  exampleapp-windows:
+  partida-windows:
     type: NATIVE_PACKAGE
     executable:
-      name: ExampleApp
+      name: Partida
       windowsExtension: exe
     artifacts:
-      - path: 'artifacts/ExampleApp-{{projectVersion}}-windows-x64.msi'
+      - path: 'artifacts/Partida-{{projectVersion}}-windows-x64.msi'
         platform: windows-x86_64
     winget:
       active: RELEASE
       continueOnError: true
       package:
-        identifier: AdrianDeLeon.ExampleApp
-        name: ExampleApp
+        identifier: AdrianDeLeon.Partida
+        name: Partida
         version: '{{projectVersion}}'
-        url: https://github.com/adriandeleon/ExampleApp
+        url: https://github.com/adriandeleon/Partida
       publisher:
         name: Adrián Arturo De León Saldivar
         url: https://github.com/adriandeleon
-        supportUrl: https://github.com/adriandeleon/ExampleApp/issues
-      moniker: exampleapp
+        supportUrl: https://github.com/adriandeleon/Partida/issues
+      moniker: partida
       installer:
         type: MSI
         scope: USER
@@ -114,11 +114,11 @@ distributions:
         owner: adriandeleon
         name: winget-pkgs
         branch: master
-        branchPush: 'exampleapp-{{projectVersion}}'
+        branchPush: 'partida-{{projectVersion}}'
 
 # Everything else in artifacts/. The two distributions above attach the arm64 dmg and the msi, so
 # they are left out here; the release-asset check in release.yml makes sure nothing is missing. The
-# .asc files are each Linux download's OpenPGP signature and exampleapp-signing-key.asc, the public
+# .asc files are each Linux download's OpenPGP signature and partida-signing-key.asc, the public
 # key that made them (the one committed as packaging/linux/signing-key.asc). release.yml attests
 # exactly these patterns and the distributions' artifacts; ReleaseSupplyChainTest keeps them equal.
 files:

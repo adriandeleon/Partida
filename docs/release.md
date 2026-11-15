@@ -16,7 +16,7 @@ commit whose pom says exactly `X.Y.Z` releases it. `.github/workflows/release.ym
 3. **Write the changelog**: rename `## [Unreleased]` in `CHANGELOG.md` to `## [X.Y.Z] - YYYY-MM-DD`
    (and start a new empty Unreleased section). The release notes are that section, after the install
    instructions in `.github/release-notes-header.md`; a tag with no section fails before publishing.
-4. **Add a `<release>`** for the version to `packaging/linux/io.github.adriandeleon.ExampleApp.metainfo.xml`.
+4. **Add a `<release>`** for the version to `packaging/linux/io.github.adriandeleon.Partida.metainfo.xml`.
 5. **Listen with a screen reader** on Windows and on macOS, from the dry run's builds (Pauta ACC-07): with
    Narrator and with VoiceOver, open the Command Palette, run a command, and move through Settings, page
    by page, hearing each control's name and role. The CI smoke test has nobody there to listen. Record the
@@ -25,7 +25,7 @@ commit whose pom says exactly `X.Y.Z` releases it. `.github/workflows/release.ym
 6. Merge, then **tag the merge commit** and push the tag:
    ```bash
    git switch master && git pull
-   git tag -a vX.Y.Z -m "ExampleApp X.Y.Z" && git push origin vX.Y.Z
+   git tag -a vX.Y.Z -m "Partida X.Y.Z" && git push origin vX.Y.Z
    ```
 7. The workflow publishes the GitHub release, then opens a `chore/reopen-…` pull request setting the
    pom to the next patch `-SNAPSHOT`. **Close and reopen it** to run its checks (a pull request opened
@@ -84,16 +84,16 @@ An app that signs with its own key replaces that file with its key's public half
 gpg --armor --export <fingerprint> > packaging/linux/signing-key.asc
 ```
 
-Every release also attaches the key as `exampleapp-signing-key.asc`.
+Every release also attaches the key as `partida-signing-key.asc`.
 
-Users verify a download with `gpg --import exampleapp-signing-key.asc` and `gpg --verify <file>.asc
+Users verify a download with `gpg --import partida-signing-key.asc` and `gpg --verify <file>.asc
 <file>`; `rpm --import` the same key and `rpm -K` checks the RPM's embedded signature. Any download's
-provenance: `gh attestation verify <file> --repo adriandeleon/ExampleApp`.
+provenance: `gh attestation verify <file> --repo adriandeleon/Partida`.
 
 ## Package managers
 
-With `PACKAGES_TOKEN` set, JReleaser also writes the Homebrew cask `exampleapp` to
-`adriandeleon/homebrew-tap` (Apple Silicon DMG) and opens a pull request for `AdrianDeLeon.ExampleApp`
+With `PACKAGES_TOKEN` set, JReleaser also writes the Homebrew cask `partida` to
+`adriandeleon/homebrew-tap` (Apple Silicon DMG) and opens a pull request for `AdrianDeLeon.Partida`
 on `microsoft/winget-pkgs` from the `adriandeleon` fork. The cask and winget templates are in
 `src/jreleaser/`. Render them locally without releasing:
 

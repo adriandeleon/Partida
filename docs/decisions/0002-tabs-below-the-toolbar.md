@@ -10,7 +10,7 @@ TABS-11 (Pauta 4.1.0) says tabs SHOULD sit in the title bar through JavaFX 27's 
 do. Termina has no menu bar and no toolbar: its title bar has room for a tab strip and nothing to keep in
 order above the terminal.
 
-ExampleApp's title bar already holds the menus and the window title (`MainWindow.buildHeaderBar`), and the
+Partida's title bar already holds the menus and the window title (`MainWindow.buildHeaderBar`), and the
 toolbar sits under it in one chrome band (TBAR-06). Moving the tab strip into the title bar would put the
 toolbar between the tabs and the documents they label, and on macOS, or with the menus taken out of the
 title bar, there is no `HeaderBar` to hold them at all.

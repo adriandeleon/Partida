@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.github.adriandeleon</groupId>
-    <artifactId>exampleapp</artifactId>
+    <artifactId>partida</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>ExampleApp</name>
+    <name>Partida</name>
     <description>A keyboard-first JavaFX desktop app.</description>
-    <url>https://github.com/adriandeleon/ExampleApp</url>
+    <url>https://github.com/adriandeleon/Partida</url>
 
     <licenses>
         <license>
@@ -31,12 +31,12 @@
         <!-- The Pauta edition this app implements (ABOUT-08): the one source for About, the
              environment block and the version flag. The README's badge and "Built to" line name the same
              number (EditionTest checks). -->
-        <pauta.version>6.0.1</pauta.version>
+        <pauta.version>6.1.0</pauta.version>
         <!-- The release build (the dist profile) sets it: PautaConformanceTest then fails on what an app
              inherited from the template, its app-only entries and the template's issues (PAUTA-16). -->
         <pauta.release>false</pauta.release>
         <!-- A harmless option off macOS; the os-mac profile exports Glass's mac package in its place. -->
-        <glass.mac.option>-Dexampleapp.glassMac=none</glass.mac.option>
+        <glass.mac.option>-Dpartida.glassMac=none</glass.mac.option>
 
         <!-- A floor too: JavaFX 27 brings the Headless glass platform the FX tests run on. -->
         <javafx.version>27.0.1</javafx.version>
@@ -59,8 +59,8 @@
         <!-- Prism pipeline per OS (the os-* profiles); this default covers profile-less builds. -->
         <prism.pipeline>es2,sw</prism.pipeline>
         <!-- jpackage wants .icns on macOS, .ico on Windows and .png on Linux (os-* profiles). -->
-        <jpackage.icon>${project.basedir}/packaging/icons/exampleapp.png</jpackage.icon>
-        <jpackage.imageName>ExampleApp</jpackage.imageName>
+        <jpackage.icon>${project.basedir}/packaging/icons/partida.png</jpackage.icon>
+        <jpackage.imageName>Partida</jpackage.imageName>
         <skip.mac.steps>true</skip.mac.steps>
         <!-- Installers take minutes the dev loop never wants; the release turns them on. -->
         <skip.installers>true</skip.installers>
@@ -121,12 +121,12 @@
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>true</filtering>
-                <includes><include>com/example/app/build-info.properties</include></includes>
+                <includes><include>com/partida/build-info.properties</include></includes>
             </resource>
             <resource>
                 <directory>src/main/resources</directory>
                 <filtering>false</filtering>
-                <excludes><exclude>com/example/app/build-info.properties</exclude></excludes>
+                <excludes><exclude>com/partida/build-info.properties</exclude></excludes>
             </resource>
             <!-- The licence and third-party notices travel inside the jar too. -->
             <resource>
@@ -216,7 +216,7 @@
                                 <arg>-Xplugin:ErrorProne -XepDisableAllChecks -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
                                 <!-- MacAppMenu puts About and Settings in macOS's application menu through
                                      Glass (ABOUT-01, WIN-15). -->
-                                <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.example.app</arg>
+                                <arg>--add-exports=javafx.graphics/com.sun.glass.ui=com.partida</arg>
                             </compilerArgs>
                             <annotationProcessorPaths>
                                 <path>
@@ -241,7 +241,7 @@
                                 <arg>--add-modules</arg>
                                 <arg>jdk.httpserver</arg>
                                 <arg>--add-reads</arg>
-                                <arg>com.example.app=jdk.httpserver</arg>
+                                <arg>com.partida=jdk.httpserver</arg>
                             </compilerArgs>
                         </configuration>
                     </execution>
@@ -263,14 +263,17 @@
                         <prism.order>sw</prism.order>
                         <java.awt.headless>true</java.awt.headless>
                         <!-- No test asks GitHub for the latest release. -->
-                        <exampleapp.updateCheck>off</exampleapp.updateCheck>
-                        <exampleapp.updateUrl>http://127.0.0.1:9/latest</exampleapp.updateUrl>
+                        <partida.updateCheck>off</partida.updateCheck>
+                        <partida.updateUrl>http://127.0.0.1:9/latest</partida.updateUrl>
                         <!-- No test may reach the developer's own, signed-in GitHub CLI: it would create a
                              real repository. Tests that need gh pass a fake one explicitly. -->
-                        <exampleapp.gh>no-such-gh-in-tests</exampleapp.gh>
+                        <partida.gh>no-such-gh-in-tests</partida.gh>
+                        <!-- No test reads the developer's own RetroArch: finding it on its own is off, and a
+                             test that needs one points Settings → Library at a fake install. -->
+                        <partida.retroarch>off</partida.retroarch>
                         <!-- A test never writes in the real home folder: the default config folder
                              of anything a test builds lands here. -->
-                        <exampleapp.configDir>${project.build.directory}/test-config</exampleapp.configDir>
+                        <partida.configDir>${project.build.directory}/test-config</partida.configDir>
                         <javafx.cachedir>${project.build.directory}/openjfx-cache</javafx.cachedir>
                         <pauta.release>${pauta.release}</pauta.release>
                     </systemPropertyVariables>
@@ -324,7 +327,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app</include></includes>
+                                    <includes><include>com.partida</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -335,7 +338,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.cli</include></includes>
+                                    <includes><include>com.partida.cli</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -346,7 +349,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.command</include></includes>
+                                    <includes><include>com.partida.command</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -357,7 +360,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.config</include></includes>
+                                    <includes><include>com.partida.config</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -368,7 +371,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.i18n</include></includes>
+                                    <includes><include>com.partida.i18n</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -379,7 +382,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.instance</include></includes>
+                                    <includes><include>com.partida.instance</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -390,7 +393,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.report</include></includes>
+                                    <includes><include>com.partida.report</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -401,7 +404,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.sync</include></includes>
+                                    <includes><include>com.partida.sync</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -412,7 +415,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.ui</include></includes>
+                                    <includes><include>com.partida.ui</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -423,7 +426,7 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
-                                    <includes><include>com.example.app.update</include></includes>
+                                    <includes><include>com.partida.update</include></includes>
                                     <limits>
                                         <limit>
                                             <counter>LINE</counter>
@@ -471,11 +474,11 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>${javafx.plugin.version}</version>
                 <configuration>
-                    <mainClass>com.example.app/com.example.app.Main</mainClass>
+                    <mainClass>com.partida/com.partida.Main</mainClass>
                     <options>
                         <option>--enable-native-access=javafx.graphics</option>
                         <option>-Dprism.order=${prism.pipeline}</option>
-                        <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.example.app</option>
+                        <option>--add-exports=javafx.graphics/com.sun.glass.ui=com.partida</option>
                         <option>${glass.mac.option}</option>
                     </options>
                 </configuration>
@@ -490,9 +493,9 @@
             <properties>
                 <prism.pipeline>mtl,es2,sw</prism.pipeline>
                 <!-- Only macOS's JavaFX has this package: MacAppMenu reaches the application menu through it. -->
-                <glass.mac.option>--add-exports=javafx.graphics/com.sun.glass.ui.mac=com.example.app</glass.mac.option>
-                <jpackage.icon>${project.basedir}/packaging/icons/exampleapp.icns</jpackage.icon>
-                <jpackage.imageName>ExampleApp.app</jpackage.imageName>
+                <glass.mac.option>--add-exports=javafx.graphics/com.sun.glass.ui.mac=com.partida</glass.mac.option>
+                <jpackage.icon>${project.basedir}/packaging/icons/partida.icns</jpackage.icon>
+                <jpackage.imageName>Partida.app</jpackage.imageName>
                 <skip.mac.steps>false</skip.mac.steps>
             </properties>
         </profile>
@@ -501,7 +504,7 @@
             <activation><os><family>windows</family></os></activation>
             <properties>
                 <prism.pipeline>d3d,es2,sw</prism.pipeline>
-                <jpackage.icon>${project.basedir}/packaging/icons/exampleapp.ico</jpackage.icon>
+                <jpackage.icon>${project.basedir}/packaging/icons/partida.ico</jpackage.icon>
             </properties>
             <build>
                 <plugins>
@@ -518,8 +521,8 @@
                                 <configuration>
                                     <launchers>
                                         <launcher>
-                                            <name>exampleapp-cli</name>
-                                            <file>${project.basedir}/packaging/windows/exampleapp-cli.properties</file>
+                                            <name>partida-cli</name>
+                                            <file>${project.basedir}/packaging/windows/partida-cli.properties</file>
                                         </launcher>
                                     </launchers>
                                 </configuration>
@@ -530,7 +533,7 @@
             </build>
         </profile>
 
-        <!-- A runnable fat jar for this OS: ./mvnw -Pfatjar package => target/exampleapp-<version>-fat.jar.
+        <!-- A runnable fat jar for this OS: ./mvnw -Pfatjar package => target/partida-<version>-fat.jar.
              Main is not an Application subclass, so the jar starts JavaFX from the classpath. -->
         <profile>
             <id>fatjar</id>
@@ -563,7 +566,7 @@
                                     </filters>
                                     <transformers>
                                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                            <mainClass>com.example.app.Main</mainClass>
+                                            <mainClass>com.partida.Main</mainClass>
                                         </transformer>
                                         <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                     </transformers>
@@ -576,7 +579,7 @@
         </profile>
 
         <!--
-            Native app image:  ./mvnw clean -Pdist package  =>  target/dist/ExampleApp{.app}
+            Native app image:  ./mvnw clean -Pdist package  =>  target/dist/Partida{.app}
             Installers too:    ./mvnw clean -Pdist -Dskip.installers=false package  =>  target/installers/
 
             `clean` is mandatory: an incremental compile can leave synthetic enum-switch classes out of
@@ -642,24 +645,24 @@
                                 <goals><goal>jpackage</goal></goals>
                                 <configuration>
                                     <type>APP_IMAGE</type>
-                                    <name>ExampleApp</name>
+                                    <name>Partida</name>
                                     <appVersion>${jpackage.appVersion}</appVersion>
                                     <vendor>Adrián Arturo De León Saldivar</vendor>
                                     <icon>${jpackage.icon}</icon>
                                     <destination>${project.build.directory}/dist</destination>
-                                    <module>com.example.app/com.example.app.Main</module>
+                                    <module>com.partida/com.partida.Main</module>
                                     <modulePaths>
                                         <modulePath>${project.build.directory}/mods</modulePath>
                                     </modulePaths>
                                     <javaOptions>
                                         <javaOption>--enable-native-access=javafx.graphics</javaOption>
                                         <javaOption>-Dprism.order=${prism.pipeline}</javaOption>
-                                        <javaOption>--add-exports=javafx.graphics/com.sun.glass.ui=com.example.app</javaOption>
+                                        <javaOption>--add-exports=javafx.graphics/com.sun.glass.ui=com.partida</javaOption>
                                         <javaOption>${glass.mac.option}</javaOption>
                                         <!-- The AOT cache scripts/aot-train.sh records into the image ($APPDIR is
                                              the installed app directory). Under the default AOTMode=auto a missing
                                              or stale cache is a warning and a normal, slower start. -->
-                                        <javaOption>-XX:AOTCache=$APPDIR/exampleapp.aot</javaOption>
+                                        <javaOption>-XX:AOTCache=$APPDIR/partida.aot</javaOption>
                                         <!-- A ceiling, not tuning: without it the JVM may take a quarter of RAM. -->
                                         <javaOption>-Xmx512m</javaOption>
                                         <javaOption>-XX:G1PeriodicGCInterval=30000</javaOption>
@@ -687,9 +690,9 @@
                                 <phase>process-classes</phase>
                                 <goals><goal>java</goal></goals>
                                 <configuration>
-                                    <mainClass>com.example.app.ui.StyleCompiler</mainClass>
+                                    <mainClass>com.partida.ui.StyleCompiler</mainClass>
                                     <arguments>
-                                        <argument>${project.build.outputDirectory}/com/example/app/styles</argument>
+                                        <argument>${project.build.outputDirectory}/com/partida/styles</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -720,7 +723,7 @@
                                     <arguments>
                                         <argument>${project.basedir}/scripts/aot-train.sh</argument>
                                         <argument>${project.build.directory}/dist/${jpackage.imageName}</argument>
-                                        <argument>exampleapp.aot</argument>
+                                        <argument>partida.aot</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -734,14 +737,14 @@
                                     <executable>bash</executable>
                                     <arguments>
                                         <argument>${project.basedir}/scripts/fix-mac-bundle-version.sh</argument>
-                                        <argument>${project.build.directory}/dist/ExampleApp.app</argument>
+                                        <argument>${project.build.directory}/dist/Partida.app</argument>
                                         <argument>${jpackage.numericVersion}</argument>
                                     </arguments>
                                     <skip>${skip.mac.steps}</skip>
                                 </configuration>
                             </execution>
                             <!-- Developer ID signing after every change to the bundle and before the
-                                 installers wrap it. A no-op unless EXAMPLEAPP_MAC_SIGN_IDENTITY is set. -->
+                                 installers wrap it. A no-op unless PARTIDA_MAC_SIGN_IDENTITY is set. -->
                             <execution>
                                 <id>sign-mac-app</id>
                                 <phase>package</phase>
@@ -750,7 +753,7 @@
                                     <executable>bash</executable>
                                     <arguments>
                                         <argument>${project.basedir}/scripts/sign-mac-app.sh</argument>
-                                        <argument>${project.build.directory}/dist/ExampleApp.app</argument>
+                                        <argument>${project.build.directory}/dist/Partida.app</argument>
                                     </arguments>
                                     <skip>${skip.mac.steps}</skip>
                                 </configuration>

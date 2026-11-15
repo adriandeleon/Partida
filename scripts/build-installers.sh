@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Wraps a finished application image into this platform's installers:
-#   macOS   .dmg (Developer ID signed when EXAMPLEAPP_MAC_SIGN_IDENTITY is set)
+#   macOS   .dmg (Developer ID signed when PARTIDA_MAC_SIGN_IDENTITY is set)
 #   Windows .msi
 #   Linux   .deb, .rpm, .tar.gz and .AppImage
 #
@@ -23,15 +23,15 @@ mkdir -p "$dest"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 linux="$root/packaging/linux"
 license="$root/LICENSE"
-app_id=io.github.adriandeleon.ExampleApp
+app_id=io.github.adriandeleon.Partida
 metainfo="$app_id.metainfo.xml"
 description="A keyboard-first JavaFX desktop app."
 
-common=(--app-image "$image" --name ExampleApp --app-version "$version" --dest "$dest"
+common=(--app-image "$image" --name Partida --app-version "$version" --dest "$dest"
         --vendor "Adrián Arturo De León Saldivar"
         --description "$description"
         # The deb's Homepage, the rpm's URL and the MSI's About link.
-        --about-url "https://github.com/adriandeleon/ExampleApp"
+        --about-url "https://github.com/adriandeleon/Partida"
         --copyright "Copyright $(date +%Y) Adrián Arturo De León Saldivar"
         --icon "$icon")
 
@@ -48,7 +48,7 @@ build() {
     fi
 }
 
-# jpackage's deb installs /opt/exampleapp and nothing else. GNOME Software and KDE Discover tie a
+# jpackage's deb installs /opt/partida and nothing else. GNOME Software and KDE Discover tie a
 # listing to a package by asking which package owns the metainfo file, so the finished deb is unpacked
 # and rebuilt with the metainfo, the theme icon and Debian's copyright file as files it owns.
 own_in_deb() {
@@ -57,7 +57,7 @@ own_in_deb() {
     dpkg-deb -R "$deb" "$work"
     install -D -m 644 "$linux/$metainfo" "$work/usr/share/metainfo/$metainfo"
     install -D -m 644 "$icon" "$work/usr/share/icons/hicolor/512x512/apps/$app_id.png"
-    install -D -m 644 "$resources/copyright" "$work/usr/share/doc/exampleapp/copyright"
+    install -D -m 644 "$resources/copyright" "$work/usr/share/doc/partida/copyright"
     # The control file's sums and size describe the contents, so they are rewritten to match.
     (cd "$work" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | LC_ALL=C sort -z |
         xargs -0 md5sum) > "$work/DEBIAN/md5sums"
@@ -68,12 +68,12 @@ own_in_deb() {
 }
 
 # The image as it is, for a system without dpkg or rpm or a user without root. The top directory
-# carries the version so two can be unpacked side by side; bin/ExampleApp starts it.
+# carries the version so two can be unpacked side by side; bin/Partida starts it.
 build_tarball() {
     echo "[installers] building tar.gz"
-    tar --create --gzip --file "$dest/exampleapp-$version-linux.tar.gz" --sort=name \
+    tar --create --gzip --file "$dest/partida-$version-linux.tar.gz" --sort=name \
         --owner=0 --group=0 --numeric-owner --mode=go-w \
-        --transform "flags=rh;s,^$(basename "$image"),exampleapp-$version," \
+        --transform "flags=rh;s,^$(basename "$image"),partida-$version," \
         -C "$(dirname "$image")" "$(basename "$image")"
     echo "[installers] tar.gz OK"
 }
@@ -82,7 +82,7 @@ build_tarball() {
 # machine, the other ships inside every AppImage. Cached, and checked on every use.
 appimage_tool() {
     local name="$1" url="$2" sum="$3" cache file
-    cache="${XDG_CACHE_HOME:-$HOME/.cache}/exampleapp-build"
+    cache="${XDG_CACHE_HOME:-$HOME/.cache}/partida-build"
     file="$cache/$sum-$name"
     mkdir -p "$cache"
     # The helper's stdout is its answer (the path), so the check must print nothing there: with a
@@ -125,11 +125,11 @@ build_appimage() {
             return 0 ;;
     esac
 
-    appdir="$(mktemp -d)/ExampleApp.AppDir"
+    appdir="$(mktemp -d)/Partida.AppDir"
     mkdir -p "$appdir/usr/lib" "$appdir/usr/share/applications" "$appdir/usr/share/metainfo"
-    cp -a "$image" "$appdir/usr/lib/exampleapp"
+    cp -a "$image" "$appdir/usr/lib/partida"
     install -m 755 "$linux/AppRun" "$appdir/AppRun"
-    sed "s|>exampleapp-ExampleApp.desktop<|>$app_id.desktop<|" "$linux/$metainfo" \
+    sed "s|>partida-Partida.desktop<|>$app_id.desktop<|" "$linux/$metainfo" \
         > "$appdir/usr/share/metainfo/$app_id.appdata.xml"
     install -D -m 644 "$icon" "$appdir/usr/share/icons/hicolor/512x512/apps/$app_id.png"
     cp "$icon" "$appdir/$app_id.png"
@@ -137,10 +137,10 @@ build_appimage() {
     # jpackage's tokens filled in by hand, the icon by its theme name. No TryExec: an AppImage is not
     # on PATH, and an entry whose TryExec is missing is hidden.
     entry="$appdir/usr/share/applications/$app_id.desktop"
-    sed -e 's/APPLICATION_NAME/ExampleApp/' -e "s/APPLICATION_DESCRIPTION/$description/" \
+    sed -e 's/APPLICATION_NAME/Partida/' -e "s/APPLICATION_DESCRIPTION/$description/" \
         -e "s/^Icon=APPLICATION_ICON$/Icon=$app_id/" \
-        -e '/^TryExec=/d' -e 's/^Exec=APPLICATION_LAUNCHER$/Exec=exampleapp/' \
-        "$linux/ExampleApp.desktop" > "$entry"
+        -e '/^TryExec=/d' -e 's/^Exec=APPLICATION_LAUNCHER$/Exec=partida/' \
+        "$linux/Partida.desktop" > "$entry"
     cp "$entry" "$appdir/"
 
     # appimagetool's own AppStream check fetches every URL in the metainfo, so a repository that is
@@ -151,7 +151,7 @@ build_appimage() {
 
     # Extracted rather than mounted: a container or a CI runner may have no FUSE.
     if APPIMAGE_EXTRACT_AND_RUN=1 ARCH="$arch" "$tool" --no-appstream --runtime-file "$runtime" \
-        "$appdir" "$dest/ExampleApp-$version.AppImage"; then
+        "$appdir" "$dest/Partida-$version.AppImage"; then
         echo "[installers] AppImage OK"
     else
         echo "::error::[installers] AppImage failed" >&2
@@ -164,14 +164,14 @@ case "$(uname -s)" in
     Darwin)
         # No --license-file on the dmg or msi: there it becomes a click-through agreement, which a
         # permissive licence does not ask for. The notices travel inside the image (add-notices.sh).
-        build dmg --mac-package-name ExampleApp
+        build dmg --mac-package-name Partida
         # The disk image gets its own signature so Gatekeeper can check it before mounting;
         # release.yml then notarizes and staples it.
-        if [ -n "${EXAMPLEAPP_MAC_SIGN_IDENTITY:-}" ]; then
+        if [ -n "${PARTIDA_MAC_SIGN_IDENTITY:-}" ]; then
             sign=(codesign --force --timestamp)
-            [ -n "${EXAMPLEAPP_MAC_KEYCHAIN:-}" ] && sign+=(--keychain "$EXAMPLEAPP_MAC_KEYCHAIN")
+            [ -n "${PARTIDA_MAC_KEYCHAIN:-}" ] && sign+=(--keychain "$PARTIDA_MAC_KEYCHAIN")
             for dmg in "$dest"/*.dmg; do
-                "${sign[@]}" --sign "$EXAMPLEAPP_MAC_SIGN_IDENTITY" "$dmg"
+                "${sign[@]}" --sign "$PARTIDA_MAC_SIGN_IDENTITY" "$dmg"
                 codesign --verify --verbose=2 "$dmg"
             done
         fi
@@ -185,8 +185,8 @@ case "$(uname -s)" in
         # packages; only the deb also installs the icon into the hicolor theme (own_in_deb).
         resources="$(mktemp -d)"
         trap 'rm -rf "$resources"' EXIT
-        cp "$linux/ExampleApp.desktop" "$resources/"
-        cp "$icon" "$resources/ExampleApp.png"
+        cp "$linux/Partida.desktop" "$resources/"
+        cp "$icon" "$resources/Partida.png"
 
         # What JavaFX links. Its natives are extracted from the module jars at run time, so the
         # bundlers' library scan never sees them and the package would install on a minimal system
@@ -204,26 +204,26 @@ case "$(uname -s)" in
         [ -f "$license" ] || { echo "no LICENSE at $license" >&2; exit 1; }
         {
             echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
-            echo "Upstream-Name: ExampleApp"
-            echo "Source: https://github.com/adriandeleon/ExampleApp"
+            echo "Upstream-Name: Partida"
+            echo "Source: https://github.com/adriandeleon/Partida"
             echo
             echo "Files: *"
             echo "Copyright: $(sed -n 's/^Copyright (c) //p' "$license" | head -1)"
             echo "License: MIT"
             echo "Comment: Third-party components and their licences are listed in"
-            echo " /opt/exampleapp/lib/app/NOTICE; the Java runtime's notices are in"
-            echo " /opt/exampleapp/lib/runtime/legal."
+            echo " /opt/partida/lib/app/NOTICE; the Java runtime's notices are in"
+            echo " /opt/partida/lib/runtime/legal."
             echo
             echo "License: MIT"
             sed -e '1{/^MIT License$/d;}' "$license" | sed -e '1{/^$/d;}' -e 's/^$/./' -e 's/^/ /'
         } > "$resources/copyright"
 
-        linux_common=(--linux-package-name exampleapp --linux-shortcut
+        linux_common=(--linux-package-name partida --linux-shortcut
                       --license-file "$license" --resource-dir "$resources")
         build deb "${linux_common[@]}" \
             --linux-deb-maintainer "adrian.deleon@gmail.com" \
             --linux-package-deps "$deb_deps"
-        own_in_deb "$(ls "$dest"/exampleapp_*.deb)"
+        own_in_deb "$(ls "$dest"/partida_*.deb)"
         build rpm "${linux_common[@]}" \
             --linux-rpm-license-type MIT \
             --linux-package-deps "$rpm_deps"
@@ -236,11 +236,11 @@ case "$(uname -s)" in
         # strands every existing install.
         build msi \
             --win-menu \
-            --win-menu-group ExampleApp \
+            --win-menu-group Partida \
             --win-shortcut \
             --win-dir-chooser \
             --win-per-user-install \
-            --win-upgrade-uuid "c0ffee00-0000-4000-8000-000000000001"
+            --win-upgrade-uuid "5d31e6ce-67b4-4e8d-8b2f-abbee3de122b"
         ;;
 esac
 

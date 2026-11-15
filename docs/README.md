@@ -1,8 +1,8 @@
-# ExampleApp documentation
+# Partida documentation
 
 This folder is for **contributors**: how the app is built, the conventions it keeps and how it is
 tested and released. The user documentation (getting started, the keyboard reference, Settings, the
-FAQ) lives on the app's website, under `/docs/` (`AppInfo.WEBSITE`, from the `exampleapp-website`
+FAQ) lives on the app's website, under `/docs/` (`AppInfo.WEBSITE`, from the `partida-website`
 repository), and Help → Documentation opens it. This folder never carries a second copy.
 
 **When these documents and the code disagree, the code wins**, and the document is fixed in the same

@@ -1,11 +1,11 @@
 # Architecture
 
-One JPMS module, `com.example.app`, in ten packages. The rule of thumb: **a decision lives in a pure
+One JPMS module, `com.partida`, in twelve packages. The rule of thumb: **a decision lives in a pure
 class with a unit test; the toolkit code around it stays thin.**
 
 | Package | What | Key classes |
 |---|---|---|
-| `com.example.app` | Entry point and identity | `Main` (CLI, hand-off, then `Application.launch`), `App`, `AppInfo`, `Os` (the one class that reads `os.name`, with an override for the tests), `PautaConformance` (the exceptions, the `template` flag and the `checked` list in `pauta.json`, and the conformance computed from them) |
+| `com.partida` | Entry point and identity | `Main` (CLI, hand-off, then `Application.launch`), `App`, `AppInfo`, `Os` (the one class that reads `os.name`, with an override for the tests), `PautaConformance` (the exceptions, the `template` flag and the `checked` list in `pauta.json`, and the conformance computed from them) |
 | `cli` | The command line, pure | `CommandLine` |
 | `config` | Versioned `settings.json`, export/import | `Settings`, `ConfigStore`, `Migrations`, `ConfigDir`, `ConfigExporter`, `ConfigImport`, `ConfigFiles` (every config file written whole: a temporary file, then a move) |
 | `command` | Commands and key bindings, pure | `CommandRegistry`, `Command`, `KeyStroke`, `Keymap`, `Keybindings`, `FuzzyMatch` |
@@ -14,6 +14,8 @@ class with a unit test; the toolkit code around it stays thin.**
 | `report` | Report a Problem and `--report` | `ProblemReport`, `Redactor`, `ReportCommand`, `Browser` |
 | `sync` | Settings Sync through Git | `SyncEngine`, `SyncMerge`, `Git` |
 | `update` | The release check, pure + HTTP | `UpdateCheck`, `UpdateService`, `ReleaseInfo` |
+| `retroarch` | RetroArch's own files and processes, pure | `CfgFile` (retroarch.cfg, core `.info` and `.opt` files, changing only the keys it sets), `RetroArchInstall` (finds a native, Flatpak or user-chosen install; maps `~`, `:` and the Flatpak's `/app` paths both ways), `CoreCatalog`/`CoreInfo` (installed cores and their `.info`), `Playlist` (`.lpl`, JSON and the older six-line form), `Thumbnails`, `Launcher` (`retroarch -L <core> <game>`), `NetworkCommands` (UDP to a running RetroArch) |
+| `library` | The game library, pure | `RetroArchContext` (one install's config, cores and box art, and the core a game runs with), `LibraryLoader` (playlists, the user's folders and the play history, merged by system), `FolderScanner` (which system a file belongs to), `Game`, `GameCollection`, `LibraryFolder`, `SystemNames` |
 | `ui` | Everything JavaFX | see below |
 
 ## Start-up
@@ -56,26 +58,37 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
   the platform supports extended windows and the menus are in the window; a plain menu row otherwise,
   and the screen menu bar on macOS; then the toolbar), the tool windows round the document tabs,
   `StatusBar`, and an `OverlayHost` (the root `StackPane`) that carries the in-scene overlays. The
-  Welcome tab's page is `placeholder()`. **Put your app's documents in tabs, and its panels in tool
-  windows.**
+  Welcome tab's page is `placeholder()`: the palette, Add Games Folder, Settings, Documentation and What's
+  New. It also runs the library's commands (`playSelected`, the games-folder pickers, the RetroArch prompts).
 - The tabs (Pauta's Tabs and tool panels, after Editora): `DocumentTabs` owns the `TabPane`, the pinned
   group, the closed list and the window title; `TabStrip` is the pure arithmetic (bulk closes skip pinned
   tabs, the pin boundary, where a dragged tab lands); `TabHeaders` draws each header (the header is the
-  title, carrying the unsaved, pinned and read-only states, and is the drag handle); `ClosedTabs` is
-  Reopen Closed Tab's list; `TabContextMenu` the per-tab commands; `Switcher` the tab switcher;
-  `TabGitStatus` the Git colors. The documents are `SampleFiles` in a `DocumentView`: placeholders that
-  exist only in memory. **Replace them with your files.**
+  title with the system's glyph, carrying the pinned state, and is the drag handle); `ClosedTabs` is
+  Reopen Closed Tab's list, by system, with the game that was selected; `TabContextMenu` the per-tab
+  commands; `Switcher` the tab switcher. Each tab is a system: a `SystemView`, the system's games in a list
+  with the tab's find bar over their titles. A system tab is never unsaved, so a quit asks nothing, and its
+  tabs are not files, so the Git colors of TABS-08 don't apply. Tabs restored from the session fill in when
+  the library first loads.
+- `LibraryService`, one per app in `AppServices`: RetroArch and the library, loaded off the FX thread after
+  the first frame and again when Settings → Library changes (only the latest load lands), and the game
+  running now: Play chooses the core and starts RetroArch off the FX thread, its output reaches the RetroArch
+  window in batches, and Stop sends RetroArch's own `QUIT` when network commands are on. The tests set
+  `partida.retroarch=off`, so none reads the developer's RetroArch; they point the library at `FakeLibrary`.
 - The tool windows: `ToolWindowManager` lays out a stripe on each of three sides and the open windows
   (at most two a side) between the stripes and the tabs, keeps the arrangement in `settings.json`
-  (`window.toolWindows`), and lines the side stripes' first icon up with the documents' first line of
-  text. A `ToolWindow` builds its content on first open; `ToolWindowVisibility` and `ToolWindowDock` are
-  its pure decisions. The three windows' content is `SamplePanels` (Documents, Outline, Output).
+  (`window.toolWindows`), and lines the side stripes' first icon up with the content's first line (a game
+  list's first row). A `ToolWindow` builds its content on first open; `ToolWindowVisibility` and
+  `ToolWindowDock` are its pure decisions. The three windows' content is `LibraryPanels`: Systems (left,
+  the systems and their game counts), Game (right, the selected game's box art, core, missing BIOS files and
+  Play; it follows the active tab) and RetroArch (bottom, what RetroArch prints while a game runs, busy
+  meanwhile).
   The class comments map each rule to the code that meets it.
 - `Commands`: every command, in one place. Menus, buttons, the palette and keys all run them by id. The
   text commands (`edit.cut`, `edit.copy`, `edit.paste`, `edit.selectAll`) act on the text that has the
   keyboard; every editor and console has a `CommandMenu` of them in place of JavaFX's stock one.
-- `FindBar`: one find bar over a text area, in the window: each document's (`find.show`, `C-s` /
-  `Ctrl/Cmd+F`), the Output's (`output.find`) and the Debug Log's (`debugLog.find`). Each searches off the
+- `FindBar`: one find bar in the window, over a text area or a list's rows (`FindBar.Target`): each system
+  tab's, over its games' titles (`find.show`, `C-s` / `Ctrl/Cmd+F`), the RetroArch console's
+  (`retroarch.find`) and the Debug Log's (`debugLog.find`). Each searches off the
   FX thread and steps through its own commands.
 - `Dialogs.styled`: every dialog goes through it: the stylesheets, one button order with Cancel first on
   every OS, and JavaFX's stock buttons worded from the catalog. `Confirm` asks before anything is lost,
@@ -90,7 +103,7 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
 - `DoctorWindow` over `sync/Doctor`: the tools and the folder the app depends on, each checked.
   `sync/ShellPath`: the login shell's `PATH`, which git and gh run with. `sync/AccountPin`: the GitHub account
   a sync clone uses.
-- `FxSampler` (`-Dexampleapp.fxSampler=<ms>`): logs the FX thread's stack when it stalls. `StartupMarks`: the
+- `FxSampler` (`-Dpartida.fxSampler=<ms>`): logs the FX thread's stack when it stalls. `StartupMarks`: the
   start's phase marks, in the Debug Log and for `scripts/measure-startup.sh`. `StyleCompiler`: the release
   build's `.bss` stylesheets, which `Themes` prefers at 100 % zoom.
 - `MacAppMenu`: About and Settings in macOS's application menu, through Glass (only macOS's JavaFX has
@@ -114,9 +127,9 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
 
 ## Config folder
 
-`~/.exampleapp` (`--config-dir`, then `--dev` (`~/.exampleapp-dev`), then `EXAMPLEAPP_CONFIG_DIR`, then the
+`~/.partida` (`--config-dir`, then `--dev` (`~/.partida-dev`), then `PARTIDA_CONFIG_DIR`, then the
 default): `settings.json` (preferences only), `session.json` (the window's place, the tool windows and the
-open documents: Pauta SET-08, WIN-08), `exampleapp-session.log` (+ `.prev.log`), `instance.sock`, `sync/`
+open documents: Pauta SET-08, WIN-08), `partida-session.log` (+ `.prev.log`), `instance.sock`, `sync/`
 (the clone, `base.json`, and `account.json`, the GitHub account pinned to the clone: SET-18), `backups/`
 (`settings-<time>.json`, kept before a sync replaces your settings: SET-20) and the backups of files that
 could not be read (`settings.json.v<n>.bak`, `settings.json.broken.bak`, the same for `session.json`). Every JSON file there has a `schemaVersion` and a

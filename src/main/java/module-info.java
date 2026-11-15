@@ -1,5 +1,5 @@
-/** ExampleApp: one JPMS module. Opens only what Jackson's reflection needs. */
-module com.example.app {
+/** Partida: one JPMS module. Opens only what Jackson's reflection needs. */
+module com.partida {
     // Null annotations, read by NullAway at compile time only.
     requires static org.jspecify;
     requires javafx.controls;
@@ -11,10 +11,10 @@ module com.example.app {
     requires java.net.http;
 
     // Jackson binds settings.json onto the config POJOs, and Settings Sync's files onto SyncData.
-    opens com.example.app.config to
+    opens com.partida.config to
             com.fasterxml.jackson.databind;
-    opens com.example.app.sync to
+    opens com.partida.sync to
             com.fasterxml.jackson.databind;
 
-    exports com.example.app;
+    exports com.partida;
 }

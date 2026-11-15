@@ -1,4 +1,4 @@
-# Contributing to ExampleApp
+# Contributing to Partida
 
 Thank you for helping. Bug reports are easiest from the app itself: **Help → Report a Problem** opens
 a prefilled issue with a redacted report you can read first.
@@ -12,8 +12,8 @@ You need **JDK 25** (Temurin is what CI and the releases use). The Maven Wrapper
 ./mvnw verify              # what CI runs: compile with NullAway, all tests, coverage floors, format check
 ```
 
-`./mvnw javafx:run` uses your real config folder `~/.exampleapp`. For experiments, launch with
-`EXAMPLEAPP_CONFIG_DIR=/tmp/scratch-config ./mvnw javafx:run`.
+`./mvnw javafx:run` uses your real config folder `~/.partida`. For experiments, launch with
+`PARTIDA_CONFIG_DIR=/tmp/scratch-config ./mvnw javafx:run`.
 
 ## Tests
 

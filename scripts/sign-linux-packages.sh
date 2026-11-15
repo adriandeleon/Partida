@@ -4,9 +4,9 @@
 #   .deb   embedded `_gpgorigin` member in debsigs' format, checked by debsig-verify
 #   every  .deb .rpm .AppImage .tar.gz .jar gets a detached, armoured `<file>.asc`
 #
-# The key comes from the environment: EXAMPLEAPP_GPG_KEY (ASCII-armoured secret key) and
-# EXAMPLEAPP_GPG_PASSPHRASE if it has one. Its public half is written to <public-key-out>. When
-# EXAMPLEAPP_GPG_EXPECTED_KEY names a public key file (packaging/linux/signing-key.asc), the secret key
+# The key comes from the environment: PARTIDA_GPG_KEY (ASCII-armoured secret key) and
+# PARTIDA_GPG_PASSPHRASE if it has one. Its public half is written to <public-key-out>. When
+# PARTIDA_GPG_EXPECTED_KEY names a public key file (packaging/linux/signing-key.asc), the secret key
 # must be that one, or the release would verify against nothing it publishes elsewhere.
 #
 # The deb is signed here rather than by debsigs, which only knows gzip members and silently signs
@@ -18,7 +18,7 @@ set -euo pipefail
 public_out="${1:?public key output required}"
 shift
 [ $# -gt 0 ] || { echo "usage: $0 <public-key-out> <dir>..." >&2; exit 2; }
-[ -n "${EXAMPLEAPP_GPG_KEY:-}" ] || { echo "::error::EXAMPLEAPP_GPG_KEY is not set"; exit 1; }
+[ -n "${PARTIDA_GPG_KEY:-}" ] || { echo "::error::PARTIDA_GPG_KEY is not set"; exit 1; }
 
 GNUPGHOME="$(mktemp -d)"
 export GNUPGHOME
@@ -27,22 +27,22 @@ trap 'gpgconf --kill gpg-agent 2>/dev/null || true; rm -rf "$GNUPGHOME"' EXIT
 # Every gpg below, including the one rpmsign starts, reads this. Loopback takes the passphrase from
 # the file rather than from a pinentry no runner can answer.
 printf '%s\n' batch no-tty "pinentry-mode loopback" > "$GNUPGHOME/gpg.conf"
-if [ -n "${EXAMPLEAPP_GPG_PASSPHRASE:-}" ]; then
-    printf '%s' "$EXAMPLEAPP_GPG_PASSPHRASE" > "$GNUPGHOME/passphrase"
+if [ -n "${PARTIDA_GPG_PASSPHRASE:-}" ]; then
+    printf '%s' "$PARTIDA_GPG_PASSPHRASE" > "$GNUPGHOME/passphrase"
     echo "passphrase-file $GNUPGHOME/passphrase" >> "$GNUPGHOME/gpg.conf"
 fi
 
-printf '%s\n' "$EXAMPLEAPP_GPG_KEY" | gpg --quiet --import
+printf '%s\n' "$PARTIDA_GPG_KEY" | gpg --quiet --import
 fpr=$(gpg --with-colons --list-secret-keys | awk -F: '$1 == "fpr" { print $10; exit }')
-[ -n "$fpr" ] || { echo "::error::EXAMPLEAPP_GPG_KEY holds no secret key"; exit 1; }
+[ -n "$fpr" ] || { echo "::error::PARTIDA_GPG_KEY holds no secret key"; exit 1; }
 echo "Signing with $fpr"
 
-expected="${EXAMPLEAPP_GPG_EXPECTED_KEY:-}"
+expected="${PARTIDA_GPG_EXPECTED_KEY:-}"
 if [ -n "$expected" ]; then
     [ -f "$expected" ] || { echo "::error::no public key at $expected"; exit 1; }
     want=$(gpg --with-colons --import-options show-only --import "$expected" |
         awk -F: '$1 == "fpr" { print $10; exit }')
-    [ "$want" = "$fpr" ] || { echo "::error::EXAMPLEAPP_GPG_KEY is $fpr, but $expected is $want"; exit 1; }
+    [ "$want" = "$fpr" ] || { echo "::error::PARTIDA_GPG_KEY is $fpr, but $expected is $want"; exit 1; }
 fi
 gpg --armor --export "$fpr" > "$public_out"
 

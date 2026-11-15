@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ExampleApp are documented in this file.
+All notable changes to Partida are documented in this file.
 
 The format is based on [Keep a Changelog 1.1](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each entry opens with a bold
@@ -10,6 +10,17 @@ one-line summary written for users.
 
 ### Added
 
+- **Your RetroArch library, by system.** Partida finds RetroArch on its own (installed natively, as the
+  `org.libretro.RetroArch` Flatpak, or in a folder you choose), and lists your games from its playlists, its
+  play history and your own games folders. The Systems window lists each system with its game count; a system
+  opens in a tab, with a find bar over its games' titles. The Game window shows the selected game's box art,
+  the core it starts with (pick another there) and any BIOS file that core is missing.
+- **Play and Stop.** Enter, a double-click, the toolbar or the Game menu starts the selected game in
+  RetroArch; the RetroArch window shows what it prints, busy while the game runs. Stop asks RetroArch to quit
+  when its network commands are on, so it saves on the way out.
+- **Settings → Library:** add and remove games folders, give a folder the core for all of it (for `.zip`,
+  `.chd`, `.cue` and other formats several systems share), point Partida at a RetroArch in a folder of your
+  own with its launch command, and show or hide the play history. Each setting has a palette command.
 - **The documents you had open come back.** Quitting remembers the open documents and the selected one, and
   the next start opens them again; `--no-session` starts with the Welcome page and leaves them for next time
   (Pauta WIN-08, CLI-04). The window's place and what was open live in `session.json`, apart from your
@@ -43,7 +54,7 @@ one-line summary written for users.
 - **About and Settings in macOS's application menu,** with Settings' keys in its title (Pauta ABOUT-01,
   WIN-15).
 - **Help → Keyboard Shortcuts** opens the searchable key binding list (Pauta DOCS-08).
-- **A console launcher on Windows,** `exampleapp-cli`, so `--help`, `--version` and `--report` print in the
+- **A console launcher on Windows,** `partida-cli`, so `--help`, `--version` and `--report` print in the
   console they were typed in (Pauta CLI-11). `-V` works as `--version` (CLI-13).
 - **Every menu row has an icon,** drawn for the commands that had none (Pauta MENU-14), and a file's icon
   follows its type (ICON-23).
@@ -55,8 +66,8 @@ one-line summary written for users.
 - **Light and dark themes that follow your system.**
 - **Settings Sync through a Git repository you own.** Your key bindings, the same on every computer.
 - **A Message Log and a Debug Log.** Click the status bar for this session's messages; Help → Debug
-  Log for everything logged, also written to `exampleapp-session.log`.
-- **Report a Problem.** A redacted report, opened as a prefilled GitHub issue; `exampleapp --report`
+  Log for everything logged, also written to `partida-session.log`.
+- **Report a Problem.** A redacted report, opened as a prefilled GitHub issue; `partida --report`
   does the same when the app cannot start.
 - **A daily update check you can turn off,** shown in the status bar and in About.
 - **Six languages:** English, Spanish, Portuguese, French, Italian and German.
@@ -122,10 +133,13 @@ one-line summary written for users.
 
 ### Changed
 
-- **ExampleApp is built to Pauta 6.0.1,** and is still Complete. The patch edition rewords one MAY, WIN-10
+- **Partida is built to Pauta 6.1.0.** The minor edition makes a menu row's icon a MAY instead of a MUST
+  (MENU-14): rows keep their glyphs. The copy of the edition's rules and the `pauta-audit` skill are 6.1.0's,
+  and `pom.xml`, the README and `AGENTS.md` name it.
+- **Partida is built to Pauta 6.0.1,** and is still Complete. The patch edition rewords one MAY, WIN-10
   (an Expert mode now keeps only the status bar), which the template does not have; the copy of the
   edition's rules is 6.0.1's, and the `pauta-audit` skill is unchanged.
-- **ExampleApp's Pauta conformance is Complete:** every MUST and SHOULD of Pauta 6.0.0 a template can meet
+- **Partida's Pauta conformance is Complete:** every MUST and SHOULD of Pauta 6.0.0 a template can meet
   is met; what is left is each app's own website, screenshots and repository settings (`app-only`).
 - **The palette and every picker move with your keymap's keys** (`C-n`, `C-p`, `C-v`, `M-v` in Emacs) and
   with `Ctrl/Cmd+Home` and `End`; the tab switcher moves the same way. Pickers say what you are choosing and
@@ -144,7 +158,7 @@ one-line summary written for users.
   keys (`C-a`, `C-e`, `C-k`, `C-y`… in Emacs) (Pauta FIND-05, FIND-09).
 - **Settings Sync remembers which GitHub account can read your repository,** for a computer signed in to two,
   and keeps a copy of your settings before a sync replaces them (Pauta SET-18, SET-20).
-- **ExampleApp is built to Pauta 6.0.0,** and its conformance is now Core: it meets every MUST of the
+- **Partida is built to Pauta 6.0.0,** and its conformance is now Core: it meets every MUST of the
   edition a template can, and the SHOULDs it does not yet are listed in the Pauta window (Help → Pauta
   Conformance). The `pauta-audit` skill and the copy of the edition's rules are 6.0.0's.
 - **The template marks what only an app made from it can have.** `pauta.json` says `"template": true`, and
@@ -160,7 +174,7 @@ one-line summary written for users.
   can't draw it, instead of only saying so in its description (Pauta OS-01).
 - **`--report` writes the report in the current folder,** or the temp folder when that one can't be
   written, and prints where (Pauta CLI-05).
-- **`--dev` wins over `EXAMPLEAPP_CONFIG_DIR`,** as a flag typed for this run should (Pauta SET-07).
+- **`--dev` wins over `PARTIDA_CONFIG_DIR`,** as a flag typed for this run should (Pauta SET-07).
 - **Keyboard focus is easier to see:** the ring is 2 px wide, just outside the control, and a text field's
   border widens instead (Pauta KBD-22). Menus have rounder cards with a deeper shadow and roomier rows
   (MENU-18), every tooltip waits the same 400 ms (TBAR-14), and the status bar no longer draws a line
@@ -197,7 +211,7 @@ one-line summary written for users.
   finds Homebrew's tools (Pauta CLI-10).
 - **Faster to start and to type in the palette:** release builds carry precompiled stylesheets, and the
   palette's rows reuse their nodes and draw their titles in runs (Pauta PERF-17, PERF-09, PERF-10).
-  `scripts/measure-startup.sh` measures a start, phase by phase, and `-Dexampleapp.fxSampler=<ms>` logs what
+  `scripts/measure-startup.sh` measures a start, phase by phase, and `-Dpartida.fxSampler=<ms>` logs what
   stalls the window (PERF-19, PERF-20).
 - **The Windows installer is signed** once `WINDOWS_CERT_PFX` is set (Pauta REL-17).
 - **Settings Sync writes the same bytes on Windows as on macOS and Linux.** The settings files and the synced
@@ -264,7 +278,7 @@ one-line summary written for users.
   redraws the status bar once. Oversized settings files and update answers are refused unread.
 - **An invalid sync branch is refused.** A blank or malformed branch name is marked and never saved.
 - **Settings search finds a row by its buttons' text,** and ranks a title above a keyword.
-- **`EXAMPLEAPP_CONFIG_DIR` wins over `--dev`,** so the order is `--config-dir`, the variable, the default.
+- **`PARTIDA_CONFIG_DIR` wins over `--dev`,** so the order is `--config-dir`, the variable, the default.
 - **The sync status turns green only once a sync has succeeded;** while one runs it is amber.
 - **A theme name this version does not know no longer resets all your settings.** The theme falls
   back to System and every other setting is kept.

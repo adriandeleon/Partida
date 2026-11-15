@@ -33,17 +33,17 @@ rpmkeys --define "_dbpath $work/rpmdb" --import "$key"
 # debsig-verify reads a policy naming the key, under the key's id.
 if command -v debsig-verify >/dev/null 2>&1; then
     mkdir -p "$work/debsig/policies/$keyid" "$work/debsig/keyrings/$keyid"
-    cp "$work/key.gpg" "$work/debsig/keyrings/$keyid/exampleapp.gpg"
-    cat > "$work/debsig/policies/$keyid/exampleapp.pol" <<POLICY
+    cp "$work/key.gpg" "$work/debsig/keyrings/$keyid/partida.gpg"
+    cat > "$work/debsig/policies/$keyid/partida.pol" <<POLICY
 <?xml version="1.0"?>
 <!DOCTYPE Policy SYSTEM "https://www.debian.org/debsig/1.0/policy.dtd">
 <Policy xmlns="https://www.debian.org/debsig/1.0/">
-  <Origin Name="ExampleApp" id="$keyid" Description="ExampleApp releases"/>
+  <Origin Name="Partida" id="$keyid" Description="Partida releases"/>
   <Selection>
-    <Required Type="origin" File="exampleapp.gpg" id="$keyid"/>
+    <Required Type="origin" File="partida.gpg" id="$keyid"/>
   </Selection>
   <Verification MinOptional="0">
-    <Required Type="origin" File="exampleapp.gpg" id="$keyid"/>
+    <Required Type="origin" File="partida.gpg" id="$keyid"/>
   </Verification>
 </Policy>
 POLICY

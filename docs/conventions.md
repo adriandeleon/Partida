@@ -7,7 +7,7 @@
 - A command that cannot run says why: register it with an `unavailable` supplier returning
   `tr("palette.disabled.<reason>")` ("Unavailable — what is missing. What to do first."). It stays
   listed, grayed, and its key binding echoes the reason.
-- Key bindings live in `src/main/resources/com/example/app/keymaps/<id>.json`. `Shortcut` is Cmd on
+- Key bindings live in `src/main/resources/com/partida/keymaps/<id>.json`. `Shortcut` is Cmd on
   macOS and Ctrl elsewhere; Emacs notation (`C-x C-c`, `M-x`) works in any keymap.
 
 ## Strings
@@ -27,7 +27,7 @@ A change that affects behavior updates, in the same pull request, never as a fol
 - `CHANGELOG.md`, under `## [Unreleased]`, an entry opening with a bold one-line summary for users;
 - `TODO.md`, when it adds, finishes or drops planned work;
 - the contributor guides in `docs/` it touches;
-- the website's user docs (the `exampleapp-website` repository) for what a user sees.
+- the website's user docs (the `partida-website` repository) for what a user sees.
 
 A reviewer treats a feature pull request with no docs change as incomplete. When docs and code disagree,
 the code wins and the docs are fixed in the same change.

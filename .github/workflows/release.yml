@@ -147,12 +147,12 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          kc="$RUNNER_TEMP/exampleapp-signing.keychain-db"
+          kc="$RUNNER_TEMP/partida-signing.keychain-db"
           kcpass="$(uuidgen)"
           security create-keychain -p "$kcpass" "$kc"
           security set-keychain-settings -lut 3600 "$kc"   # no auto-lock mid-build
           security unlock-keychain -p "$kcpass" "$kc"
-          p12="$RUNNER_TEMP/exampleapp-signing.p12"
+          p12="$RUNNER_TEMP/partida-signing.p12"
           printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$p12"
           if ! security import "$p12" -k "$kc" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign; then
             rm -f "$p12"
@@ -170,8 +170,8 @@ jobs:
             exit 1
           fi
           echo "Signing as: $identity"
-          echo "EXAMPLEAPP_MAC_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
-          echo "EXAMPLEAPP_MAC_KEYCHAIN=$kc" >> "$GITHUB_ENV"
+          echo "PARTIDA_MAC_SIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
+          echo "PARTIDA_MAC_KEYCHAIN=$kc" >> "$GITHUB_ENV"
           echo "enabled=true" >> "$GITHUB_OUTPUT"
 
       # With the tests: two of these runners (linux-arm64, macos-x64) run nowhere else. The pom builds
@@ -181,7 +181,7 @@ jobs:
         timeout-minutes: 50
         env:
           # A release without its AOT cache starts noticeably slower and says nothing: fail instead.
-          EXAMPLEAPP_REQUIRE_AOT: '1'
+          PARTIDA_REQUIRE_AOT: '1'
         # No xvfb here (PLAT-11): the tests run on JavaFX's Headless platform, and aot-train.sh starts its
         # own xvfb-run for the one step that needs a display, training the AOT cache (REL-10).
         run: ./mvnw -B --no-transfer-progress clean -Pdist -Dskip.installers=false verify
@@ -191,9 +191,9 @@ jobs:
         timeout-minutes: 5
         run: |
           case "$RUNNER_OS" in
-            macOS)   launcher="target/dist/ExampleApp.app/Contents/MacOS/ExampleApp" ;;
-            Windows) launcher="target/dist/ExampleApp/ExampleApp.exe" ;;
-            *)       launcher="target/dist/ExampleApp/bin/ExampleApp" ;;
+            macOS)   launcher="target/dist/Partida.app/Contents/MacOS/Partida" ;;
+            Windows) launcher="target/dist/Partida/Partida.exe" ;;
+            *)       launcher="target/dist/Partida/bin/Partida" ;;
           esac
           bash scripts/smoke-test.sh "$launcher" "$RUNNER_TEMP/smoke"
 
@@ -209,7 +209,7 @@ jobs:
 
       - name: Check the macOS signature
         if: runner.os == 'macOS'
-        run: codesign --verify --deep --strict --verbose=2 target/dist/ExampleApp.app
+        run: codesign --verify --deep --strict --verbose=2 target/dist/Partida.app
 
       # Apple scans the signed dmg and issues a ticket; stapling attaches it so Gatekeeper accepts the
       # dmg offline. A rejection prints Apple's log, which names each offending file. The checks at
@@ -267,7 +267,7 @@ jobs:
           spctl --assess --type execute --verbose=2 "$app"
           # Launch the notarized app itself, from the stapled dmg, under the hardened runtime: the JVM
           # starts only with the JIT entitlements, and the first window proves the JavaFX natives load.
-          bash scripts/smoke-test.sh "$app/Contents/MacOS/ExampleApp" "$RUNNER_TEMP/smoke-notarized"
+          bash scripts/smoke-test.sh "$app/Contents/MacOS/Partida" "$RUNNER_TEMP/smoke-notarized"
           echo "- ${TARGET}: signed, notarized, stapled and launched" >> "$GITHUB_STEP_SUMMARY"
 
       # Platform-specific (it carries this OS's JavaFX natives), so built on each runner that ships one.
@@ -278,7 +278,7 @@ jobs:
         timeout-minutes: 10
         run: ./mvnw -B --no-transfer-progress -Pfatjar -DskipTests package
 
-      # One naming scheme for every download: ExampleApp-<version>-<target>.<ext>.
+      # One naming scheme for every download: Partida-<version>-<target>.<ext>.
       - name: Name the downloads
         shell: bash
         run: |
@@ -291,12 +291,12 @@ jobs:
               *.tar.gz) ext=tar.gz ;;
               *)        ext="${file##*.}" ;;
             esac
-            mv -v "$file" "ExampleApp-$VERSION-$TARGET.$ext"
+            mv -v "$file" "Partida-$VERSION-$TARGET.$ext"
             produced=$((produced + 1))
           done
           [ "$produced" -gt 0 ] || { echo "::error::no installer was produced for $TARGET"; exit 1; }
           if [ "${{ matrix.fatjar }}" = true ]; then
-            cp -v ../exampleapp-*-fat.jar "ExampleApp-$VERSION-$TARGET.jar"
+            cp -v ../partida-*-fat.jar "Partida-$VERSION-$TARGET.jar"
           fi
           ls -la
 
@@ -328,7 +328,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ExampleApp-${{ matrix.target }}
+          name: Partida-${{ matrix.target }}
           path: target/installers/*
           retention-days: 14
           if-no-files-found: error
@@ -337,11 +337,11 @@ jobs:
       - name: Remove signing keychain (macOS)
         if: always() && steps.macsign.outputs.enabled == 'true'
         shell: bash
-        run: security delete-keychain "$RUNNER_TEMP/exampleapp-signing.keychain-db" || true
+        run: security delete-keychain "$RUNNER_TEMP/partida-signing.keychain-db" || true
 
   # Signs the Linux downloads (scripts/sign-linux-packages.sh) in a job of its own, so the key is never
   # on a runner that runs Maven, and once for both architectures. It replaces the build's artifacts
-  # with the signed files and adds the public key as exampleapp-signing-key.asc.
+  # with the signed files and adds the public key as partida-signing-key.asc.
   #
   # With LINUX_GPG_KEY the key must be the family's release key, committed as
   # packaging/linux/signing-key.asc. A tag without the secret fails; a dry run without it signs with a
@@ -363,11 +363,11 @@ jobs:
           sudo apt-get -o Acquire::Retries=3 update -qq
           sudo apt-get -o Acquire::Retries=3 install -y -qq rpm debsig-verify
 
-      # One directory per artifact: linux/ExampleApp-linux-x64, linux/ExampleApp-linux-arm64.
+      # One directory per artifact: linux/Partida-linux-x64, linux/Partida-linux-arm64.
       - name: Download the Linux builds
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: ExampleApp-linux-*
+          pattern: Partida-linux-*
           path: linux
 
       - name: Sign
@@ -378,8 +378,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "$LINUX_GPG_KEY" ]; then
-            export EXAMPLEAPP_GPG_KEY="$LINUX_GPG_KEY" EXAMPLEAPP_GPG_PASSPHRASE="$LINUX_GPG_PASSPHRASE"
-            export EXAMPLEAPP_GPG_EXPECTED_KEY=packaging/linux/signing-key.asc
+            export PARTIDA_GPG_KEY="$LINUX_GPG_KEY" PARTIDA_GPG_PASSPHRASE="$LINUX_GPG_PASSPHRASE"
+            export PARTIDA_GPG_EXPECTED_KEY=packaging/linux/signing-key.asc
           elif [ "$GITHUB_REF_TYPE" = tag ]; then
             echo "::error title=Linux signing key missing::LINUX_GPG_KEY is not set; refusing to release unsigned Linux packages"
             exit 1
@@ -387,22 +387,22 @@ jobs:
             echo "::warning title=Throw-away signing key::no LINUX_GPG_KEY, so this dry run signs with a key made for it"
             export GNUPGHOME="$RUNNER_TEMP/throwaway-gnupg"
             mkdir -m 700 "$GNUPGHOME"
-            gpg --batch --pinentry-mode loopback --passphrase '' --quick-gen-key 'ExampleApp dry run <dry-run@exampleapp.invalid>' ed25519 sign 1d
-            EXAMPLEAPP_GPG_KEY="$(gpg --batch --armor --export-secret-keys)"
-            export EXAMPLEAPP_GPG_KEY
+            gpg --batch --pinentry-mode loopback --passphrase '' --quick-gen-key 'Partida dry run <dry-run@partida.invalid>' ed25519 sign 1d
+            PARTIDA_GPG_KEY="$(gpg --batch --armor --export-secret-keys)"
+            export PARTIDA_GPG_KEY
             unset GNUPGHOME
           fi
           mkdir -p key
-          bash scripts/sign-linux-packages.sh key/exampleapp-signing-key.asc linux/*/
-          bash scripts/check-linux-signatures.sh key/exampleapp-signing-key.asc linux/*/
-          fpr=$(gpg --with-colons --import-options show-only --import key/exampleapp-signing-key.asc | awk -F: '$1 == "fpr" { print $10; exit }')
+          bash scripts/sign-linux-packages.sh key/partida-signing-key.asc linux/*/
+          bash scripts/check-linux-signatures.sh key/partida-signing-key.asc linux/*/
+          fpr=$(gpg --with-colons --import-options show-only --import key/partida-signing-key.asc | awk -F: '$1 == "fpr" { print $10; exit }')
           echo "- Linux: signed with \`$fpr\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload signed (linux-x64)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ExampleApp-linux-x64
-          path: linux/ExampleApp-linux-x64/*
+          name: Partida-linux-x64
+          path: linux/Partida-linux-x64/*
           overwrite: true
           retention-days: 14
           if-no-files-found: error
@@ -410,8 +410,8 @@ jobs:
       - name: Upload signed (linux-arm64)
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ExampleApp-linux-arm64
-          path: linux/ExampleApp-linux-arm64/*
+          name: Partida-linux-arm64
+          path: linux/Partida-linux-arm64/*
           overwrite: true
           retention-days: 14
           if-no-files-found: error
@@ -419,8 +419,8 @@ jobs:
       - name: Upload the public key
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ExampleApp-signing-key
-          path: key/exampleapp-signing-key.asc
+          name: Partida-signing-key
+          path: key/partida-signing-key.asc
           retention-days: 14
           if-no-files-found: error
 
@@ -444,7 +444,7 @@ jobs:
       - name: Download every build
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: ExampleApp-*
+          pattern: Partida-*
           path: artifacts
           merge-multiple: true
 
@@ -455,12 +455,12 @@ jobs:
           expected=()
           for target in linux-x64 linux-arm64; do
             for ext in deb rpm AppImage tar.gz jar; do
-              expected+=("ExampleApp-$VERSION-$target.$ext" "ExampleApp-$VERSION-$target.$ext.asc")
+              expected+=("Partida-$VERSION-$target.$ext" "Partida-$VERSION-$target.$ext.asc")
             done
           done
-          expected+=("ExampleApp-$VERSION-macos-arm64.dmg" "ExampleApp-$VERSION-macos-x64.dmg")
-          expected+=("ExampleApp-$VERSION-windows-x64.msi" "ExampleApp-$VERSION-windows-x64.jar")
-          expected+=(exampleapp-signing-key.asc)
+          expected+=("Partida-$VERSION-macos-arm64.dmg" "Partida-$VERSION-macos-x64.dmg")
+          expected+=("Partida-$VERSION-windows-x64.msi" "Partida-$VERSION-windows-x64.jar")
+          expected+=(partida-signing-key.asc)
           declare -A wanted
           missing=0
           for file in "${expected[@]}"; do
@@ -515,7 +515,7 @@ jobs:
       - name: Download every build
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: ExampleApp-*
+          pattern: Partida-*
           path: artifacts
           merge-multiple: true
 
@@ -536,7 +536,7 @@ jobs:
           fi
 
       # A signed statement that each download was built by this workflow from this commit:
-      #   gh attestation verify <file> --repo adriandeleon/ExampleApp --source-ref refs/tags/vX.Y.Z
+      #   gh attestation verify <file> --repo adriandeleon/Partida --source-ref refs/tags/vX.Y.Z
       # The patterns are exactly what jreleaser.yml attaches (the two distributions' artifacts and
       # `files.globs`); ReleaseSupplyChainTest keeps the two lists equal. Before JReleaser, so a
       # release never publishes a download without one.
@@ -544,8 +544,8 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
-            artifacts/ExampleApp-*-macos-arm64.dmg
-            artifacts/ExampleApp-*-windows-x64.msi
+            artifacts/Partida-*-macos-arm64.dmg
+            artifacts/Partida-*-windows-x64.msi
             artifacts/*-macos-x64.dmg
             artifacts/*.deb
             artifacts/*.rpm

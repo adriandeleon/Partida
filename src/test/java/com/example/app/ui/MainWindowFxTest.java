@@ -1,0 +1,527 @@
+package com.example.app.ui;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Window;
+
+import com.example.app.AppInfo;
+import com.example.app.Os;
+import com.example.app.config.ConfigStore;
+import com.example.app.config.ThemeChoice;
+import com.example.app.i18n.Messages;
+import com.example.app.update.ReleaseInfo;
+import com.example.app.update.UpdateService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import static com.example.app.ui.FxTestSupport.call;
+import static com.example.app.ui.FxTestSupport.press;
+import static com.example.app.ui.FxTestSupport.run;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** The main window in a real headless toolkit: start-up, the palette, keys, the Message Log, menus. */
+@Tag("fx")
+class MainWindowFxTest {
+
+    @TempDir
+    Path dir;
+
+    private final FakeHost host = new FakeHost();
+    private Startup.Running app;
+    private MainWindow window;
+    private AppServices services;
+
+    @BeforeAll
+    static void boot() throws Exception {
+        FxTestSupport.boot();
+    }
+
+    @BeforeEach
+    void start() throws Exception {
+        app = FxTestSupport.start(dir, host);
+        window = app.window();
+        services = app.services();
+    }
+
+    @AfterEach
+    void stop() throws Exception {
+        FxTestSupport.stop(app);
+    }
+
+    private String echo() throws Exception {
+        return call(() -> window.statusBar().echo().getText());
+    }
+
+    @Test
+    void startsReadyWithTheSessionLog() throws Exception {
+        assertTrue(call(() -> window.stage().isShowing()));
+        assertEquals("Ready", echo());
+        assertTrue(Files.exists(dir.resolve(DebugLog.FILE)));
+        // The window title names the project and the app; a file's tab adds the file (TABS-10).
+        assertEquals("Samples — ExampleApp", call(() -> window.stage().getTitle()));
+    }
+
+    @Test
+    void thePaletteFindsAndRunsACommand() throws Exception {
+        run(window::openPalette);
+        assertTrue(call(() -> window.overlays().isShowing()));
+        TextField query = call(() -> (TextField) window.overlays().root().lookup(".palette-query"));
+        run(() -> query.setText("toggle status"));
+        @SuppressWarnings("unchecked")
+        ListView<Picker.Ranked<String>> list = call(
+                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".list-view"));
+        assertEquals(
+                "view.toggleStatusBar",
+                call(() -> list.getSelectionModel().getSelectedItem().item().value()));
+        run(() -> press(query, KeyCode.ENTER, false, false, false, false));
+        assertFalse(call(() -> window.overlays().isShowing()));
+        assertFalse(services.settings().showStatusBar);
+        assertFalse(call(() -> window.statusBar().isVisible()));
+    }
+
+    @Test
+    void thePaletteListsEveryRegisteredCommandItselfIncluded() throws Exception {
+        run(window::openPalette);
+        @SuppressWarnings("unchecked")
+        ListView<Picker.Ranked<String>> list = call(
+                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".list-view"));
+        java.util.Set<String> listed = call(
+                () -> list.getItems().stream().map(r -> r.item().value()).collect(java.util.stream.Collectors.toSet()));
+        java.util.Set<String> registered = services.commands().all().stream()
+                .map(com.example.app.command.Command::id)
+                .collect(java.util.stream.Collectors.toSet());
+        assertEquals(registered, listed); // PAL-02: palette.show too
+        run(() -> window.overlays().hide());
+    }
+
+    @Test
+    void helpOpensTheDocsAndTheReleaseNotesAndCopiesTheDetails() throws Exception {
+        run(() -> services.commands().run("help.documentation"));
+        assertEquals(AppInfo.docsUrl(), host.opened.getLast());
+        run(() -> services.commands().run("help.whatsNew"));
+        assertEquals(AppInfo.releaseNotesUrl(), host.opened.getLast());
+        // The welcome placeholder repeats Documentation and What's New, through the registry (DOCS-05/06).
+        java.util.List<javafx.scene.control.Button> buttons =
+                call(() -> window.stage().getScene().getRoot().lookupAll(".welcome .button").stream()
+                        .map(n -> (javafx.scene.control.Button) n)
+                        .toList());
+        for (String id : java.util.List.of("help.documentation", "help.whatsNew")) {
+            String title = services.commands().get(id).title();
+            javafx.scene.control.Button button = buttons.stream()
+                    .filter(b -> b.getText().equals(title))
+                    .findFirst()
+                    .orElseThrow();
+            int before = host.opened.size();
+            run(button::fire);
+            assertEquals(before + 1, host.opened.size(), id);
+        }
+        run(() -> services.commands().run("help.copyDetails"));
+        assertEquals(
+                AppInfo.environment(services.store().dir()),
+                call(() -> javafx.scene.input.Clipboard.getSystemClipboard().getString()));
+    }
+
+    @Test
+    void escapeAndCtrlGCloseOverlays() throws Exception {
+        run(window::openPalette);
+        run(() -> press(window.overlays().root(), KeyCode.ESCAPE, false, false, false, false));
+        assertFalse(call(() -> window.overlays().isShowing()));
+        // The keymap's cancel chord closes them too: C-g in Emacs (PAL-07, QOPEN-07, MLOG-03); CUA binds none.
+        run(window::openMessageLog);
+        run(() -> press(window.overlays().root(), KeyCode.G, false, true, false, false));
+        assertTrue(call(() -> window.overlays().isShowing()), "CUA has no cancel chord: Ctrl+G is just a key");
+        run(() -> services.store().update(s -> s.keymap = "emacs"));
+        run(() -> press(window.overlays().root(), KeyCode.G, false, true, false, false));
+        assertFalse(call(() -> window.overlays().isShowing()));
+        run(() -> services.store().update(s -> s.keymap = "cua"));
+        run(window::openPalette);
+        run(() -> window.overlays().root().lookup(".overlay-backdrop").fireEvent(click()));
+        assertFalse(call(() -> window.overlays().isShowing()));
+    }
+
+    @Test
+    void keySequencesRunCommandsAndHintTheNextKey() throws Exception {
+        run(() -> services.store().update(s -> s.keymap = "emacs"));
+        var target = call(() -> window.statusBar());
+        run(() -> press(target, KeyCode.H, false, true, false, false));
+        assertTrue(echo().startsWith("C-h- "), echo());
+        assertTrue(echo().contains("e Message Log"), echo());
+        run(() -> press(target, KeyCode.E, false, false, false, false));
+        assertTrue(call(() -> window.overlays().isShowing()));
+        run(() -> window.overlays().hide());
+
+        run(() -> press(target, KeyCode.H, false, true, false, false));
+        run(() -> press(target, KeyCode.Z, false, false, false, false));
+        assertEquals("C-h z is undefined", echo());
+
+        run(() -> services.store().update(s -> s.keybindings.put("sync.now", "F5")));
+        run(() -> press(target, KeyCode.F5, false, false, false, false));
+        assertTrue(echo().startsWith("Settings Sync: Sync Now: Unavailable"), echo());
+
+        // Plain typing and unbound keys pass through.
+        assertFalse(
+                call(() -> press(target, KeyCode.A, false, false, false, false).isConsumed()));
+        TextField field = new TextField();
+        assertFalse(call(() -> {
+            window.overlays().root().getChildren().add(field);
+            return press(field, KeyCode.B, false, false, false, false).isConsumed();
+        }));
+        assertFalse(call(
+                () -> press(target, KeyCode.SHIFT, true, false, false, false).isConsumed()));
+        assertEquals(
+                "Emacs", call(() -> ((Label) window.statusBar().getChildren().get(4)).getText()));
+    }
+
+    @Test
+    void theMessageLogShowsFiltersCopiesAndClears() throws Exception {
+        run(() -> {
+            services.echo("status.configExportFailed", "disk full");
+            services.echo("status.sync.invalidUrl", "bad");
+        });
+        assertTrue(call(() -> window.statusBar().unread().isVisible()));
+        assertTrue(call(() -> window.statusBar().echo().getStyleClass().contains("warning")));
+        run(() -> window.statusBar().echo().fireEvent(click()));
+        assertFalse(call(() -> window.statusBar().unread().isVisible()));
+        MessageLogView log = window.messageLog();
+        assertEquals(3, call(() -> log.list().getItems().size()));
+        run(() -> log.filter().setText("disk"));
+        assertEquals(1, call(() -> log.list().getItems().size()));
+        run(() -> press(log.filter(), KeyCode.DOWN, false, false, false, false));
+        assertEquals(0, call(() -> log.list().getSelectionModel().getSelectedIndex()));
+        run(() -> press(log.list(), KeyCode.C, false, !Os.isMac(), false, Os.isMac()));
+        assertTrue(MessageLogView.asText(services.messages().entries()).contains("Export failed: disk full"));
+        // The shortcut runs messageLog.copy, which copies the selection (KBD-01).
+        assertTrue(call(() -> javafx.scene.input.Clipboard.getSystemClipboard().getString())
+                .endsWith("Export failed: disk full"));
+        run(() -> {
+            for (var node : window.overlays().root().lookupAll(".button")) {
+                if (node instanceof javafx.scene.control.Button b) b.fire();
+            }
+        });
+        assertTrue(services.messages().entries().isEmpty());
+        run(() -> window.overlays().hide());
+        // A list cell renders the time and the severity.
+        run(() -> {
+            services.echo("status.ready");
+            window.openMessageLog();
+        });
+        assertEquals(1, call(() -> window.messageLog().list().getItems().size()));
+    }
+
+    @Test
+    void menusRunCommandsAndGreyUnavailableOnes() throws Exception {
+        List<Menu> menus = call(() -> List.copyOf(window.menuBar().getMenus()));
+        assertEquals(5, menus.size()); // File, Edit, View, Window, Help
+        run(() -> {
+            for (Menu menu : menus) menu.getOnShowing().handle(null);
+        });
+        MenuItem toggle = call(() -> menus.get(2).getItems().stream()
+                .filter(i -> "view.toggleStatusBar".equals(i.getId()))
+                .findFirst()
+                .orElseThrow());
+        run(toggle::fire);
+        assertFalse(services.settings().showStatusBar);
+    }
+
+    @Test
+    void pickersChangeSettings() throws Exception {
+        run(window::chooseTheme);
+        TextField query = call(() -> (TextField) window.overlays().root().lookup(".palette-query"));
+        run(() -> query.setText("dark"));
+        run(() -> press(query, KeyCode.ENTER, false, false, false, false));
+        assertEquals(ThemeChoice.DARK, services.settings().theme);
+        assertTrue(call(() -> Themes.isDark()));
+        assertEquals("Theme: Dark", echo());
+
+        run(window::chooseKeymap);
+        TextField keymapQuery = call(() -> (TextField) window.overlays().root().lookup(".palette-query"));
+        run(() -> keymapQuery.setText("emacs"));
+        run(() -> press(keymapQuery, KeyCode.ENTER, false, false, false, false));
+        assertEquals("emacs", services.settings().keymap);
+
+        run(window::chooseLanguage);
+        TextField languageQuery =
+                call(() -> (TextField) window.overlays().root().lookup(".palette-query"));
+        run(() -> languageQuery.setText("deutsch"));
+        run(() -> press(languageQuery, KeyCode.ENTER, false, false, false, false));
+        assertEquals("de", services.settings().language);
+        assertEquals(Messages.tr("status.languageRestart"), echo());
+        run(() -> services.store().update(s -> s.theme = ThemeChoice.LIGHT));
+    }
+
+    @Test
+    void exportAndImportTheConfigFolder() throws Exception {
+        run(() -> services.store().update(s -> s.keymap = "emacs"));
+        host.saveAnswer = dir.resolve("backup.zip");
+        run(window::exportConfig);
+        // The walk and the zip write run off the FX thread (PERF-01).
+        FxTestSupport.waitUntil(() -> window.statusBar().echo().getText().startsWith("Exported"));
+        assertTrue(Files.exists(host.saveAnswer));
+        assertTrue(echo().startsWith("Exported 2 files to"), echo()); // settings.json and session.json (SET-08)
+
+        run(() -> services.store().update(s -> s.keymap = "cua"));
+        host.openAnswer = host.saveAnswer;
+        // Import overwrites: it asks first, naming the file, and a Cancel changes nothing (WIN-05).
+        host.confirmAnswer = false;
+        run(window::importConfig);
+        FxTestSupport.waitUntil(() -> !host.questions.isEmpty());
+        assertEquals("cua", services.settings().keymap);
+        assertTrue(host.questions.getLast().message().contains("backup.zip"));
+        assertEquals("Overwrite", host.questions.getLast().action());
+        // Only the ticked parts are replaced (SET-12): untick Preferences, keep the key bindings.
+        run(() -> services.store().update(s -> s.showStatusBar = false));
+        host.confirmAnswer = true;
+        host.onQuestion = q -> q.choices().stream()
+                .filter(c -> c.label().startsWith("Preferences"))
+                .forEach(c -> c.tick(false));
+        run(window::importConfig);
+        FxTestSupport.waitUntil(() -> window.statusBar().echo().getText().startsWith("Imported"));
+        assertEquals("emacs", services.settings().keymap);
+        assertFalse(services.settings().showStatusBar, "an unticked part is kept");
+        host.onQuestion = q -> {};
+
+        // PERF-03: two imports at once; the first one's scan is dropped, and only the latest is asked about.
+        int asked = host.questions.size();
+        host.confirmAnswer = false;
+        run(() -> {
+            window.importConfig();
+            window.importConfig();
+        });
+        FxTestSupport.waitUntil(() -> window.importsDropped() == 1 && host.questions.size() == asked + 1);
+        // And a quit drops an import still in flight.
+        host.confirmAnswer = true;
+        run(() -> {
+            window.importConfig();
+            window.quit();
+        });
+        FxTestSupport.waitUntil(() -> window.importsDropped() == 2);
+        assertEquals(
+                asked + 1,
+                host.questions.stream()
+                        .filter(q -> !q.title().equals(Messages.tr("confirm.quitUnsaved.title")))
+                        .count(),
+                "a dropped import asked anyway");
+
+        host.saveAnswer = dir.resolve("missing/folder/backup.zip");
+        run(window::exportConfig);
+        FxTestSupport.waitUntil(() -> window.statusBar().echo().getText().startsWith("Export failed"));
+        host.openAnswer = dir.resolve("nope.zip");
+        run(window::importConfig);
+        FxTestSupport.waitUntil(() -> window.statusBar().echo().getText().startsWith("Import failed"));
+        host.saveAnswer = null;
+        host.openAnswer = null;
+        run(window::exportConfig);
+        run(window::importConfig);
+    }
+
+    /** WIN-13, CONF-01: quitting with typing in the documents asks first; Cancel keeps the app running. */
+    @Test
+    void quitAsksBeforeTheSessionsTypingIsLost() throws Exception {
+        assertTrue(call(() -> window.tabs().unsavedNames()).isEmpty(), "nothing typed yet");
+        run(() -> {
+            window.tabs().tabPane().getSelectionModel().select(1);
+            window.tabs().activeDocument().text().appendText("\nmore");
+        });
+        java.util.List<String> unsaved = call(() -> window.tabs().unsavedNames());
+        assertEquals(1, unsaved.size());
+        int exits = host.exits;
+        host.confirmAnswer = false;
+        run(window::quit);
+        Confirmations.Question asked = host.questions.getLast();
+        assertEquals(Messages.tr("confirm.quitUnsaved.title"), asked.title());
+        assertTrue(asked.message().contains(unsaved.getFirst()), asked.message());
+        assertEquals("Quit Without Saving", asked.action());
+        assertTrue(call(() -> window.stage().isShowing()), "Cancel keeps the window");
+        assertEquals(exits, host.exits);
+        // The window's close button is the same quit: it asks too.
+        run(() -> window.stage()
+                .fireEvent(
+                        new javafx.stage.WindowEvent(window.stage(), javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST)));
+        assertEquals(
+                Messages.tr("confirm.quitUnsaved.title"),
+                host.questions.getLast().title());
+        assertTrue(call(() -> window.stage().isShowing()));
+        host.confirmAnswer = true;
+    }
+
+    @Test
+    void handOffQuitAndWindowState() throws Exception {
+        run(() -> window.handOff(List.of("a")));
+        assertEquals(Messages.tr("status.handOff"), echo());
+        run(() -> {
+            window.stage().setWidth(700);
+            window.stage().setHeight(450);
+        });
+        run(window::quit);
+        FxTestSupport.waitUntil(() -> host.exits == 1); // the last save is waited for off the FX thread
+        // TRAY-04: the window's close button takes the same path, closing the other windows first.
+        run(() -> window.openSettings(SettingsWindow.Page.GENERAL));
+        run(() -> window.stage()
+                .fireEvent(
+                        new javafx.stage.WindowEvent(window.stage(), javafx.stage.WindowEvent.WINDOW_CLOSE_REQUEST)));
+        FxTestSupport.waitUntil(() -> host.exits == 2);
+        assertFalse(call(() -> window.settingsWindow().stage().isShowing()), "quit closes the other windows first");
+        assertEquals(700, services.settings().window.width);
+        assertNotNull(services.settings().window.x);
+        // Not a real maximize: JavaFX's Headless platform throws resizing a maximized stage on Windows
+        // (HeadlessWindow.clearRect). What matters here is that the flag is saved and read back.
+        run(() -> services.store().update(s -> s.window.maximized = true));
+        services.store().flush();
+        assertTrue(ConfigStore.open(dir).settings().window.maximized);
+    }
+
+    @Test
+    void aRestartRestoresTheWindowAndReportsConfigTrouble(@TempDir Path other) throws Exception {
+        Files.writeString(
+                other.resolve(ConfigStore.FILE),
+                "{\"schemaVersion\": 1, \"darkMode\": false,"
+                        + " \"window\": {\"x\": 5, \"y\": 6, \"width\": 640, \"height\": 400}}");
+        Startup.Running second = FxTestSupport.start(other, host);
+        try {
+            assertEquals(
+                    Messages.tr("status.config.migrated"),
+                    call(() -> second.window().statusBar().echo().getText()));
+            assertEquals(640, call(() -> second.window().stage().getWidth()));
+            assertEquals(ThemeChoice.LIGHT, second.services().settings().theme);
+        } finally {
+            FxTestSupport.stop(second);
+        }
+        Files.writeString(other.resolve(ConfigStore.FILE), "{\"schemaVersion\": 99}");
+        Startup.Running third = FxTestSupport.start(other, host, "--no-session");
+        try {
+            assertTrue(
+                    call(() -> third.window().statusBar().echo().getText()).startsWith("Settings come from a newer"));
+        } finally {
+            FxTestSupport.stop(third);
+        }
+        Files.writeString(other.resolve(ConfigStore.FILE), "{oops");
+        Startup.Running fourth = FxTestSupport.start(other, host);
+        try {
+            assertTrue(
+                    call(() -> fourth.window().statusBar().echo().getText()).startsWith("Settings could not be read"));
+        } finally {
+            FxTestSupport.stop(fourth);
+        }
+    }
+
+    @Test
+    void anUncaughtExceptionReachesTheStatusBar() throws Exception {
+        run(() -> DebugLog.uncaught(Thread.currentThread(), new IllegalStateException("kaput")));
+        FxTestSupport.waitUntil(() -> window.statusBar().echo().getText().contains("kaput"));
+        assertTrue(call(() -> window.statusBar().echo().getStyleClass().contains("error")));
+    }
+
+    @Test
+    void theSmokeTestWritesAndExits() throws Exception {
+        Path file = dir.resolve("smoke.txt");
+        run(() -> Startup.smokeTest(file.toString(), host));
+        FxTestSupport.waitUntil(() -> host.exits == 1);
+        assertEquals("window-shown\n", Files.readString(file));
+        run(() -> Startup.smokeTest(dir.resolve("no/such/dir/x").toString(), host));
+        FxTestSupport.waitUntil(() -> host.exits == 2);
+        run(() -> Startup.smokeTest(null, host));
+        run(() -> Startup.smokeTest(" ", host));
+    }
+
+    @Test
+    void updatesShowInTheStatusBarAndAbout() throws Exception {
+        UpdateCoordinator updates = services.updates();
+        assertFalse(updates.automaticAllowed());
+        assertFalse(updates.scheduleStartupCheck());
+        run(() -> updates.finish(
+                new UpdateService.Outcome(new ReleaseInfo("9.9.9", "https://example.com/r"), null), false));
+        assertEquals(UpdateCoordinator.State.AVAILABLE, updates.state());
+        assertTrue(call(() -> window.statusBar().update().isVisible()));
+        run(() -> window.statusBar().update().fire());
+        assertEquals(List.of("https://example.com/r"), host.opened);
+        assertTrue(services.settings().lastUpdateCheck > 0);
+
+        run(() -> updates.finish(new UpdateService.Outcome(null, "timed out"), true));
+        assertEquals("Update check failed: timed out", echo());
+        run(() -> updates.finish(new UpdateService.Outcome(null, null), true));
+        assertEquals("You are up to date.", echo());
+
+        // A real manual check, against the closed local port the suite configures.
+        run(() -> updates.checkNow(true));
+        run(() -> updates.checkNow(true)); // ignored while one is running
+        FxTestSupport.waitUntil(() -> updates.state() == UpdateCoordinator.State.FAILED);
+        assertNotNull(updates.error());
+    }
+
+    @Test
+    void theStartupCheckIsScheduledOnceWhenAllowed() throws Exception {
+        FxTestSupport.waitUntil(() -> app.afterFirstPaint().get()); // the startup's own call has run
+        String saved = System.getProperty(UpdateCoordinator.PROPERTY);
+        try {
+            System.clearProperty(UpdateCoordinator.PROPERTY);
+            run(() -> services.store().update(s -> s.lastUpdateCheck = System.currentTimeMillis()));
+            assertFalse(call(() -> services.updates().scheduleStartupCheck()));
+            run(() -> services.store().update(s -> s.lastUpdateCheck = 0));
+            assertTrue(call(() -> services.updates().scheduleStartupCheck()));
+            assertFalse(call(() -> services.updates().scheduleStartupCheck()));
+        } finally {
+            System.setProperty(UpdateCoordinator.PROPERTY, saved);
+        }
+    }
+
+    private static MouseEvent click() {
+        return new MouseEvent(
+                MouseEvent.MOUSE_CLICKED,
+                1,
+                1,
+                1,
+                1,
+                MouseButton.PRIMARY,
+                1,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false,
+                true,
+                false,
+                false,
+                null);
+    }
+
+    static List<Window> windows() {
+        return List.copyOf(Window.getWindows());
+    }
+
+    /** PAL-09: a keymap switch while the palette is open draws its opener chip, its legend and its chips again. */
+    @Test
+    void thePaletteFollowsAKeymapSwitchWhileOpen() throws Exception {
+        run(window::openPalette);
+        javafx.scene.Node card = call(() -> window.overlays().root().lookup(".command-palette"));
+        java.util.function.Supplier<String> opener =
+                () -> ((javafx.scene.control.Label) card.lookup(".opener-chip")).getText();
+        java.util.function.Supplier<String> legend =
+                () -> ((javafx.scene.control.Label) card.lookup(".palette-hint")).getText();
+        assertEquals(services.keybindings().label("palette.show"), call(opener::get));
+        assertFalse(call(legend::get).contains("C-g"));
+        run(() -> services.store().update(s -> s.keymap = "emacs"));
+        assertEquals("M-x", call(opener::get));
+        assertTrue(call(legend::get).contains("C-n") && call(legend::get).contains("C-g"), call(legend::get));
+        run(() -> window.overlays().hide());
+        run(() -> services.store().update(s -> s.keymap = "cua"));
+    }
+}

@@ -1,0 +1,646 @@
+/*
+ * App styles, layered on the Caret & Ink control theme (editora-light.css / editora-dark.css). Colors
+ * are the theme's -color-* roles, never hex literals, so light and dark both follow. The UI font is not
+ * set here: ui-font.css is attached to every window's scene (Themes.installUiFont).
+ */
+
+/* ---- tokens ----
+   State colors, each meaning named once and chained to one of the theme's roles; component rules use
+   these, never a role directly, for a state:
+     amber   not durable yet: warnings, not connected
+     red     broken: errors, a failed check, an invalid value
+     green   verified: connected, up to date
+     accent  the app is offering something: an update
+   -<state>-bg is the state's tinted fill; -<state>-emphasis its solid fill, drawn on with
+   -color-fg-emphasis (never white). -focus-ring is the one keyboard focus color (the block at the end).
+   StyleContrastTest holds the contrast of every pair in both flagship themes. */
+.root {
+    -state-amber: -color-warning-fg;
+    -state-amber-bg: -color-warning-subtle;
+    -state-red: -color-danger-fg;
+    -state-red-bg: -color-danger-subtle;
+    -state-red-emphasis: -color-danger-emphasis;
+    -state-green: -color-success-fg;
+    -state-green-bg: -color-success-subtle;
+    -state-accent: -color-accent-fg;
+    -state-accent-bg: -color-accent-subtle;
+    -focus-ring: -color-accent-emphasis;
+    /* Git's untracked olive and renamed violet (TABS-08), as in Editora: ladders of the theme's ground, a
+       light ink on a dark ground and a deep one on a light ground, since the themes have no role for them. */
+    -state-olive: ladder(-color-bg-default, #a9b84a 0%, #b3c157 10%, #c3cf73 20%, #d3dc92 30%, #dde4a8 49%, #4f5c10 50%);
+    -state-violet: ladder(-color-bg-default, #b392f0 0%, #bc9ff3 10%, #cab5f6 20%, #dacbf9 30%, #e4d9fb 49%, #6538c2 50%);
+    /* The keyboard's one hue (ICON-06), periwinkle, as in Editora: a ladder of the ground like the two above,
+       a deep ink on a light ground and a lighter one the darker it gets. Every key chord a menu shows wears it
+       (MENU-15); it reads at 4.5:1 or more on the default and subtle grounds of both themes. */
+    -state-key: ladder(-color-bg-default, #b0b6e0 0%, #b8bee5 10%, #cdd1f1 20%, #e3e6f9 30%, #ecedfb 49%, #3c4380 50%);
+    /* The overlay's scrim and the floating cards' shadow (ICON-08): black at a fixed alpha, the one place a
+       fixed color may stand, since the themes have no role for either. */
+    -scrim: rgba(0, 0, 0, 0.18);
+    -shadow: rgba(0, 0, 0, 0.28);
+}
+
+/* ---- window ---- */
+.welcome {
+    -fx-padding: 40;
+}
+.welcome-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+.muted {
+    -fx-text-fill: -color-fg-muted;
+}
+.hint {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+}
+
+/* ---- status bar ---- */
+.status-bar {
+    -fx-padding: 3 10 3 10;
+    -fx-background-color: -color-bg-subtle;
+    -fx-font-size: 12px;
+    -fx-min-height: 26px;
+}
+.status-bar .echo {
+    -fx-cursor: hand;
+    -fx-text-fill: -color-fg-default;
+}
+.status-bar .echo.error {
+    -fx-text-fill: -state-red;
+}
+.status-bar .echo.warning {
+    -fx-text-fill: -state-amber;
+}
+.status-bar .unread-errors {
+    -fx-background-color: -state-red-emphasis;
+    -fx-text-fill: -color-fg-emphasis;
+    -fx-background-radius: 8;
+    -fx-padding: 0 6 0 6;
+    -fx-font-size: 11px;
+    -fx-cursor: hand;
+}
+.status-bar .status-item {
+    -fx-text-fill: -color-fg-muted;
+}
+.status-bar .update-notice {
+    -fx-text-fill: -state-accent;
+    -fx-padding: 0;
+    -fx-font-weight: bold;
+}
+
+/* ---- overlays: palette, pickers, message log ---- */
+.overlay-backdrop {
+    -fx-background-color: -scrim;
+}
+.command-palette, .message-log {
+    -fx-background-color: -color-bg-overlay;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 6;
+    -fx-effect: dropshadow(gaussian, -shadow, 24, 0.1, 0, 6);
+}
+.command-palette .list-view, .message-log .list-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.command-palette .list-cell {
+    -fx-font-size: 12.5px;
+    -fx-padding: 7 16 7 16;
+    -fx-background-radius: 6;
+}
+.command-palette .list-cell:selected {
+    -fx-background-color: -color-accent-subtle;
+    -fx-border-color: transparent transparent transparent -color-accent-emphasis;
+    -fx-border-width: 0 0 0 2;
+}
+.command-palette .list-cell .match {
+    -fx-font-weight: bold;
+    -fx-fill: -color-accent-fg;
+}
+.command-palette .list-cell .plain {
+    -fx-fill: -color-fg-default;
+}
+.command-palette .list-cell.unavailable .plain,
+.command-palette .list-cell.unavailable .match {
+    -fx-fill: -color-fg-subtle;
+}
+.key-chip {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-default;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 1 6 1 6;
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-accent-fg;
+}
+.palette-description {
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 2 10 0 10;
+    -fx-text-overrun: ellipsis;
+}
+.palette-hint {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 0 10 2 10;
+}
+.message-log-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 4 0 4;
+}
+.message-log-list .list-cell {
+    -fx-padding: 2 4 2 4;
+    -fx-background-radius: 5;
+}
+.message-log-list .time {
+    -fx-font-family: "JetBrains Mono";
+    -fx-font-size: 11px;
+    -fx-text-fill: -color-fg-muted;
+}
+.message-log-list .error {
+    -fx-text-fill: -state-red;
+}
+.message-log-list .warning {
+    -fx-text-fill: -state-amber;
+}
+
+/* ---- settings ---- */
+.settings-sidebar .list-cell {
+    -fx-padding: 6 8 6 8;
+    -fx-graphic-text-gap: 8;
+}
+.settings-sidebar .list-cell.no-match {
+    -fx-text-fill: -color-fg-subtle;
+    -fx-opacity: 0.6;
+}
+/* Glyphs, two families (Icons): a node carries one class, never both. A line glyph is stroked and
+   filled with nothing; a filled glyph is filled. Moving a glyph between families moves its CSS too. */
+.icon-line {
+    -fx-fill: transparent;
+    -fx-stroke: -color-fg-muted;
+    -fx-stroke-width: 1.3;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+.toolbar-icon {
+    -fx-fill: -color-fg-muted;
+}
+.settings-sidebar .list-cell:selected .icon-line {
+    -fx-stroke: -color-fg-default;
+}
+.settings-page-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+.settings-card {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 8;
+    -fx-border-color: -color-border-muted;
+    -fx-border-radius: 8;
+    -fx-padding: 4 14 4 14;
+}
+.settings-card-heading {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+    -fx-padding: 8 0 2 0;
+}
+.setting-row {
+    -fx-padding: 10 0 10 0;
+}
+.setting-title {
+    -fx-font-weight: bold;
+}
+.setting-desc, .note {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 12px;
+}
+.text-field.invalid {
+    -fx-border-color: -state-red-emphasis;
+}
+.pill {
+    -fx-background-radius: 10;
+    -fx-padding: 2 10 2 10;
+    -fx-font-size: 11.5px;
+}
+.pill.green {
+    -fx-background-color: -state-green-bg;
+    -fx-text-fill: -state-green;
+}
+.pill.amber {
+    -fx-background-color: -state-amber-bg;
+    -fx-text-fill: -state-amber;
+}
+.pill.red {
+    -fx-background-color: -state-red-bg;
+    -fx-text-fill: -state-red;
+}
+.setting-switch {
+    -fx-min-width: 56px;
+}
+.setting-switch:selected {
+    -fx-background-color: -color-accent-emphasis;
+    -fx-text-fill: -color-fg-emphasis;
+}
+
+/* ---- about ---- */
+.about-name {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+}
+.about-version {
+    -fx-font-size: 14px;
+    -fx-text-fill: -color-fg-muted;
+}
+.about-tagline {
+    -fx-font-size: 13px;
+    -fx-text-fill: -color-fg-muted;
+}
+/* Amber, a color nothing else in About uses: in the links' accent it read as one more link (Pauta ABOUT-10). */
+.about-update-available {
+    -fx-text-fill: -state-amber;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+}
+.about-update-current {
+    -fx-text-fill: -state-green;
+}
+.about-update-failed {
+    -fx-text-fill: -state-red;
+}
+.about-env {
+    -fx-font-family: "JetBrains Mono";
+    -fx-font-size: 11.5px;
+    -fx-text-fill: -color-fg-muted;
+}
+
+/* ---- pauta window ---- */
+.pauta-conformance.complete {
+    -fx-background-color: -state-green-bg;
+    -fx-text-fill: -state-green;
+}
+.pauta-conformance.core {
+    -fx-background-color: -state-accent-bg;
+    -fx-text-fill: -state-accent;
+}
+.pauta-conformance.partial {
+    -fx-background-color: -state-amber-bg;
+    -fx-text-fill: -state-amber;
+}
+.pauta-list {
+    -fx-max-height: 300px;
+    -fx-pref-viewport-height: 300px;
+    -fx-background-color: transparent;
+}
+.pauta-list > .viewport {
+    -fx-background-color: transparent;
+}
+.pauta-group {
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 2 0;
+}
+.pauta-rule {
+    -fx-font-family: "JetBrains Mono";
+    -fx-font-size: 12px;
+    -fx-text-fill: -state-accent;
+    -fx-padding: 0;
+}
+.pauta-level {
+    -fx-font-size: 11.5px;
+}
+.pauta-reason > .text {
+    -fx-fill: -color-fg-default;
+}
+.pauta-reason > .hyperlink {
+    -fx-padding: 0;
+}
+
+/* ---- debug log, report ---- */
+.debug-log-text, .report-text {
+    -fx-font-family: "JetBrains Mono";
+    -fx-font-size: 12px;
+}
+
+/* ---- title bar and menus ---- */
+/* One chrome band (TBAR-06): the title bar or menu row and the toolbar share -color-bg-subtle with no rule
+   between them; the one rule is under the whole band. The theme draws a 1px rule under .menu-bar and
+   .tool-bar as a second background layer; each collapses to its fill alone. */
+.chrome-band {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: transparent transparent -color-border-muted transparent;
+}
+.menu-bar,
+.tool-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-insets: 0;
+}
+.header-bar {
+    -fx-background-color: -color-bg-subtle;
+    -fx-min-height: 34px;
+}
+.header-bar .menu-bar {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.header-title {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 12.5px;
+}
+/* Every menu, whatever node it was opened from (MENU-16): a popup inherits the font of the node that showed
+   it, and em sizes resolve against it, so a menu opened from the toolbar or a monospaced view would draw
+   at their size. The font is pinned in pixels on the menu and its rows' labels. */
+/* MENU-18: the card's radius 8 and a shadow of radius 16 at offset Y 16; a row 34 px high (padding 8 × 12). */
+.context-menu {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(gaussian, -shadow, 16, 0, 0, 16);
+}
+.context-menu .menu-item {
+    -fx-padding: 8px 12px 8px 12px;
+}
+.context-menu,
+.context-menu .menu-item,
+.context-menu .menu-item .label {
+    -fx-font-family: "Inter";
+    -fx-font-size: 14px;
+    -fx-font-weight: normal;
+    -fx-font-style: normal;
+}
+/* A row's chord (MENU-15): Inter 11 px in the keyboard's periwinkle, in the menu bar's drop-downs and every
+   right-click menu alike. The extra .label class outranks the 14 px pin above and the theme's label fill. */
+/* A command that can't run now: grayed, still a row, its tooltip saying why (KBD-04). */
+.context-menu .menu-item.unavailable .label,
+.context-menu .menu-item.unavailable .icon-box {
+    -fx-opacity: 0.45;
+}
+/* A row that deletes, discards or resets (MENU-12). */
+.context-menu .menu-item.danger .label.menu-item-title,
+.menu-item.danger .label {
+    -fx-text-fill: -state-red;
+}
+.context-menu .menu-item .label.menu-item-chord,
+.menu-item .menu-item-chord {
+    -fx-font-family: "Inter";
+    -fx-font-size: 11px;
+    -fx-text-fill: -state-key;
+}
+
+/* ---- toolbar (Toolbars and tooltips) ----
+   Two containers in one row (AppToolbar): the cluster, a ToolBar that overflows into its chevron, and the
+   pinned tail, which never does. Both paint the band's ground, so the seam between them is invisible.
+   The insets are asymmetric as in Editora: nothing sits above the bar but the menus. */
+.tool-bar {
+    -fx-padding: 5 1 2 6;
+    -fx-spacing: 5;
+}
+.toolbar-tail {
+    -fx-padding: 5 6 2 0;
+    -fx-spacing: 5;
+}
+/* An icon button: 28px, padding 3 x 5, radius 4, no border; the glyph muted, full strength under the
+   pointer. The stroke is thinned so a 20px toolbar glyph draws the same weight as an 18px menu glyph. */
+.toolbar-button {
+    -fx-padding: 3 5 3 5;
+    -fx-background-radius: 4;
+    -fx-min-height: 28px;
+    -fx-pref-height: 28px;
+    -fx-max-height: 28px;
+}
+.toolbar-button .icon-line {
+    -fx-stroke-width: 1.17;
+}
+.toolbar-button:hover .icon-line {
+    -fx-stroke: -color-fg-default;
+}
+/* Groups are separated by spacing, not rules (TBAR-04): the Separator's padding is the gap, its line goes. */
+.tool-bar .separator:vertical > .line {
+    -fx-border-color: transparent;
+}
+/* A button whose overlay is up looks pressed (TBAR-07): an accent-subtle fill, the glyph in the accent. */
+.button:open {
+    -fx-background-color: -color-accent-subtle;
+}
+.button:open .icon-line {
+    -fx-stroke: -color-accent-fg;
+}
+/* Tooltips share the menus' card radius. */
+.tooltip {
+    -fx-background-radius: 8px, 7px;
+    -fx-show-delay: 400ms; /* every tooltip, whoever made it (TBAR-14) */
+}
+
+/* ---- document tabs (Tabs and tool panels) ----
+   The header is the title (TABS-02): .tab-header holds the pin, the file glyph and .tab-title. Order matters
+   below: the Git colors follow read-only, so a read-only file still shows its status, and the unsaved rule is
+   more specific, so an unsaved tab is amber whatever its status (TABS-08). */
+.document-tabs > .tab-header-area {
+    -fx-padding: 3 6 0 6;
+}
+.tab .tab-title {
+    -fx-text-fill: -color-fg-muted;
+}
+.tab:selected .tab-title {
+    -fx-text-fill: -color-fg-default;
+}
+.tab-header.pinned .tab-title {
+    -fx-font-weight: bold;
+}
+.tab-header.read-only .tab-title {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-style: italic;
+}
+.tab.git-status-modified .tab-title,
+.documents-list .git-status-modified {
+    -fx-text-fill: -state-accent;
+}
+.tab.git-status-added .tab-title,
+.documents-list .git-status-added {
+    -fx-text-fill: -state-green;
+}
+.tab.git-status-untracked .tab-title,
+.documents-list .git-status-untracked {
+    -fx-text-fill: -state-olive;
+}
+.tab.git-status-renamed .tab-title,
+.documents-list .git-status-renamed {
+    -fx-text-fill: -state-violet;
+}
+.tab.git-status-deleted .tab-title,
+.documents-list .git-status-deleted {
+    -fx-text-fill: -color-fg-muted;
+}
+.tab.git-status-conflict .tab-title,
+.documents-list .git-status-conflict {
+    -fx-text-fill: -state-red;
+}
+/* The Git status's letter after a tab's name (ACC-05): a little smaller, in the status's color. */
+.tab-header .git-letter {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 0 2px;
+}
+/* Unsaved (TABS-03): a "• " prefix, amber italic, over any Git color. */
+.tab .tab-header.dirty .tab-title {
+    -fx-text-fill: -state-amber;
+    -fx-font-style: italic;
+}
+/* Dragging a tab (TABS-07): the dragged header dims, an accent line marks the edge where it will land. */
+.tab-header.tab-dragging {
+    -fx-opacity: 0.4;
+}
+.tab-header.tab-drop-before {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 0 0 0 2;
+}
+.tab-header.tab-drop-after {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 0 2 0 0;
+}
+/* Toggle Tab Bar (TABS-12): the strip folds away, the documents stay. */
+.tab-pane.no-tab-header > .tab-header-area {
+    -fx-pref-height: 0;
+    -fx-min-height: 0;
+    -fx-max-height: 0;
+    visibility: hidden;
+}
+.document-text {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+}
+.document-text .content {
+    -fx-padding: 6 12 6 12;
+}
+.switcher-header {
+    -fx-font-weight: bold;
+}
+.switcher-path {
+    -fx-text-fill: -color-fg-muted;
+    -fx-font-size: 11.5px;
+}
+
+/* ---- tool windows (Tabs and tool panels, Tool panels) ----
+   A stripe is a toolbar (TBAR-12): its buttons are toolbar buttons. The vertical stripes' top padding is set
+   in code so the first glyph sits on the documents' first line of text (TBAR-13); keep the button's top
+   padding here in step with ToolWindowManager.STRIPE_BUTTON_TOP_INSET. */
+.tool-stripe {
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: -color-border-muted;
+    -fx-spacing: 6;
+}
+.tool-stripe-vertical {
+    -fx-pref-width: 34;
+    -fx-min-width: 34;
+    -fx-padding: 8 0 8 0;
+}
+.tool-stripe-horizontal {
+    -fx-pref-height: 32;
+    -fx-min-height: 32;
+    -fx-padding: 0 4 0 4;
+}
+.tool-stripe-left {
+    -fx-border-width: 0 1 0 0;
+}
+.tool-stripe-right {
+    -fx-border-width: 0 0 0 1;
+}
+.tool-stripe-bottom {
+    -fx-border-width: 1 0 0 0;
+}
+.tool-stripe-button:tw-active {
+    -fx-background-color: -color-accent-muted;
+}
+.tool-stripe-button:tw-active .icon-line {
+    -fx-stroke: -color-accent-fg;
+}
+/* The busy badge (TABS-22): small, over the glyph's corner, so the button keeps its size. */
+.tool-stripe-busy {
+    -fx-progress-color: -color-accent-fg;
+}
+/* Re-docking (TABS-17): the dragged button dims, an accent line marks where it lands, and an empty stripe
+   shows as a dashed accent drop zone for as long as the drag lasts. */
+.tool-stripe-button.tool-stripe-button-dragging {
+    -fx-opacity: 0.4;
+}
+.tool-stripe-button.tool-drop-top {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 2 0 0 0;
+}
+.tool-stripe-button.tool-drop-bottom {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 0 0 2 0;
+}
+.tool-stripe-button.tool-drop-left {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 0 0 0 2;
+}
+.tool-stripe-button.tool-drop-right {
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 0 2 0 0;
+}
+.tool-stripe.tool-stripe-drop-target {
+    -fx-background-color: -color-accent-subtle;
+    -fx-border-color: -color-accent-emphasis;
+    -fx-border-width: 1;
+    -fx-border-style: segments(4, 4) line-cap round;
+    -fx-min-width: 34;
+    -fx-min-height: 32;
+}
+.tool-stripe.tool-stripe-drop-over {
+    -fx-background-color: -color-accent-muted;
+}
+.tool-window-panel {
+    -fx-background-color: -color-bg-default;
+}
+.tool-window-header {
+    -fx-padding: 3 4 3 8;
+    -fx-background-color: -color-bg-subtle;
+    -fx-border-color: transparent transparent -color-border-muted transparent;
+}
+.tool-window-title {
+    -fx-font-weight: bold;
+    -fx-graphic-text-gap: 6;
+}
+.tool-window-header-button {
+    -fx-padding: 2 4 2 4;
+}
+.tool-window-split > .split-pane-divider {
+    -fx-padding: 0 1 0 1;
+}
+.output-bar {
+    -fx-padding: 4 8 4 8;
+}
+.output-console {
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
+
+/* ---- Keyboard focus ----
+   One layer for every control, drawn once in the -focus-ring color (on .root above): 3:1 or better on
+   every surface in both flagship themes (StyleContrastTest). Keep this block LAST: equal-specificity
+   author rules are decided by order. */
+*:focus-visible {
+    -fx-border-color: -focus-ring;
+}
+/* KBD-22: 2 px wide, 1 px outside the control: a border with negative insets adds nothing to the control's
+   own size, so focusing one never moves the layout. */
+.button:focus-visible,
+.toggle-button:focus-visible,
+.menu-button:focus-visible,
+.split-menu-button:focus-visible,
+.hyperlink:focus-visible,
+.combo-box-base:focus-visible,
+.check-box:focus-visible,
+.radio-button:focus-visible {
+    -fx-border-width: 2;
+    -fx-border-insets: -3;
+    -fx-border-radius: 6;
+}
+/* A text field draws it inside, by widening its own focus border to 2 px. */
+.text-input:focus-visible {
+    -fx-border-width: 0;
+    -fx-background-color: -focus-ring, -color-input-bg-focused;
+    -fx-background-insets: 0, 2px;
+}

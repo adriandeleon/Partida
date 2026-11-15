@@ -1,54 +1,33 @@
 <p align="center">
-  <img src="branding/exampleapp.svg" alt="" width="96" height="96">
+  <img src="branding/partida.svg" alt="" width="96" height="96">
 </p>
 
-<h1 align="center">ExampleApp</h1>
+<h1 align="center">Partida</h1>
 
 <p align="center">
 
-[![CI](https://github.com/adriandeleon/ExampleApp/actions/workflows/ci.yml/badge.svg)](https://github.com/adriandeleon/ExampleApp/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/adriandeleon/ExampleApp)](https://github.com/adriandeleon/ExampleApp/releases/latest)
-[![License: MIT](https://img.shields.io/github/license/adriandeleon/ExampleApp)](LICENSE)
+[![CI](https://github.com/adriandeleon/Partida/actions/workflows/ci.yml/badge.svg)](https://github.com/adriandeleon/Partida/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/adriandeleon/Partida)](https://github.com/adriandeleon/Partida/releases/latest)
+[![License: MIT](https://img.shields.io/github/license/adriandeleon/Partida)](LICENSE)
 ![Java](https://img.shields.io/badge/Java-25%2B-orange?logo=openjdk&logoColor=white)
 ![JavaFX](https://img.shields.io/badge/JavaFX-27%2B-1e90ff)
 ![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
-[![Pauta](https://img.shields.io/badge/Pauta-6.0.1%20%C2%B7%20Complete-2ea043)](https://exampleapp-project.dev/docs/pauta/)
-[![Stars](https://img.shields.io/github/stars/adriandeleon/ExampleApp?style=flat)](https://github.com/adriandeleon/ExampleApp/stargazers)
+[![Pauta](https://img.shields.io/badge/Pauta-6.1.0%20%C2%B7%20Complete-2ea043)](https://partida-project.dev/docs/pauta/)
+[![Stars](https://img.shields.io/github/stars/adriandeleon/Partida?style=flat)](https://github.com/adriandeleon/Partida/stargazers)
 
 </p>
 
-<!-- template:start -->
-> [!IMPORTANT]
-> **This is the template for [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.0.1](https://pauta-project.dev/6.0.1/).** Click **Use this template**, clone your new repository, then run:
->
-> ```bash
-> scripts/rename.sh MyApp com.myapp
-> ./mvnw verify
-> ./mvnw javafx:run
-> ```
->
-> `rename.sh` turns every `ExampleApp` / `exampleapp` / `EXAMPLEAPP` / `com.example.app` into your
-> names, moves the package folders, gives the Windows installer its own upgrade code, and deletes
-> this box, the rename check in CI and itself. Then replace the icon (`branding/`, then
-> `scripts/make-icons.sh`) and the screenshots, and write your app in tabs and tool windows in place of
-> the samples (`SampleFiles`, `SamplePanels`).
-> Every MUST and SHOULD of Pauta 6.0.1 that a template can meet is here and tested, so the template is
-> Complete; see [docs/architecture.md](docs/architecture.md) for where each piece lives. What only your app
-> can have is listed, rule by rule, in [`pauta.json`](src/main/resources/com/example/app/pauta.json) and in
-> the app's Pauta window (Help → Pauta Conformance) as `app-only`: your website, your screenshots and your
-> repository settings. After `rename.sh`, `./mvnw verify` lists them, and the release build (`-Pdist`)
-> fails until each is met or pending on an issue of your own ([TODO.md](TODO.md)).
-<!-- template:end -->
-
-ExampleApp is a keyboard-first JavaFX desktop app for Windows, macOS and Linux. Every action is a
+Partida is a keyboard-first game library for [RetroArch](https://www.retroarch.com/), for Windows, macOS
+and Linux. It finds RetroArch on its own, lists your games by system from RetroArch's playlists and your
+own folders, and starts each one with the right core; RetroArch does the emulation. Every action is a
 command you can run from the Command Palette, and nothing leaves your computer unless you ask.
 
-Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.0.1](https://pauta-project.dev/6.0.1/), [Pauta conformance: Complete](https://exampleapp-project.dev/docs/pauta/).
+Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/), [Pauta conformance: Complete](https://partida-project.dev/docs/pauta/).
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/screenshot-dark.svg">
-    <img src="docs/images/screenshot-light.svg" alt="ExampleApp's main window" width="800">
+    <img src="docs/images/screenshot-light.svg" alt="Partida's main window" width="800">
   </picture>
 </p>
 
@@ -76,29 +55,29 @@ Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), 
 
 ## Documentation
 
-The user guide lives on the website, [exampleapp-project.dev/docs](https://exampleapp-project.dev/docs/),
+The user guide lives on the website, [partida-project.dev/docs](https://partida-project.dev/docs/),
 and Help → Documentation opens the page for the version you run:
 
-- [Getting started](https://exampleapp-project.dev/docs/getting-started/): install, first launch, the first thing to do
-- [Keyboard reference](https://exampleapp-project.dev/docs/keymaps/): every command and its keys, CUA and Emacs
-- [Settings](https://exampleapp-project.dev/docs/settings/): every setting, the config folder, Settings Sync
-- [FAQ](https://exampleapp-project.dev/docs/faq/) and [What's new](https://exampleapp-project.dev/docs/whats-new/)
+- [Getting started](https://partida-project.dev/docs/getting-started/): install, first launch, the first thing to do
+- [Keyboard reference](https://partida-project.dev/docs/keymaps/): every command and its keys, CUA and Emacs
+- [Settings](https://partida-project.dev/docs/settings/): every setting, the config folder, Settings Sync
+- [FAQ](https://partida-project.dev/docs/faq/) and [What's new](https://partida-project.dev/docs/whats-new/)
 
 This repository's [docs/](docs/README.md) is for contributors.
 
 ## Install
 
 Download the installer for your system from the
-[latest release](https://github.com/adriandeleon/ExampleApp/releases/latest):
+[latest release](https://github.com/adriandeleon/Partida/releases/latest):
 
 | System | Download |
 |---|---|
-| macOS (Apple Silicon / Intel) | `ExampleApp-<version>-macos-arm64.dmg` / `-macos-x64.dmg`, signed and notarized |
-| Windows x64 | `ExampleApp-<version>-windows-x64.msi` |
+| macOS (Apple Silicon / Intel) | `Partida-<version>-macos-arm64.dmg` / `-macos-x64.dmg`, signed and notarized |
+| Windows x64 | `Partida-<version>-windows-x64.msi` |
 | Linux x64 / arm64 | `.deb`, `.rpm`, `.AppImage` or `.tar.gz`, each with an `.asc` signature |
 
 Every download has a build provenance attestation:
-`gh attestation verify <file> --repo adriandeleon/ExampleApp`.
+`gh attestation verify <file> --repo adriandeleon/Partida`.
 
 ## Build
 
@@ -121,12 +100,12 @@ the app against its Pauta edition, ask a coding agent to "audit against Pauta": 
 ## Command line
 
 ```text
-exampleapp [options] [files...]
+partida [options] [files...]
 
   -h, --help            Show the help and exit
   -v, --version         Show the version and exit
-      --config-dir DIR  Use DIR as the config folder (default ~/.exampleapp)
-      --dev             Use ~/.exampleapp-dev, so a development build keeps its own config
+      --config-dir DIR  Use DIR as the config folder (default ~/.partida)
+      --dev             Use ~/.partida-dev, so a development build keeps its own config
       --new-instance    Start a second process instead of handing off to the running one
       --no-session      Do not restore the last window size and position
       --report          Write a redacted problem report and open a GitHub issue
@@ -136,18 +115,18 @@ A second launch on the same config folder hands its arguments to the running app
 
 ## Config folder
 
-Settings live in `~/.exampleapp` (`~/.exampleapp-dev` with `--dev`); `--config-dir` or `EXAMPLEAPP_CONFIG_DIR`
+Settings live in `~/.partida` (`~/.partida-dev` with `--dev`); `--config-dir` or `PARTIDA_CONFIG_DIR`
 names another folder, in that order:
 
 | File | What |
 |---|---|
 | `settings.json` | Preferences, with a `schemaVersion`; migrated forward on upgrade, backed up when a newer version wrote it |
-| `exampleapp-session.log` | This session's Debug Log; the previous one is `exampleapp-session.prev.log` |
+| `partida-session.log` | This session's Debug Log; the previous one is `partida-session.prev.log` |
 | `sync/` | The Settings Sync clone, when sync is set up |
 
 Settings → Advanced exports the folder as a `.zip` and imports one back, replacing only the parts you tick.
 
 ## License
 
-ExampleApp is released under the [MIT License](LICENSE). Third-party components and their licenses
-are listed in [NOTICE](NOTICE). ExampleApp is built with the help of AI coding tools.
+Partida is released under the [MIT License](LICENSE). Third-party components and their licenses
+are listed in [NOTICE](NOTICE). Partida is built with the help of AI coding tools.

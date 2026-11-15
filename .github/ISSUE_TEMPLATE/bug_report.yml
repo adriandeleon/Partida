@@ -1,12 +1,12 @@
 name: Bug report
-description: Something in ExampleApp went wrong. Help → Report a Problem (or `exampleapp --report`) fills in the details.
+description: Something in Partida went wrong. Help → Report a Problem (or `partida --report`) fills in the details.
 labels: ["bug"]
 body:
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
-      description: What you did, what you expected, and what ExampleApp did instead.
+      description: What you did, what you expected, and what Partida did instead.
     validations:
       required: true
   - type: textarea
@@ -22,7 +22,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: ExampleApp version, Java, JavaFX, OS. Filled in when you report from the app; otherwise copy it from About → Copy details.
+      description: Partida version, Java, JavaFX, OS. Filled in when you report from the app; otherwise copy it from About → Copy details.
       render: text
   - type: textarea
     id: report

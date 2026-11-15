@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Generates every icon the build and the app use from the one source, branding/exampleapp.svg:
+# Generates every icon the build and the app use from the one source, branding/partida.svg:
 #
-#   packaging/icons/exampleapp.png   512x512, jpackage on Linux and the hicolor theme icon
-#   packaging/icons/exampleapp.ico   16-256, jpackage on Windows
-#   packaging/icons/exampleapp.icns  128-1024, jpackage on macOS (written by scripts/Icns.java)
-#   src/main/resources/com/example/app/icons/app-{16,32,64,128,256}.png   the window icons
+#   packaging/icons/partida.png   512x512, jpackage on Linux and the hicolor theme icon
+#   packaging/icons/partida.ico   16-256, jpackage on Windows
+#   packaging/icons/partida.icns  128-1024, jpackage on macOS (written by scripts/Icns.java)
+#   src/main/resources/com/partida/icons/app-{16,32,64,128,256}.png   the window icons
 #
 # Run it after changing the SVG and commit the results: the build does not regenerate them, so it
 # needs neither ImageMagick nor a renderer. Needs rsvg-convert (librsvg), ImageMagick 7 (`magick`)
@@ -18,9 +18,9 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-svg="$root/branding/exampleapp.svg"
+svg="$root/branding/partida.svg"
 icons="$root/packaging/icons"
-window="$root/src/main/resources/com/example/app/icons"
+window="$root/src/main/resources/com/partida/icons"
 [ -f "$svg" ] || { echo "no $svg" >&2; exit 1; }
 command -v rsvg-convert >/dev/null || {
     echo "rsvg-convert is required: librsvg2-bin (Debian, Ubuntu), librsvg2-tools (Fedora)," >&2
@@ -47,7 +47,7 @@ if awk -v s="$spread" 'BEGIN { exit !(s < 0.01) }'; then
     exit 1
 fi
 
-png 512 "$icons/exampleapp.png"
+png 512 "$icons/partida.png"
 for size in 16 32 64 128 256; do
     png "$size" "$window/app-$size.png"
 done
@@ -55,12 +55,12 @@ done
 for size in 16 24 32 48 64 128 256; do
     png "$size" "$work/ico-$size.png"
 done
-magick "$work"/ico-{16,24,32,48,64,128,256}.png "$icons/exampleapp.ico"
+magick "$work"/ico-{16,24,32,48,64,128,256}.png "$icons/partida.ico"
 
 for size in 128 256 512 1024; do
     png "$size" "$work/icns-$size.png"
 done
-java "$root/scripts/Icns.java" "$icons/exampleapp.icns" \
+java "$root/scripts/Icns.java" "$icons/partida.icns" \
     "ic07=$work/icns-128.png" "ic08=$work/icns-256.png" \
     "ic09=$work/icns-512.png" "ic10=$work/icns-1024.png"
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Signs the finished ExampleApp.app with a Developer ID Application identity, the hardened runtime
+# Signs the finished Partida.app with a Developer ID Application identity, the hardened runtime
 # and a secure timestamp: what Apple's notarization asks for.
 #
-# Runs only when EXAMPLEAPP_MAC_SIGN_IDENTITY names the identity (release.yml imports the certificate
-# into a throw-away keychain, EXAMPLEAPP_MAC_KEYCHAIN). Anywhere else it is a no-op and the bundle keeps
+# Runs only when PARTIDA_MAC_SIGN_IDENTITY names the identity (release.yml imports the certificate
+# into a throw-away keychain, PARTIDA_MAC_KEYCHAIN). Anywhere else it is a no-op and the bundle keeps
 # its ad-hoc signature.
 #
 # It runs after every edit to the bundle and before build-installers.sh wraps it, and signs inside
@@ -14,17 +14,17 @@
 set -euo pipefail
 
 app="${1:?app bundle path required}"
-identity="${EXAMPLEAPP_MAC_SIGN_IDENTITY:-}"
+identity="${PARTIDA_MAC_SIGN_IDENTITY:-}"
 
 [ "$(uname -s)" = "Darwin" ] || exit 0
-[ -n "$identity" ] || { echo "sign: EXAMPLEAPP_MAC_SIGN_IDENTITY not set, bundle stays ad-hoc signed"; exit 0; }
+[ -n "$identity" ] || { echo "sign: PARTIDA_MAC_SIGN_IDENTITY not set, bundle stays ad-hoc signed"; exit 0; }
 [ -d "$app" ] || { echo "sign: no app bundle at $app" >&2; exit 1; }
 
-entitlements="$(cd "$(dirname "$0")/.." && pwd)/packaging/macos/ExampleApp.entitlements"
+entitlements="$(cd "$(dirname "$0")/.." && pwd)/packaging/macos/Partida.entitlements"
 [ -f "$entitlements" ] || { echo "sign: no $entitlements" >&2; exit 1; }
 
 sign=(codesign --force --timestamp --options runtime)
-[ -n "${EXAMPLEAPP_MAC_KEYCHAIN:-}" ] && sign+=(--keychain "$EXAMPLEAPP_MAC_KEYCHAIN")
+[ -n "${PARTIDA_MAC_KEYCHAIN:-}" ] && sign+=(--keychain "$PARTIDA_MAC_KEYCHAIN")
 sign+=(--sign "$identity")
 echo "sign: Developer ID signing $app as \"$identity\""
 
@@ -42,7 +42,7 @@ grep -q '<signed>true</signed>' "$state" || { echo "sign: could not mark $state 
 # Finder metadata or resource forks anywhere in the bundle make codesign refuse to seal it.
 xattr -cr "$app"
 
-main="$app/Contents/MacOS/ExampleApp"
+main="$app/Contents/MacOS/Partida"
 libraries=()
 executables=()
 while IFS= read -r -d '' file; do

@@ -31,7 +31,7 @@ Each of these cost one of the family's apps real time.
 - **AOT training needs a window on screen.** A headless training run archives almost nothing and still
   looks successful; `aot-train.sh` uses `xvfb-run` on a Linux machine without a display.
 - **A test must never reach the real `gh`.** The developer's GitHub CLI is signed in, and "Create on
-  GitHub" would make a real repository: the suite sets `exampleapp.gh` to a command that does not exist.
+  GitHub" would make a real repository: the suite sets `partida.gh` to a command that does not exist.
 - **A key value with `{0}` is a MessageFormat pattern**: a single apostrophe in it swallows text.
 - **`settings.json` is written off the FX thread.** `ConfigStore.update` returns before the file is on
   disk: call `store.flush()` before reading the file or opening a second store on the same folder.

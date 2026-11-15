@@ -22,12 +22,12 @@
 
 - **No sleeps.** Run work on the FX thread with `FxTestSupport.run/call` and wait for background
   results with the bounded `waitUntil`.
-- **A test writes only inside its temp folders.** The suite sets `exampleapp.configDir` to
+- **A test writes only inside its temp folders.** The suite sets `partida.configDir` to
   `target/test-config` so nothing defaults to the real home folder.
-- **No real `gh`.** `exampleapp.gh` points "Create on GitHub" at a command that does not exist;
+- **No real `gh`.** `partida.gh` points "Create on GitHub" at a command that does not exist;
   `GitHubCliTest` and `ShellFeaturesFxTest` pass a fake `gh` explicitly: a shell script, or a batch
   file on Windows, so the sync package's floor holds there too.
-- **No network.** `exampleapp.updateCheck=off` stops the automatic check, and `exampleapp.updateUrl`
+- **No network.** `partida.updateCheck=off` stops the automatic check, and `partida.updateUrl`
   points manual checks at a closed local port. `UpdateServiceTest` serves releases from the JDK's own
   HTTP server; `SyncTest` syncs through a local bare Git repository (skipped when git is missing).
 
@@ -44,12 +44,12 @@
 | `ConfigStoreTest#outOfRangeAndUnknownValuesAreCorrectedAsTheFileIsRead` | Every value read from `settings.json` is clamped or falls back to its default |
 | `MigrationsTest`, `SyncTest#theSyncFilesCarryAVersionAndAnOldBareFileIsMigrated` | Every schema version of `settings.json` and of Settings Sync's files has a migration step |
 | `StartupDeferralFxTest` | The start's file work runs off the FX thread; nothing nobody waits for, Settings Sync included, starts before the first paint |
-| `LogSearchTest`, `FindBarFxTest` | Every find bar (the documents', the Output's, the Debug Log's) is in its window, searches as you type off the FX thread, applies only its latest search, narrows a growing query without searching again, steps with Enter and Shift+Enter, and gives the focus back on Escape; its command, run again, finds the next match, and every keymap binds `find.show` |
+| `LogSearchTest`, `FindBarFxTest` | Every find bar (a system tab's, the RetroArch console's, the Debug Log's) is in its window, searches as you type off the FX thread, applies only its latest search, narrows a growing query without searching again, steps with Enter and Shift+Enter, and gives the focus back on Escape; its command, run again, finds the next match, and every keymap binds `find.show` |
 | `NamedControlsFxTest` | Every control in every window and dialog, every Settings page and the palette has a name a screen reader says, and every menu row reads as its title and wears a glyph (ACC-01, MENU-14) |
 | `SameOnEveryOsFxTest`, `OsTest` | Run as Windows, macOS and Linux through `Os.override`, the app has the same commands, menu rows and Settings (OS-01, OS-03); `Os` is the one reader of `os.name` (OS-02) |
 | `UiZoomTest`, `MenuLookFxTest#theUiZoomScalesEveryMenu` | The UI zoom's steps and range, the stylesheets it scales, and every menu at the zoomed size (WIN-12, MENU-16) |
 | `DialogsFxTest` | Cancel is the confirm question's default; every dialog has one button order with Cancel first and its stock buttons worded from the catalog (CONF-13, WIN-11, CONF-14) |
-| `SessionAndWelcomeFxTest` | `session.json` apart from `settings.json`; the open documents come back, `--no-session` leaves them; the Welcome page in Help, Close alone, rebuilt on show; the text zoom on its own (SET-08, WIN-08, WELC-03/05/11, WIN-09) |
+| `SessionAndWelcomeFxTest` | `session.json` apart from `settings.json`; the open systems come back, `--no-session` leaves them; the Welcome page in Help, Close alone, rebuilt on show; the text zoom on its own (SET-08, WIN-08, WELC-03/05/11, WIN-09) |
 | `SettingsRoundTripFxTest` | Every switch, number and choice of every Settings page survives a restart (QUAL-13) |
 | `PickerFxTest`, `TextInputKeysTest` | The palette's matching, its keymap moves, help chord, title and current value; a text field's editing keys (KBD-06, PAL-06/08, QOPEN-02/04/06, FIND-09) |
 | `AccountPinTest`, `ShellPathTest`, `DoctorTest`, `FxSamplerTest`, `StyleCompilerTest` | The account a sync clone uses, the login shell's PATH, the Doctor's rows, the FX-thread sampler, the `.bss` stylesheets (SET-18, CLI-10, DIAG-07, PERF-20, PERF-17) |
@@ -66,16 +66,16 @@ the whole build, and below each package's own line floor:
 
 | Package | Line floor |
 |---|---|
-| `com.example.app` | 0.72 |
-| `com.example.app.cli` | 0.97 |
-| `com.example.app.command` | 0.96 |
-| `com.example.app.config` | 0.94 |
-| `com.example.app.i18n` | 0.94 |
-| `com.example.app.instance` | 0.95 |
-| `com.example.app.report` | 0.84 |
-| `com.example.app.sync` | 0.89 |
-| `com.example.app.ui` | 0.93 |
-| `com.example.app.update` | 0.90 |
+| `com.partida` | 0.72 |
+| `com.partida.cli` | 0.97 |
+| `com.partida.command` | 0.96 |
+| `com.partida.config` | 0.94 |
+| `com.partida.i18n` | 0.94 |
+| `com.partida.instance` | 0.95 |
+| `com.partida.report` | 0.84 |
+| `com.partida.sync` | 0.89 |
+| `com.partida.ui` | 0.93 |
+| `com.partida.update` | 0.90 |
 
 Floors are a regression net, not a target: each sits two to three points below the package's measured
 level. A new package gets its own floor in the pom; ratchet a floor up as coverage rises, never down.

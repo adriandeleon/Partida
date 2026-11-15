@@ -1,0 +1,67 @@
+package com.partida.ui;
+
+import java.util.List;
+import java.util.Locale;
+
+import com.partida.i18n.Messages;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** Every question names the thing and what happens to it, and its button the action (CONF-02/03, CONF-12). */
+class ConfirmationsTest {
+
+    @AfterEach
+    void english() {
+        Messages.init("en");
+    }
+
+    private static List<Confirmations.Question> every() {
+        return List.of(
+                Confirmations.importConfig(
+                        "partida-config.zip", java.util.List.of(com.partida.config.ConfigImport.Part.values())),
+                Confirmations.resetBinding("About", "Ctrl+Alt+J", "F12"),
+                Confirmations.resetBinding("About", "Ctrl+Alt+J", ""),
+                Confirmations.quitUnsaved(List.of("notes.md")),
+                Confirmations.quitUnsaved(List.of("notes.md", "README.md")));
+    }
+
+    @Test
+    void eachQuestionNamesTheThingAndWhatHappens() {
+        Messages.init("en");
+        List<Confirmations.Question> questions = every();
+        assertTrue(questions.get(0).message().contains("partida-config.zip"));
+        assertTrue(questions.get(0).message().contains("overwritten"));
+        assertEquals(4, questions.get(0).choices().size(), "one choice per part, all ticked");
+        assertTrue(questions.get(0).choices().stream().allMatch(Confirmations.Choice::ticked));
+        assertTrue(questions.get(1).message().contains("About"));
+        assertTrue(questions.get(1).message().contains("Ctrl+Alt+J")
+                && questions.get(1).message().contains("F12"));
+        assertTrue(questions.get(1).message().contains("removed"));
+        assertTrue(questions.get(2).message().contains("no keys"));
+        assertEquals(
+                "notes.md has changes. Quit and lose them?", questions.get(3).message());
+        assertTrue(questions.get(4).message().startsWith("2 documents have changes: notes.md, README.md."));
+    }
+
+    @Test
+    void theButtonIsTheActionsOwnVerbInEveryLanguage() {
+        for (String language : Messages.available().keySet()) {
+            Messages.init(language);
+            for (Confirmations.Question question : every()) {
+                String action = question.action().toLowerCase(Locale.ROOT);
+                assertFalse(action.isBlank(), language);
+                for (String vague : List.of("ok", "yes", "sí", "sim", "oui", "ja")) {
+                    assertFalse(action.equals(vague), language + ": " + question.action());
+                }
+                assertFalse(question.message().contains("{"), language + ": " + question.message());
+                question.choices().forEach(c -> assertFalse(c.label().startsWith("confirm."), language));
+                assertTrue(
+                        question.message().endsWith(".") || question.message().endsWith("?"), language);
+            }
+        }
+    }
+}

@@ -1,25 +1,25 @@
-# ExampleApp: rules for coding agents
+# Partida: rules for coding agents
 
-ExampleApp is a JavaFX desktop app: JDK 25+, JavaFX 27+, Maven, one JPMS module (`com.example.app`).
-It follows [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.0.1](https://pauta-project.dev/6.0.1/).
+Partida is a JavaFX desktop app: JDK 25+, JavaFX 27+, Maven, one JPMS module (`com.partida`).
+It follows [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), edition [6.1.0](https://pauta-project.dev/6.1.0/).
 This file is operational rules, not a changelog: how the app is built lives in [`docs/`](docs/README.md).
 When documentation and code disagree, **the code wins**, and the documentation is fixed in the same change.
-User-facing feature documentation goes to the separate website repository (`exampleapp-website`), never here.
+User-facing feature documentation goes to the separate website repository (`partida-website`), never here.
 
 ## Pauta
 
-This app is built to Pauta 6.0.1. Its rules: https://pauta-project.dev/6.0.1/llms.txt
-(every rule in one file: https://pauta-project.dev/6.0.1/llms-full.txt).
+This app is built to Pauta 6.1.0. Its rules: https://pauta-project.dev/6.1.0/llms.txt
+(every rule in one file: https://pauta-project.dev/6.1.0/llms-full.txt).
 
 - Before building a feature, read the rules on its page and copy from the code each rule's Reference names.
-- Cite a rule by its ID and edition: "KBD-07 (Pauta 6.0.1)".
+- Cite a rule by its ID and edition: "KBD-07 (Pauta 6.1.0)".
 - Read the numbered edition, never latest/. Moving to a newer edition is its own change: pauta.version in
   pom.xml, this file and the README change together.
 
 The edition's one source is `pauta.version` in `pom.xml`; About, `--version` and the environment block read
 it through `AppInfo`, and the first lines of this file, the README's Pauta badge and its "Built to" line (and
 the template box until `rename.sh` removes it) name the same number (`EditionTest` checks).
-Every rule the app does not meet is an exception in `src/main/resources/com/example/app/pauta.json`:
+Every rule the app does not meet is an exception in `src/main/resources/com/partida/pauta.json`:
 `not-applicable` with a reason, `deviation` (SHOULDs only) with a decision record in `docs/decisions/`,
 `pending` with an issue, or, in the template alone (`"template": true`), `app-only` with a reason: a rule
 only an app made from it can meet, such as its website or its screenshots. `rename.sh` sets `template` to
@@ -56,7 +56,7 @@ Run Maven from the repository root, **on JDK 25** (Palantir Java Format breaks o
 
 ## How to work
 
-- **One task, one branch, one worktree.** `git worktree add ../exampleapp-<topic> -b <type>/<topic>`;
+- **One task, one branch, one worktree.** `git worktree add ../partida-<topic> -b <type>/<topic>`;
   never switch branches under another session's feet, never stash someone else's work.
 - **A whole feature is one pull request**, with its tests and its strings in every catalog. **Docs
   change in the same PR** (`docs/conventions.md#docs-in-the-same-pr`): `CHANGELOG.md`, `TODO.md`, the

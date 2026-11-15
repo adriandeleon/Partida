@@ -12,7 +12,7 @@ them separately.
 
 ## Decision
 
-ExampleApp starts from `adriandeleon/adl-desktop-app-template`, which meets most of Pauta's MUSTs with a
+Partida starts from `adriandeleon/adl-desktop-app-template`, which meets most of Pauta's MUSTs with a
 small, tested implementation of each and records the rest as exceptions in `pauta.json`, and is renamed
 with `scripts/rename.sh`.
 

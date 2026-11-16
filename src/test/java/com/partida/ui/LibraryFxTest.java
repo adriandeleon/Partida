@@ -119,10 +119,10 @@ class LibraryFxTest {
         host.folderAnswer = roms;
         assertTrue(runCommand("library.addFolder"));
         assertEquals(roms.toString(), services.settings().library.folders.getFirst().path);
-        assertEquals(Messages.tr("status.folderAdded", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderAdded", roms.toString()));
         assertTrue(runCommand("library.addFolder"));
         assertEquals(1, services.settings().library.folders.size());
-        assertEquals(Messages.tr("status.folderCannotAddTwice", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderCannotAddTwice", roms.toString()));
         FakeLibrary.waitLoaded(services);
 
         assertTrue(runCommand("library.setFolderCore"));
@@ -151,7 +151,7 @@ class LibraryFxTest {
         assertTrue(runCommand("library.removeFolder"));
         pick("my-games");
         assertTrue(services.settings().library.folders.isEmpty());
-        assertEquals(Messages.tr("status.folderRemoved", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderRemoved", roms.toString()));
     }
 
     @Test
@@ -202,7 +202,7 @@ class LibraryFxTest {
             settings.retroarchFolder().fireEvent(new javafx.event.ActionEvent());
         });
         assertTrue(call(() -> settings.retroarchFolder().getStyleClass().contains("invalid")));
-        assertEquals(Messages.tr("status.retroarchFolderInvalid"), echo());
+        assertEchoed(Messages.tr("status.retroarchFolderInvalid"));
         assertEquals(config.toString(), services.settings().library.retroarchConfigDir);
         run(() -> {
             settings.retroarchCommand().setText("retroarch -v");

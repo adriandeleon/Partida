@@ -79,6 +79,19 @@ class LibraryFxTest {
         return call(() -> window.statusBar().echo().getText());
     }
 
+    /**
+     * That {@code text} was echoed. A settings change also reloads the library in the background, and the
+     * reload's own echo may land after it in the status bar, so the Message Log is read once the load is done.
+     */
+    private void assertEchoed(String text) throws Exception {
+        FakeLibrary.waitLoaded(services);
+        run(() -> {});
+        List<String> logged = call(() -> services.messages().entries().stream()
+                .map(MessageLog.Entry::text)
+                .toList());
+        assertTrue(logged.contains(text), text + " not in " + logged);
+    }
+
     private boolean runCommand(String id) throws Exception {
         return call(() -> services.commands().run(id));
     }
@@ -160,9 +173,9 @@ class LibraryFxTest {
 
         assertTrue(runCommand("library.toggleRecentlyPlayed"));
         assertFalse(services.settings().library.showRecentlyPlayed);
-        assertEquals(Messages.tr("status.recentlyPlayedOff"), echo());
+        assertEchoed(Messages.tr("status.recentlyPlayedOff"));
         assertTrue(runCommand("library.toggleRecentlyPlayed"));
-        assertEquals(Messages.tr("status.recentlyPlayedOn"), echo());
+        assertEchoed(Messages.tr("status.recentlyPlayedOn"));
 
         assertTrue(runCommand("library.refresh"));
         FakeLibrary.waitLoaded(services);

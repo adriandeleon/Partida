@@ -76,11 +76,15 @@ public final class SettingsWindow {
                             "view.toggleStatusBar",
                             "view.toggleSimpleMode",
                             null,
-                            "view.restoreToolbar"),
+                            "view.restoreToolbar",
+                            "toolbar.moveUp",
+                            "toolbar.moveDown",
+                            "toolbar.remove"),
             Page.LIBRARY,
                     java.util.Arrays.asList(
                             "library.addFolder",
                             "library.removeFolder",
+                            "folder.remove",
                             "library.setFolderCore",
                             null,
                             "library.setRetroArchFolder",
@@ -369,7 +373,11 @@ public final class SettingsWindow {
                 "customize customise toolbar buttons order reorder move remove add gap restore default");
         toolbarList.getStyleClass().add("toolbar-layout-list");
         toolbarList.setAccessibleText(Messages.tr("settings.toolbarLayout.title"));
-        toolbarList.setCellFactory(v -> new ToolbarCell());
+        // Each entry's right-click menu is its commands (MENU-05); the Menu key opens it too (MENU-09).
+        CommandMenu toolbarMenu = new CommandMenu(
+                services, java.util.Arrays.asList("toolbar.moveUp", "toolbar.moveDown", null, "toolbar.remove"));
+        toolbarList.setCellFactory(v -> CommandMenu.onRow(new ToolbarCell(), () -> toolbarMenu));
+        RowContextMenu.install(toolbarList);
         UiZoom.bind(toolbarList.prefHeightProperty(), 220);
         toolbarList.getSelectionModel().selectedIndexProperty().addListener((obs, old, at) -> toolbarButtons());
         toolbarList.setOnKeyPressed(e -> {
@@ -381,9 +389,9 @@ public final class SettingsWindow {
                 e.consume();
             }
         });
-        toolbarUp.setOnAction(e -> moveToolbarEntry(-1));
-        toolbarDown.setOnAction(e -> moveToolbarEntry(1));
-        toolbarRemove.setOnAction(e -> removeToolbarEntry());
+        toolbarUp.setOnAction(e -> services.commands().run("toolbar.moveUp"));
+        toolbarDown.setOnAction(e -> services.commands().run("toolbar.moveDown"));
+        toolbarRemove.setOnAction(e -> services.commands().run("toolbar.remove"));
         HBox actions = UiZoom.hbox(6, toolbarUp, toolbarDown, toolbarRemove, toolbarAdd);
         actions.setAlignment(Pos.CENTER_LEFT);
         VBox editor = UiZoom.vbox(8, toolbarList, actions);
@@ -434,14 +442,31 @@ public final class SettingsWindow {
         if (last >= 0) toolbarList.getSelectionModel().select(found >= 0 ? found : Math.max(0, Math.min(at, last)));
     }
 
-    private void moveToolbarEntry(int delta) {
+    /** The selected toolbar entry's place in the layout, or -1. */
+    int selectedToolbarEntry() {
+        return toolbarList.getSelectionModel().getSelectedIndex();
+    }
+
+    /** How many entries the toolbar layout has, its gaps included. */
+    int toolbarEntries() {
+        return toolbarList.getItems().size();
+    }
+
+    /** Whether the selected toolbar entry can be removed: a gap can, a button unless it is the last. */
+    boolean canRemoveToolbarEntry() {
+        return ToolbarLayout.canRemove(toolbarLayout(), selectedToolbarEntry());
+    }
+
+    /** Moves the selected toolbar entry up ({@code -1}) or down ({@code 1}): {@code toolbar.moveUp} and Down. */
+    void moveToolbarEntry(int delta) {
         int at = toolbarList.getSelectionModel().getSelectedIndex();
         if (at < 0) return;
         List<@Nullable String> layout = toolbarLayout();
         saveToolbarLayout(ToolbarLayout.moved(layout, at, delta), layout.get(at), at + delta);
     }
 
-    private void removeToolbarEntry() {
+    /** Removes the selected toolbar entry: {@code toolbar.remove}. */
+    void removeToolbarEntry() {
         int at = toolbarList.getSelectionModel().getSelectedIndex();
         if (!ToolbarLayout.canRemove(toolbarLayout(), at)) return;
         saveToolbarLayout(ToolbarLayout.removed(toolbarLayout(), at), null, at);
@@ -563,7 +588,9 @@ public final class SettingsWindow {
             line.setWrapText(true);
         }
         folderList.setPlaceholder(noFolders);
-        folderList.setCellFactory(v -> new FolderCell());
+        CommandMenu folderMenu = new CommandMenu(services, java.util.Arrays.asList("folder.remove"));
+        folderList.setCellFactory(v -> CommandMenu.onRow(new FolderCell(), () -> folderMenu)); // MENU-05
+        RowContextMenu.install(folderList);
         folderFilter.setPredicate(f -> true);
         folderList.setItems(folderFilter);
         folderList
@@ -713,7 +740,9 @@ public final class SettingsWindow {
             });
             remove.setOnAction(e -> {
                 Settings.Library.Folder folder = getItem();
-                if (folder != null) MainWindow.removeFolder(services, stage, folder.path);
+                if (folder == null) return;
+                folderList.getSelectionModel().select(folder);
+                services.commands().run("folder.remove");
             });
             row = UiZoom.hbox(8, path, core, remove);
             row.setAlignment(Pos.CENTER_LEFT);
@@ -1316,6 +1345,17 @@ public final class SettingsWindow {
 
     ListView<Settings.Library.Folder> folderList() {
         return folderList;
+    }
+
+    /** The games folder selected in Settings → Library, or null. */
+    Settings.Library.@Nullable Folder selectedFolder() {
+        return folderList.getSelectionModel().getSelectedItem();
+    }
+
+    /** Removes the selected games folder after asking: {@code folder.remove}. */
+    void removeSelectedFolder() {
+        Settings.Library.Folder folder = selectedFolder();
+        if (folder != null) MainWindow.removeFolder(services, stage, folder.path);
     }
 
     Stage stage() {

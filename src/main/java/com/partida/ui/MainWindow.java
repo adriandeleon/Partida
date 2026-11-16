@@ -522,6 +522,20 @@ public final class MainWindow {
         return true;
     }
 
+    /**
+     * Restore Default Toolbar, after asking (CONF-01): the toolbar the user arranged goes, the app's own comes
+     * back. The question is over the window it was asked from, Settings or this one.
+     */
+    void restoreToolbar() {
+        Window owner = stage;
+        for (Window w : Window.getWindows()) {
+            if (w.isFocused()) owner = w;
+        }
+        if (!services.host().confirm(owner, Confirmations.restoreToolbar())) return;
+        services.store().update(s -> s.toolbarLayout = new java.util.ArrayList<>());
+        services.echo("status.toolbarRestored");
+    }
+
     /** Remove Games Folder: pick one of Settings → Library's folders; its games leave the library. */
     void removeLibraryFolder() {
         List<Picker.Item<String>> items = services.settings().library.folders.stream()

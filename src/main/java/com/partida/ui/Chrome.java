@@ -149,6 +149,27 @@ final class Chrome {
         return checking ? Messages.tr("palette.disabled.checking") : null;
     }
 
+    /**
+     * Why Move Up or Move Down can't move the selected toolbar entry in Settings → General: none is selected,
+     * or it is at that end of the layout.
+     */
+    static @Nullable String toolbarMoveUnavailable(int at, int size, int delta) {
+        if (at < 0 || at >= size) return Messages.tr("palette.disabled.noToolbarEntry");
+        int to = at + delta;
+        return to < 0 || to >= size ? Messages.tr("palette.disabled.toolbarEntryEnd") : null;
+    }
+
+    /** Why Remove can't take the selected toolbar entry away: none is selected, or it is the last button. */
+    static @Nullable String toolbarRemoveUnavailable(boolean selected, boolean removable) {
+        if (!selected) return Messages.tr("palette.disabled.noToolbarEntry");
+        return removable ? null : Messages.tr("palette.disabled.toolbarLastButton");
+    }
+
+    /** Why a games folder's row command can't run: no folder is selected in Settings → Library. */
+    static @Nullable String folderRowUnavailable(boolean selected) {
+        return selected ? null : Messages.tr("palette.disabled.noFolderSelected");
+    }
+
     /** Why a key-binding row's command cannot run: no row is selected in Settings → Keymap. */
     static @Nullable String bindingRowUnavailable(boolean selected) {
         return selected ? null : Messages.tr("palette.disabled.noBindingSelected");

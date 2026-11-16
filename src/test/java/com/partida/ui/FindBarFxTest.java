@@ -261,6 +261,24 @@ class FindBarFxTest {
             press(filter, KeyCode.ESCAPE, false, false, false, false);
         });
         assertEquals(List.of(), call(view::chipTerms), "Escape empties the chips too");
+
+        // FIND-16: a chip before the last is taken away from its own button, which Tab reaches.
+        run(() -> {
+            filter.requestFocus();
+            filter.setText("ext:bin");
+            filter.positionCaret(7);
+            press(filter, KeyCode.SPACE, false, false, false, false);
+            filter.setText("ext:zip");
+            filter.positionCaret(7);
+            press(filter, KeyCode.SPACE, false, false, false, false);
+        });
+        assertEquals(2, call(view::chipTerms).size());
+        javafx.scene.control.Button first = call(() -> (javafx.scene.control.Button)
+                view.node().lookupAll(".filter-chip").iterator().next());
+        assertTrue(call(first::isFocusTraversable), "in the Tab order");
+        run(first::fire);
+        assertEquals(List.of(new GameFilter.Term("ext", "zip")), call(view::chipTerms));
+        run(() -> press(filter, KeyCode.ESCAPE, false, false, false, false));
         assertEquals("", call(filter::getText));
 
         boolean shown = app.services().settings().showStatusBar;

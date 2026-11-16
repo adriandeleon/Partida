@@ -1,7 +1,7 @@
 {
   "$schema": "https://pauta-project.dev/6.1.0/audit.schema.json",
   "app": "Partida",
-  "commit": "5a572e4",
+  "commit": "24f3e75",
   "edition": "6.1.0",
   "date": "2026-11-16",
   "scope": [],
@@ -53,7 +53,7 @@
       "id": "PAUTA-04",
       "level": "MUST",
       "status": "fail",
-      "evidence": "Unmet with no exception in pauta.json: PERF-10, ICON-05, MENU-05, MENU-12, CONF-01, FIND-16. No result reports an entry for a rule that passes. Judged last from every other result of the edition."
+      "evidence": "Unmet with no exception in pauta.json: PERF-10, ICON-05. No result reports an entry for a rule that passes. Judged last from every other result of the edition."
     },
     {
       "id": "PAUTA-05",
@@ -517,7 +517,7 @@
       "id": "PERF-10",
       "level": "SHOULD",
       "status": "fail",
-      "evidence": "The palette re-sets each visible title run's style class on every keystroke (src/main/java/com/partida/ui/Picker.java:453) where a pseudo-class would keep classes stable (as OverlayToggles.OPEN does). The grid's selected tile is now a pseudo-class (src/main/java/com/partida/ui/SystemView.java:663). applyCss only on one row's list, on a keyboard menu request (src/main/java/com/partida/ui/RowContextMenu.java:40,73)."
+      "evidence": "The palette re-sets each visible title run's style class on every keystroke (src/main/java/com/partida/ui/Picker.java:453) where a pseudo-class would keep classes stable (as OverlayToggles.OPEN does). The grid's selection is a pseudo-class set on the tiles in sight, with no refresh (src/main/java/com/partida/ui/SystemView.java:174,691-697). applyCss only on one row's list, on a keyboard menu request (src/main/java/com/partida/ui/RowContextMenu.java:40,73)."
     },
     {
       "id": "PERF-11",
@@ -1230,8 +1230,8 @@
     {
       "id": "MENU-05",
       "level": "MUST",
-      "status": "fail",
-      "evidence": "Two Settings lists with row actions have no right-click menu: Settings > General's toolbar layout list (src/main/java/com/partida/ui/SettingsWindow.java:370-388, ToolbarCell :468) and Settings > Library's folder list (src/main/java/com/partida/ui/SettingsWindow.java:558-568, FolderCell :690-750, Remove and core inline). The game grid's tiles now open the game menu on right-click and the Menu key (src/main/java/com/partida/ui/SystemView.java:145-154,651-656; src/test/java/com/partida/ui/RightClickMenusFxTest.java:243-262); game rows, ROM rows, Systems rows, the console, Debug Log, Message Log and key bindings have command menus."
+      "status": "pass",
+      "evidence": "Every list with row actions has a right-click menu of commands: game rows and grid tiles (game.play, find.show: src/main/java/com/partida/ui/SystemView.java:120,145-154), ROM rows (library.playRom, src/main/java/com/partida/ui/GameDetails.java), Systems rows (systems.open, src/main/java/com/partida/ui/LibraryPanels.java), Settings → General's toolbar entries (toolbar.moveUp, toolbar.moveDown, toolbar.remove: src/main/java/com/partida/ui/SettingsWindow.java:377-380; commands src/main/java/com/partida/ui/Commands.java:113-121), Settings → Library's folders (folder.remove: SettingsWindow.java:591-593, Commands.java:122), key bindings, the console, the Debug Log and the Message Log; src/test/java/com/partida/ui/ToolbarAndModesFxTest.java:96, src/test/java/com/partida/ui/RightClickMenusFxTest.java:243-262."
     },
     {
       "id": "MENU-06",
@@ -1272,8 +1272,8 @@
     {
       "id": "MENU-12",
       "level": "SHOULD",
-      "status": "fail",
-      "evidence": "view.restoreToolbar (Restore Default Toolbar, which discards the user's toolbar layout: src/main/java/com/partida/ui/Commands.java:74-78) is a row of the toolbar's and Settings > General's right-click menus (src/main/java/com/partida/ui/AppToolbar.java:131-132; src/main/java/com/partida/ui/SettingsWindow.java:70-78) but is not in AppMenus.DESTRUCTIVE, so it is not styled danger (src/main/java/com/partida/ui/AppMenus.java:264-270). The listed rows (messageLog.clear, debugLog.clear, retroarch.clear, keymap.resetBinding, config.import, library.removeFolder) get danger (src/main/java/com/partida/ui/AppMenus.java:254,307), red via -state-red = -color-danger-fg (src/main/resources/com/partida/styles/app.css:20,379-382)."
+      "status": "pass",
+      "evidence": "The rows that delete, discard or reset are in AppMenus.DESTRUCTIVE, Restore Default Toolbar and a folder's Remove included (src/main/java/com/partida/ui/AppMenus.java:262-272), styled danger in every menu, red via -state-red = -color-danger-fg (src/main/resources/com/partida/styles/app.css)."
     },
     {
       "id": "MENU-13",
@@ -1962,8 +1962,8 @@
     {
       "id": "ABOUT-07",
       "level": "MUST",
-      "status": "fail",
-      "evidence": "About says Built to Pauta 6.1.0 (src/main/java/com/partida/ui/AboutDialog.java:61,100-103: conformance from pauta.json, which lists none of these) while MUSTs fail: MENU-05, CONF-01, FIND-16. Judged last, against 6.1.0's own rules."
+      "status": "pass",
+      "evidence": "About says Built to Pauta 6.1.0 (src/main/java/com/partida/ui/AboutDialog.java:61,100-103); audited against 6.1.0's own rules, no MUST is fail or pending. Judged last."
     },
     {
       "id": "ABOUT-08",
@@ -2028,8 +2028,8 @@
     {
       "id": "CONF-01",
       "level": "MUST",
-      "status": "fail",
-      "evidence": "Unmet in part: view.restoreToolbar (Settings > General's Restore Default, src/main/java/com/partida/ui/SettingsWindow.java:363, and the palette) empties the user's own toolbar layout with no question and no undo (src/main/java/com/partida/ui/Commands.java:74-78). Met elsewhere: removing a games folder asks Confirmations.removeFolder first (src/main/java/com/partida/ui/MainWindow.java:518-519, from src/main/java/com/partida/ui/SettingsWindow.java:716 and the picker MainWindow.java:530); import asks (MainWindow.java:1014); key-binding reset asks (SettingsWindow.java:954)."
+      "status": "pass",
+      "evidence": "Every destructive action asks first: Restore Default Toolbar asks Confirmations.restoreToolbar before the user's layout goes (src/main/java/com/partida/ui/MainWindow.java:529-537, Confirmations.java:90; src/test/java/com/partida/ui/ToolbarAndModesFxTest.java:184-193), removing a games folder asks Confirmations.removeFolder (MainWindow.java:518-519, from the picker, the folder row's Remove and folder.remove), import asks (MainWindow.java), and a key-binding reset asks (SettingsWindow.java)."
     },
     {
       "id": "CONF-02",
@@ -2202,8 +2202,8 @@
     {
       "id": "FIND-16",
       "level": "MUST",
-      "status": "fail",
-      "evidence": "Previous, Next and Close leave the Tab order in both find bars (src/main/java/com/partida/ui/FindBar.java:101-104), matched by Shift+Enter, Enter and Escape in the field (:110-121), and the game filter leaves it with find.show/library.filter focusing it (src/main/java/com/partida/ui/SystemView.java:147). But each filter chip's remove button is set not focus-traversable (SystemView.java:243-251) and no command or key removes that chip: Backspace at the field's start removes only the last chip (src/main/java/com/partida/ui/GameFilter.java:75, SystemView.java:207-211) and Escape clears them all (:259-264), so a chip before the last cannot be removed alone from the keyboard. Fix: keep the chip buttons in the Tab order, or give the field a key that removes any chip."
+      "status": "pass",
+      "evidence": "The filter box's controls out of the Tab order are the field itself (its command library.filter focuses it, FIND-15) and the key badge, which does nothing; each chip's remove button stays in the Tab order (src/main/java/com/partida/ui/SystemView.java:259), so any chip, not only the last that Backspace takes back, is removed from the keyboard (src/test/java/com/partida/ui/FindBarFxTest.java:265-281). The find bars' Next, Previous and Close leave it with Enter, Shift+Enter and Escape in their fields."
     },
     {
       "id": "MLOG-08",

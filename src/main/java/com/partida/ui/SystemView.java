@@ -171,7 +171,7 @@ final class SystemView {
         details = new GameDetails(hooks.play(), hooks.playRom(), hooks.romMenu(), hooks.boxArt(), hooks.retroArch());
         list.getSelectionModel().selectedItemProperty().addListener((obs, was, now) -> {
             showDetails();
-            if (gridMode) grid.refresh();
+            if (gridMode) markSelectedTile(); // no refresh: that rebuilds the cells, and a tile's open menu closes
         });
 
         games = new StackPane(list, grid);
@@ -247,13 +247,16 @@ final class SystemView {
         return true;
     }
 
-    /** Draws the chips: each its term and a button that takes it away, out of the Tab order. */
+    /**
+     * Draws the chips: each its term and a button that takes it away. The buttons stay in the Tab order: the
+     * field's keys take back only the last chip, so a chip before it is removed from its own button (FIND-16).
+     */
     private void showChips() {
         chips.getChildren().clear();
         for (GameFilter.Term term : List.copyOf(chipTerms)) {
             javafx.scene.control.Button chip = new javafx.scene.control.Button(term.text() + " ×");
             chip.getStyleClass().add("filter-chip");
-            chip.setFocusTraversable(false);
+            chip.setFocusTraversable(true);
             chip.setAccessibleText(Messages.tr("systems.filter.removeChip", term.text()));
             chip.setOnAction(e -> {
                 chipTerms.remove(term);
@@ -638,6 +641,7 @@ final class SystemView {
             };
             UiZoom.bind(node.spacingProperty(), 4);
             node.setAccessibleRole(javafx.scene.AccessibleRole.BUTTON);
+            node.setUserData(this);
             node.getStyleClass().add("game-tile");
             node.setAlignment(Pos.TOP_CENTER);
             node.setOnMouseClicked(e -> {
@@ -682,6 +686,14 @@ final class SystemView {
     }
 
     private static final javafx.css.PseudoClass SELECTED = javafx.css.PseudoClass.getPseudoClass("selected");
+
+    /** Marks the selected game's tile among those in sight, and unmarks the rest. */
+    private void markSelectedTile() {
+        GameTitle selected = selectedTitle();
+        for (Node n : grid.lookupAll(".game-tile")) {
+            if (n.getUserData() instanceof Tile tile) n.pseudoClassStateChanged(SELECTED, tile.title == selected);
+        }
+    }
 
     /** The selected game's tile, when its row is in sight. */
     private @Nullable Node selectedTile() {

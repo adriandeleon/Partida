@@ -211,6 +211,11 @@ public final class Icons {
     /** Close: an X. */
     public static final String CLOSE = "M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6";
 
+    /** Move Up and Move Down: an arrow each way. */
+    public static final String MOVE_UP = "M8 13V3M4 7l4-4 4 4";
+
+    public static final String MOVE_DOWN = "M8 3v10M4 9l4 4 4-4";
+
     /** Next and Previous: a chevron each way. */
     public static final String NEXT = "M6 3.5l4.5 4.5L6 12.5";
 
@@ -344,6 +349,10 @@ public final class Icons {
             Map.entry("keymap.changeBinding", BIND_KEY),
             Map.entry("settings.bindKey", BIND_KEY),
             Map.entry("keymap.resetBinding", RESET),
+            Map.entry("toolbar.moveUp", MOVE_UP),
+            Map.entry("toolbar.moveDown", MOVE_DOWN),
+            Map.entry("toolbar.remove", CLOSE),
+            Map.entry("folder.remove", CLOSE),
             Map.entry("settings.language", GLOBE),
             Map.entry("settings.toggleUpdateCheck", BELL),
             Map.entry("sync.setBranch", BRANCH),

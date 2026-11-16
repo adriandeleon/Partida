@@ -23,6 +23,8 @@ one-line summary written for users.
   ROMs (or Toggle Hidden ROMs) brings them back. The Systems window counts games, not files.
 - **A box-art grid.** Toggle Grid View (View menu) shows a system's games as covers; each system remembers
   its view. Arrow keys, Home and End move through the tiles, Enter plays.
+- **Remove any filter chip from the keyboard.** Tab reaches each `key:value` chip in a system's filter box,
+  and Space removes it; Backspace at the start of the field still takes back the last one (Pauta FIND-16).
 - **Type to jump.** Typing a game's first letters in the list or the grid selects the first game that starts
   with them ("The" is ignored, so The Legend of Zelda is under L).
 - **Preferred regions.** Settings → Library → Preferred regions (or Set Preferred Regions… in the palette)
@@ -31,7 +33,10 @@ one-line summary written for users.
   order comes from your country.
 - **Arrange the toolbar your way.** Settings → General → Toolbar Buttons lists the toolbar's buttons: move
   them, remove them, add others (the Systems and RetroArch windows, Filter Games, the documentation) and gaps between groups, or Restore Default. Customize Toolbar… and Restore Default Toolbar
-  are on the toolbar's right-click menu and in the palette (Pauta TBAR-09).
+  are on the toolbar's right-click menu and in the palette (Pauta TBAR-09). Restore Default asks before it
+  throws your arrangement away (CONF-01). Each entry of the list, and each games folder in Settings → Library,
+  has a right-click menu: Move Up, Move Down and Remove, or Remove for a folder, each a palette command too
+  (MENU-05).
 - **Zen and Expert modes.** Toggle Zen Mode (`Ctrl+Shift+F11`, `Cmd+Shift+F11` on macOS, `C-c z` in Emacs)
   hides every bar so only your games show; Toggle Expert Mode (`Ctrl+Shift+F12`, `Cmd+Shift+F12`, `C-c e`)
   keeps just the status bar. The same command brings everything back, and both are in the View menu (Pauta

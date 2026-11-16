@@ -267,7 +267,9 @@ final class AppMenus {
             "retroarch.clear",
             "keymap.resetBinding",
             "config.import",
-            "library.removeFolder");
+            "library.removeFolder",
+            "view.restoreToolbar",
+            "folder.remove");
 
     /**
      * An in-window row (MENU-02): the command's glyph (or an empty slot, so titles line up), the title, a

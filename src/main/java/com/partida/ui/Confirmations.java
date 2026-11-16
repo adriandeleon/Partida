@@ -83,6 +83,17 @@ public final class Confirmations {
                 Messages.tr("confirm.removeFolder.action"));
     }
 
+    /**
+     * Before Restore Default Toolbar throws away the toolbar the user arranged (CONF-01): its buttons, their
+     * order and its gaps go, and the app's own come back.
+     */
+    public static Question restoreToolbar() {
+        return new Question(
+                Messages.tr("confirm.restoreToolbar.title"),
+                Messages.tr("confirm.restoreToolbar.question"),
+                Messages.tr("confirm.restoreToolbar.action"));
+    }
+
     /** Before a binding the user set is removed and the keymap's own applies again. */
     public static Question resetBinding(String commandTitle, String userChord, String keymapChord) {
         return new Question(

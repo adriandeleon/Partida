@@ -72,10 +72,7 @@ final class Commands {
         r.register("view.customizeToolbar", window::customizeToolbar);
         r.register(
                 "view.restoreToolbar",
-                () -> {
-                    services.store().update(s -> s.toolbarLayout = new java.util.ArrayList<>());
-                    services.echo("status.toolbarRestored");
-                },
+                window::restoreToolbar,
                 () -> services.settings().toolbarLayout.isEmpty()
                         ? com.partida.i18n.Messages.tr("palette.disabled.toolbarDefault")
                         : null);
@@ -112,6 +109,20 @@ final class Commands {
                 "keymap.resetBinding",
                 window::resetSelectedBinding,
                 () -> Chrome.bindingRowUnavailable(window.selectedBinding() != null));
+        // The rows of Settings → General's toolbar layout and Settings → Library's folders (MENU-05).
+        r.register(
+                "toolbar.moveUp", () -> onSettings(window, w -> w.moveToolbarEntry(-1)), () -> toolbarMove(window, -1));
+        r.register(
+                "toolbar.moveDown", () -> onSettings(window, w -> w.moveToolbarEntry(1)), () -> toolbarMove(window, 1));
+        r.register("toolbar.remove", () -> onSettings(window, SettingsWindow::removeToolbarEntry), () -> {
+            SettingsWindow w = openSettings(window);
+            return Chrome.toolbarRemoveUnavailable(
+                    w != null && w.selectedToolbarEntry() >= 0, w != null && w.canRemoveToolbarEntry());
+        });
+        r.register("folder.remove", () -> onSettings(window, SettingsWindow::removeSelectedFolder), () -> {
+            SettingsWindow w = openSettings(window);
+            return Chrome.folderRowUnavailable(w != null && w.selectedFolder() != null);
+        });
         r.register("settings.toggleUpdateCheck", () -> {
             services.store().update(s -> s.checkForUpdates = !s.checkForUpdates);
             services.echo(services.settings().checkForUpdates ? "status.updateCheckOn" : "status.updateCheckOff");
@@ -440,6 +451,23 @@ final class Commands {
 
     private static void stepFind(@org.jspecify.annotations.Nullable FindBar bar, boolean forward) {
         if (bar != null && bar.isOpen()) bar.step(forward);
+    }
+
+    /** The Settings window while it shows, or null: what its rows' commands act on. */
+    private static @org.jspecify.annotations.Nullable SettingsWindow openSettings(MainWindow window) {
+        SettingsWindow w = window.settingsWindow();
+        return w != null && w.stage().isShowing() ? w : null;
+    }
+
+    private static void onSettings(MainWindow window, java.util.function.Consumer<SettingsWindow> action) {
+        SettingsWindow w = openSettings(window);
+        if (w != null) action.accept(w);
+    }
+
+    private static @org.jspecify.annotations.Nullable String toolbarMove(MainWindow window, int delta) {
+        SettingsWindow w = openSettings(window);
+        return Chrome.toolbarMoveUnavailable(
+                w == null ? -1 : w.selectedToolbarEntry(), w == null ? 0 : w.toolbarEntries(), delta);
     }
 
     private static ToolWindow toolWindow(MainWindow window, String id) {

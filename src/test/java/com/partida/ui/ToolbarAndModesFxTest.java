@@ -88,6 +88,60 @@ class ToolbarAndModesFxTest {
         target.fireEvent(new KeyEvent(KeyEvent.KEY_PRESSED, "", "", code, false, false, alt, false));
     }
 
+    /**
+     * MENU-05: the toolbar list's rows and Settings → Library's folder rows have right-click menus of commands,
+     * each saying why it can't run until a row is selected.
+     */
+    @Test
+    void theSettingsListsRowsHaveCommandMenus() throws Exception {
+        assertNotNull(services.commands().get("toolbar.moveUp").unavailableReason(), "Settings closed");
+        assertNotNull(services.commands().get("folder.remove").unavailableReason());
+        SettingsWindow settings = customize();
+        var list = settings.toolbarList();
+        assertNotNull(services.commands().get("toolbar.moveUp").unavailableReason(), "at the top");
+        // Down twice: over the gap after it, then past Play, the selection following (as Alt+Down does).
+        assertTrue(call(() -> services.commands().run("toolbar.moveDown")));
+        assertTrue(call(() -> services.commands().run("toolbar.moveDown")));
+        assertEquals("palette.show", barIds().get(1));
+        assertEquals(1, call(() -> list.getSelectionModel().getSelectedIndex()), "the selection follows it");
+        assertTrue(call(() -> services.commands().run("toolbar.moveUp")));
+        assertEquals("palette.show", barIds().getFirst());
+        assertTrue(call(() -> services.commands().run("toolbar.remove")));
+        assertFalse(barIds().contains("palette.show"));
+
+        run(() -> {
+            list.getScene().getRoot().applyCss();
+            list.getScene().getRoot().layout();
+            Node cell = list.lookup(".list-cell");
+            cell.fireEvent(new javafx.scene.input.ContextMenuEvent(
+                    javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, false, null));
+        });
+        List<String> rows = call(() -> javafx.stage.Window.getWindows().stream()
+                .filter(w -> w instanceof javafx.scene.control.ContextMenu m && m.isShowing())
+                .flatMap(w -> ((javafx.scene.control.ContextMenu) w).getItems().stream())
+                .map(MenuItem::getId)
+                .filter(Objects::nonNull)
+                .toList());
+        assertEquals(List.of("toolbar.moveUp", "toolbar.moveDown", "toolbar.remove"), rows);
+        run(() -> javafx.stage.Window.getWindows().stream()
+                .filter(w -> w instanceof javafx.scene.control.ContextMenu)
+                .toList()
+                .forEach(javafx.stage.Window::hide));
+
+        // A games folder: Remove asks first, and a no keeps it.
+        run(() -> services.store()
+                .update(s -> s.library.folders.add(new com.partida.config.Settings.Library.Folder(
+                        dir.resolve("roms").toString(), ""))));
+        run(() -> settings.folderList().getSelectionModel().select(0));
+        assertNull(services.commands().get("folder.remove").unavailableReason());
+        host.confirmAnswer = false;
+        assertTrue(call(() -> services.commands().run("folder.remove")));
+        assertEquals(1, services.settings().library.folders.size(), "a no keeps the folder");
+        host.confirmAnswer = true;
+        assertTrue(call(() -> services.commands().run("folder.remove")));
+        assertTrue(services.settings().library.folders.isEmpty());
+    }
+
     /** TBAR-09: a reorder and a removal in Settings reach the bar and the settings file, and Restore undoes them. */
     @Test
     void theUserReordersRemovesAndRestoresTheButtons() throws Exception {
@@ -127,7 +181,17 @@ class ToolbarAndModesFxTest {
         assertEquals("tool.systems", barIds().getLast());
         assertNotNull(toolbar.button("tool.systems"));
 
-        // Restore Default brings the app's own layout back, and saves nothing of the user's.
+        // Restore Default asks first (CONF-01): a no keeps the user's layout.
+        int asked = host.questions.size();
+        host.confirmAnswer = false;
+        List<String> mine = List.copyOf(services.settings().toolbarLayout);
+        assertTrue(call(() -> services.commands().run("view.restoreToolbar")));
+        assertEquals(asked + 1, host.questions.size());
+        assertEquals(
+                Confirmations.restoreToolbar().title(), host.questions.getLast().title());
+        assertEquals(mine, services.settings().toolbarLayout, "a no keeps the layout");
+        // A yes brings the app's own layout back, and saves nothing of the user's.
+        host.confirmAnswer = true;
         assertTrue(call(() -> services.commands().run("view.restoreToolbar")));
         assertEquals(AppToolbar.CLUSTER, barIds());
         assertTrue(services.settings().toolbarLayout.isEmpty());

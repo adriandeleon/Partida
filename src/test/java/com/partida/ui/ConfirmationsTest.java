@@ -24,7 +24,8 @@ class ConfirmationsTest {
                 Confirmations.importConfig(
                         "partida-config.zip", java.util.List.of(com.partida.config.ConfigImport.Part.values())),
                 Confirmations.resetBinding("About", "Ctrl+Alt+J", "F12"),
-                Confirmations.resetBinding("About", "Ctrl+Alt+J", ""));
+                Confirmations.resetBinding("About", "Ctrl+Alt+J", ""),
+                Confirmations.restoreToolbar());
     }
 
     @Test

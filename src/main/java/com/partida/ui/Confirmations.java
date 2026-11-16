@@ -73,18 +73,6 @@ public final class Confirmations {
     }
 
     /**
-     * Before Quit discards the typing of this session (WIN-13, CONF-01): the samples have no file to save to,
-     * so the question has the one action, Quit without saving, beside Cancel. {@code names} are the documents
-     * with changes, open or closed this session.
-     */
-    public static Question quitUnsaved(List<String> names) {
-        return new Question(
-                Messages.tr("confirm.quitUnsaved.title"),
-                Messages.tr("confirm.quitUnsaved.question", names.size(), String.join(", ", names)),
-                Messages.tr("confirm.quitUnsaved.action"));
-    }
-
-    /**
      * Before a games folder leaves the library (CONF-01): the user added it and picked its core. Its files stay
      * on disk; only the entry, and the core it was given, go.
      */
@@ -93,6 +81,17 @@ public final class Confirmations {
                 Messages.tr("confirm.removeFolder.title"),
                 Messages.tr("confirm.removeFolder.question", path),
                 Messages.tr("confirm.removeFolder.action"));
+    }
+
+    /**
+     * Before Restore Default Toolbar throws away the toolbar the user arranged (CONF-01): its buttons, their
+     * order and its gaps go, and the app's own come back.
+     */
+    public static Question restoreToolbar() {
+        return new Question(
+                Messages.tr("confirm.restoreToolbar.title"),
+                Messages.tr("confirm.restoreToolbar.question"),
+                Messages.tr("confirm.restoreToolbar.action"));
     }
 
     /** Before a binding the user set is removed and the keymap's own applies again. */

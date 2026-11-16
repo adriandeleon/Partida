@@ -4,9 +4,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-import javafx.scene.control.Tab;
-
 import com.partida.config.ConfigStore;
+import com.partida.i18n.Messages;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -16,11 +15,12 @@ import static com.partida.ui.FxTestSupport.call;
 import static com.partida.ui.FxTestSupport.run;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The session apart from the settings (SET-08), the systems that come back (WIN-08), the Welcome page's
- * place, menu and refresh (WELC-03, WELC-05, WELC-11) and the game lists' own text zoom (WIN-09).
+ * The session apart from the settings (SET-08), the system that comes back (WIN-08), the browser's empty
+ * state and its refresh (WELC-02, WELC-05) and the game lists' own text zoom (WIN-09).
  */
 @Tag("fx")
 class SessionAndWelcomeFxTest {
@@ -41,29 +41,29 @@ class SessionAndWelcomeFxTest {
     private static final String N = FakeLibrary.SYSTEMS.get(1);
     private static final String L = FakeLibrary.SYSTEMS.get(7);
 
-    private static List<String> titles(MainWindow window) throws Exception {
-        return call(() ->
-                window.tabs().tabs().stream().map(t -> window.tabs().title(t)).toList());
+    /** The system the window shows, or null on the browser's empty state. */
+    private static String shown(MainWindow window) throws Exception {
+        return call(() -> window.browser().activePath());
     }
 
-    /** SET-08, WIN-08, WELC-03: what was open comes back, from a file of its own; --no-session starts afresh. */
+    /** SET-08, WIN-08: the system shown comes back, from a file of its own; --no-session starts afresh. */
     @Test
-    void theOpenDocumentsComeBackFromTheSessionFile() throws Exception {
+    void theSystemShownComesBackFromTheSessionFile() throws Exception {
         Startup.Running first = FxTestSupport.start(dir, host);
         try {
-            // No session yet: the Welcome page, selected (WELC-03).
-            assertEquals(
-                    "Welcome",
-                    call(() -> first.window().tabs().title(first.window().tabs().selected())));
-            assertEquals(List.of("Welcome"), titles(first.window()), "a first run opens nothing of its own");
+            // No session yet: the browser's empty state (WELC-02).
+            assertNull(shown(first.window()), "a first run shows no system of its own");
+            assertTrue(call(() -> first.window()
+                    .browser()
+                    .node()
+                    .getChildren()
+                    .contains(first.window().browser().empty())));
             FakeLibrary.load(first.services(), dir.resolve("library"));
             for (String name : List.of(R, N, L)) {
                 var system = FakeLibrary.collection(first.services(), name);
-                run(() -> first.window().tabs().open(system));
+                run(() -> first.window().browser().open(system));
             }
-            run(() -> first.window().tabs().closeTab(first.window().tabs().welcome()));
-            Tab notes = call(() -> first.window().tabs().tabFor(N));
-            run(() -> first.window().tabs().tabPane().getSelectionModel().select(notes));
+            run(() -> first.window().browser().show(N));
             run(() -> first.window().saveWindowState());
         } finally {
             FxTestSupport.stop(first);
@@ -76,22 +76,14 @@ class SessionAndWelcomeFxTest {
 
         Startup.Running second = FxTestSupport.start(dir, host);
         try {
-            assertEquals(List.of(R, N, L), titles(second.window()), "no Welcome page");
-            assertEquals(
-                    N,
-                    call(() ->
-                            second.window().tabs().title(second.window().tabs().selected())));
+            assertEquals(N, shown(second.window()));
         } finally {
             FxTestSupport.stop(second);
         }
 
         Startup.Running third = FxTestSupport.start(dir, host, "--no-session");
         try {
-            assertEquals(
-                    "Welcome",
-                    call(() -> third.window().tabs().title(third.window().tabs().selected())));
-            assertEquals(List.of("Welcome"), titles(third.window()), "--no-session opens nothing of its own (CLI-04)");
-            run(() -> third.window().tabs().closeAllTabs());
+            assertNull(shown(third.window()), "--no-session shows nothing of its own (CLI-04)");
             run(() -> third.window().saveWindowState());
         } finally {
             FxTestSupport.stop(third);
@@ -101,33 +93,36 @@ class SessionAndWelcomeFxTest {
                 "a --no-session run leaves the last session alone");
     }
 
-    /** WELC-03, WELC-05, WELC-11: Help → Welcome Page; a Close-only menu; rebuilt on every show. */
+    /** WELC-02, WELC-05: the empty state lists the ways in with their chords, and is rebuilt on every show. */
     @Test
-    void theWelcomePageIsInHelpClosesAloneAndIsRebuiltWhenShown() throws Exception {
+    void theEmptyStateListsTheWaysInAndIsRebuiltWhenShown() throws Exception {
         Startup.Running app = FxTestSupport.start(dir, host);
         try {
             MainWindow window = app.window();
-            assertTrue(call(() -> window.menus().groups().stream()
-                    .flatMap(List::stream)
-                    .anyMatch(r -> r.commandId().equals("view.welcome"))));
-            assertTrue(
-                    call(() -> window.menuBar().getMenus().getLast().getItems().stream()
-                            .anyMatch(i -> "view.welcome".equals(i.getId()))),
-                    "in the Help menu");
-            CommandMenu menu = call(() -> window.tabs().welcomeMenu());
-            run(menu::menu);
-            assertEquals(
-                    List.of("buffer.close"),
-                    call(() -> menu.items().stream()
-                            .map(javafx.scene.control.MenuItem::getId)
-                            .toList()));
-            assertFalse(call(() -> window.tabs().isPinned(window.tabs().welcome())), "not a pinned document");
+            String waysIn = call(() -> window.waysIn().getText());
+            String systems = app.services().keybindings().label("tool.systems");
+            assertFalse(systems.isEmpty());
+            assertTrue(waysIn.contains(Messages.tr("command.tool.systems") + "   " + systems), waysIn);
+            String addFolder = app.services().keybindings().label("library.addFolder");
+            assertFalse(addFolder.isEmpty(), "every way in has its chord");
+            assertTrue(waysIn.contains(Messages.tr("command.library.addFolder") + "   " + addFolder), waysIn);
+
             int before = call(window::welcomeRefreshes);
             FakeLibrary.load(app.services(), dir.resolve("library"));
             var system = FakeLibrary.collection(app.services(), 0);
-            run(() -> window.tabs().open(system)); // away from Welcome, to a system
-            assertTrue(call(() -> app.services().commands().run("view.welcome")));
+            run(() -> window.browser().open(system)); // away from the empty state, to a system
+            assertFalse(call(() -> window.browser()
+                    .node()
+                    .getChildren()
+                    .contains(window.browser().empty())));
+            run(() -> window.browser().showEmpty());
             assertTrue(call(window::welcomeRefreshes) > before, "rebuilt when shown");
+            assertNull(shown(window));
+
+            // A keymap change rewrites the chords.
+            run(() -> app.services().store().update(s -> s.keymap = "emacs"));
+            String emacs = app.services().keybindings().label("tool.systems");
+            assertTrue(call(() -> window.waysIn().getText()).contains(emacs));
         } finally {
             FxTestSupport.stop(app);
         }
@@ -141,13 +136,14 @@ class SessionAndWelcomeFxTest {
             MainWindow window = app.window();
             FakeLibrary.load(app.services(), dir.resolve("library"));
             var system = FakeLibrary.collection(app.services(), 0);
-            run(() -> window.tabs().open(system));
+            run(() -> window.browser().open(system));
             assertTrue(call(() -> app.services().commands().run("view.zoomIn")));
             assertEquals(110, app.services().settings().textZoom);
-            assertTrue(call(() -> window.tabs().activeView().list().getStyle()).contains("1.1em"));
+            assertTrue(
+                    call(() -> window.browser().activeView().list().getStyle()).contains("1.1em"));
             assertEquals(100, app.services().settings().uiZoom, "the UI zoom is its own");
             assertTrue(call(() -> app.services().commands().run("view.zoomReset")));
-            assertEquals("", call(() -> window.tabs().activeView().list().getStyle()));
+            assertEquals("", call(() -> window.browser().activeView().list().getStyle()));
         } finally {
             FxTestSupport.stop(app);
         }

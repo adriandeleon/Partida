@@ -41,6 +41,16 @@ class UiZoomTest {
         assertTrue(scaled.contains(".b-2px"), "a selector is never scaled");
         assertTrue(scaled.contains("-fx-min-width: 15px;"), scaled);
         assertEquals(css, UiZoom.scale(css, Settings.DEFAULT_UI_ZOOM));
+
+        // A bare length is a pixel length: scaled too, a zero and a border's width left alone.
+        String bare = ".c { -fx-padding: 0 3 0 3; -fx-background-radius: 50; -fx-background-insets: 0, 2; "
+                + "-fx-border-width: 1; -fx-background-color: #123; }";
+        String zoomed = UiZoom.scale(bare, 200);
+        assertTrue(zoomed.contains("-fx-padding: 0 6px 0 6px;"), zoomed);
+        assertTrue(zoomed.contains("-fx-background-radius: 100px;"), zoomed);
+        assertTrue(zoomed.contains("-fx-background-insets: 0, 4px;"), zoomed);
+        assertTrue(zoomed.contains("-fx-border-width: 1;"), zoomed);
+        assertTrue(zoomed.contains("#123"), zoomed);
     }
 
     @Test
@@ -62,9 +72,10 @@ class UiZoomTest {
     }
 
     /**
-     * Every size the zoomed sheets fix is written in px, so the zoom multiplies it (WIN-12): a bare number in a
-     * padding, gap, radius, inset or width is a pixel length JavaFX takes as is, and the zoom would leave it alone.
-     * Only a border's or a stroke's width stays a bare number: a hairline stays one pixel at every zoom.
+     * Every size the zoomed sheets fix is a px length once the zoom has read it, so the zoom multiplies it
+     * (WIN-12): a bare number in a padding, gap, radius, inset or width is taken as pixels (the control themes are
+     * Editora's files unchanged, ICON-05). Only a border's or a stroke's width stays a bare number: a hairline
+     * stays one pixel at every zoom.
      */
     @Test
     void theZoomedSheetsWriteEveryLengthInPixels() throws IOException {
@@ -77,7 +88,7 @@ class UiZoomTest {
             String css;
             try (InputStream in = Themes.class.getResourceAsStream("/com/partida/styles/" + sheet)) {
                 assertTrue(in != null, sheet);
-                css = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                css = UiZoom.pixels(new String(in.readAllBytes(), StandardCharsets.UTF_8));
             }
             Matcher m = declaration.matcher(css);
             while (m.find()) {

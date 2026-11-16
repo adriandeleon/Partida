@@ -1,8 +1,6 @@
 package com.partida.ui;
 
 import java.util.List;
-import java.util.Set;
-import java.util.function.Predicate;
 
 import com.partida.i18n.Messages;
 import org.junit.jupiter.api.Test;
@@ -13,83 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** The pure decisions behind the tabs and the tool windows (Pauta's Tabs and tool panels), no toolkit. */
+/** The pure decisions behind the browser and the tool windows (Pauta's Tabs and tool panels), no toolkit. */
 class TabsAndPanelsTest {
-
-    private static final String A = "Nintendo - Game Boy";
-    private static final String B = "Sega - Game Gear";
-
-    /** TABS-06: newest first, bounded, one entry per system, the selected game kept. */
-    @Test
-    void closedTabsKeepOrderBoundOneEntryPerSystemAndTheSelection() {
-        ClosedTabs closed = new ClosedTabs();
-        assertEquals(20, ClosedTabs.DEFAULT_CAPACITY);
-        closed.closed(A, 5);
-        closed.closed(B, 7);
-        closed.closed(A, 9); // closed again: to the top, listed once, with its new selection
-        closed.closed(null, 3); // a tab with no system is not listed
-        assertEquals(List.of(new ClosedTabs.Entry(A, 9), new ClosedTabs.Entry(B, 7)), closed.entries());
-
-        ClosedTabs bounded = new ClosedTabs();
-        for (int i = 0; i < 25; i++) bounded.closed("system " + i, i);
-        assertEquals(20, bounded.size());
-        assertEquals("system 24", bounded.entries().getFirst().name());
-        assertEquals("system 5", bounded.entries().getLast().name());
-
-        assertEquals(new ClosedTabs.Entry(A, 9), closed.pop());
-        closed.forget(B); // opened again some other way
-        assertNull(closed.pop());
-        closed.closed(A, -4);
-        assertEquals(0, java.util.Objects.requireNonNull(closed.pop()).selected());
-    }
-
-    /** TABS-04: no bulk close takes a pinned tab. */
-    @Test
-    void bulkCloseSkipsPinnedTabs() {
-        List<String> tabs = List.of("p1", "p2", "a", "b", "c", "d");
-        Predicate<String> pinned = Set.of("p1", "p2")::contains;
-        Predicate<String> dirty = Set.of("b")::contains;
-        assertEquals(List.of("a", "c", "d"), TabStrip.closeOtherTabs(tabs, "b", pinned));
-        assertEquals(List.of("a", "b", "c", "d"), TabStrip.closeAllTabs(tabs, pinned));
-        assertEquals(List.of("a", "c", "d"), TabStrip.closeUnmodifiedTabs(tabs, pinned, dirty));
-        assertEquals(List.of("a", "b"), TabStrip.eligibleToLeft(tabs, "c", pinned));
-        assertEquals(List.of("d"), TabStrip.eligibleToRight(tabs, "c", pinned));
-        assertEquals(List.of(), TabStrip.eligibleToLeft(tabs, "a", pinned));
-        assertEquals(List.of(), TabStrip.eligibleToRight(tabs, "missing", pinned));
-    }
-
-    /** TABS-05: pinning goes to the end of the pinned group, unpinning to just after it. */
-    @Test
-    void pinningMovesToThePinBoundary() {
-        List<String> tabs = List.of("p1", "p2", "a", "b", "c");
-        // "c" just pinned: after p1 and p2.
-        assertEquals(2, TabStrip.moveToPinBoundary(tabs, "c", Set.of("p1", "p2", "c")::contains));
-        // "p1" just unpinned: just after the one pinned tab left.
-        assertEquals(1, TabStrip.moveToPinBoundary(tabs, "p1", Set.of("p2")::contains));
-    }
-
-    /** TABS-07: a dragged tab lands beside its target, held to its own group. */
-    @Test
-    void aDraggedTabStaysInItsGroup() {
-        List<String> tabs = List.of("p1", "p2", "a", "b", "c");
-        Predicate<String> pinned = Set.of("p1", "p2")::contains;
-        assertEquals(4, TabStrip.dropIndex(tabs, "a", "c", true, pinned)); // after c, "a" taken out
-        assertEquals(2, TabStrip.dropIndex(tabs, "c", "p1", false, pinned)); // not into the pinned group
-        assertEquals(1, TabStrip.dropIndex(tabs, "p1", "b", true, pinned)); // a pinned one stays pinned
-        assertEquals(-1, TabStrip.dropIndex(tabs, "a", "a", true, pinned));
-        assertEquals(0, TabStrip.cycle(4, 5, 1));
-        assertEquals(4, TabStrip.cycle(0, 5, -1));
-        assertEquals(-1, TabStrip.cycle(0, 0, 1));
-    }
 
     /** TABS-10: an app with no files names what the window shows, then the app. */
     @Test
     void theWindowTitleNamesTheSystemAndTheApp() {
-        assertEquals("Nintendo - Game Boy — Partida", DocumentTabs.windowTitle("Nintendo - Game Boy"));
-        assertEquals("Partida", DocumentTabs.windowTitle(null));
+        assertEquals("Nintendo - Game Boy — Partida", Browser.windowTitle("Nintendo - Game Boy"));
+        assertEquals("Partida", Browser.windowTitle(null));
     }
 
-    /** QUAL-05: whether Play, Stop and the Game window can act is decided by pure rules, in this order. */
+    /** QUAL-05: whether Play and Stop can act is decided by pure rules, in this order. */
     @Test
     void playStopAndTheGameWindowFollowPureRules() {
         assertEquals(Messages.tr("palette.disabled.noRetroArch"), Chrome.playUnavailable(false, true, false));
@@ -98,8 +30,6 @@ class TabsAndPanelsTest {
         assertNull(Chrome.playUnavailable(true, true, false));
         assertNull(Chrome.stopUnavailable(true));
         assertEquals(Messages.tr("palette.disabled.noGameRunning"), Chrome.stopUnavailable(false));
-        assertTrue(Chrome.gameWindowAvailable(true));
-        assertFalse(Chrome.gameWindowAvailable(false));
         assertNull(Chrome.filterStepUnavailable(true));
         assertEquals(Messages.tr("palette.disabled.noFilter"), Chrome.filterStepUnavailable(false));
     }
@@ -181,14 +111,6 @@ class TabsAndPanelsTest {
         assertEquals(GameFilter.KeyAction.TO_LIST, GameFilter.keyAction("DOWN", "mario", 2, false, false));
         assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("A", "mario", 2, false, false));
         assertTrue(GameFilter.chipAt("> ext:zip", 9).isEmpty(), "never inside a command");
-    }
-
-    /** The Game window's initials, where there is no box art. */
-    @Test
-    void initialsAreTheFirstLettersOfTwoWords() {
-        assertEquals("SM", LibraryPanels.GamePanel.initialsOf("Super Mario World"));
-        assertEquals("Z", LibraryPanels.GamePanel.initialsOf("Zelda"));
-        assertEquals("", LibraryPanels.GamePanel.initialsOf("!!"));
     }
 
     /** Settings → Library's RetroArch folder: blank or a full path. */

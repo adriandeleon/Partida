@@ -205,44 +205,21 @@ public final class Icons {
     /** The Pauta window: a ruled page with a tick, the rules and how the app meets them. */
     public static final String CONFORMANCE = "M3.5 2.5h9v11h-9zM5.3 6.2l1.1 1.1 2.1-2.3M5.5 9.5h5M5.5 11.5h3.5";
 
-    /** A file: a page with a folded corner. The tab header's file glyph. */
+    /** A file: a page with a folded corner. */
     public static final String FILE = "M4 1.75h5.5l3 3v9.5H4zM9.5 1.75v3h3";
 
-    /** Pin or Unpin Tab: a pushpin, as in Editora; a pinned tab's header wears it too. */
-    public static final String PIN = "M9.5 2l4.5 4.5-2.6.6-2.5 2.5.3 3.4-2.7-2.7L3 14M6.5 7.3L4 4.8l3-.5z";
-
-    /** Close Tab: an X. */
+    /** Close: an X. */
     public static final String CLOSE = "M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6";
 
-    /**
-     * The close variants keep a smaller X as the family's anchor and add one mark, so the six read as a family
-     * and stay apart at menu size (as in Editora): a square for the others, three for all, a tick for the
-     * unmodified, a triangle for the direction.
-     */
-    public static final String CLOSE_OTHERS = "M2.5 5.5l6 6M8.5 5.5l-6 6M11 2.5h3v3h-3z";
+    /** Move Up and Move Down: an arrow each way. */
+    public static final String MOVE_UP = "M8 13V3M4 7l4-4 4 4";
 
-    public static final String CLOSE_ALL =
-            "M5 2.5l6 6M11 2.5l-6 6M2.5 12h2.5v2H2.5zM6.75 12h2.5v2h-2.5zM11 12h2.5v2H11z";
+    public static final String MOVE_DOWN = "M8 3v10M4 9l4 4 4-4";
 
-    public static final String CLOSE_UNMODIFIED = "M2.5 3.5l6 6M8.5 3.5l-6 6M9.5 12.2l1.8 1.8 3.2-3.5";
-
-    public static final String CLOSE_LEFT = "M7 5l6 6M13 5l-6 6M1.5 8l3-2.75v5.5z";
-
-    public static final String CLOSE_RIGHT = "M3 5l6 6M9 5l-6 6M14.5 8l-3-2.75v5.5z";
-
-    /** Reopen Closed Tab: an arrow turning back. */
-    public static final String REOPEN = "M3.4 9.6A4.9 4.9 0 1 0 4.5 4.4M4.3 1.8v2.8h2.8";
-
-    /** Next Tab and Previous Tab: a chevron each way. */
+    /** Next and Previous: a chevron each way. */
     public static final String NEXT = "M6 3.5l4.5 4.5L6 12.5";
 
     public static final String PREVIOUS = "M10 3.5L5.5 8l4.5 4.5";
-
-    /** The tab switcher: two pages, one over the other. */
-    public static final String SWITCHER = "M2.5 5.5h8v8h-8zM5.5 2.5h8v8";
-
-    /** Toggle Tab Bar: a window whose top row is a tab. */
-    public static final String TAB_BAR = "M1.75 2.75H14.25V13.25H1.75ZM1.75 6.25H14.25M6.25 2.75V6.25";
 
     /** Zen mode: a window with no bars at all, its frame alone (WIN-10). */
     public static final String ZEN_MODE = "M1.75 2.75H14.25V13.25H1.75ZM5.5 8h5";
@@ -263,6 +240,17 @@ public final class Icons {
     public static final String CORE = "M4.5 4.5h7v7h-7zM6.5 2v2.5M9.5 2v2.5M6.5 11.5V14M9.5 11.5V14"
             + "M2 6.5h2.5M2 9.5h2.5M11.5 6.5H14M11.5 9.5H14";
 
+    /** Toggle Grid View: four tiles. */
+    public static final String GRID =
+            "M2.5 2.5h4.5v4.5h-4.5zM9 2.5h4.5v4.5h-4.5zM2.5 9h4.5v4.5h-4.5zM9 9h4.5v4.5h-4.5z";
+
+    /** Toggle Hidden ROMs: an eye, what is shown. */
+    public static final String EYE =
+            "M1 8c1.8-3 4.2-4.5 7-4.5s5.2 1.5 7 4.5c-1.8 3-4.2 4.5-7 4.5S2.8 11 1 8zM6 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0";
+
+    /** Play This ROM: a cartridge with a play mark on its label. */
+    public static final String PLAY_ROM = "M3.5 1.5h9v13h-9zM5.5 14.5v-2M10.5 14.5v-2M7 4.5v4l3-2z";
+
     /** The Welcome tab: a house. */
     public static final String HOME = "M2.5 7.5L8 2.5l5.5 5M4 6.5v7h8v-7M6.75 13.5v-3.5h2.5v3.5";
 
@@ -271,9 +259,6 @@ public final class Icons {
 
     /** The Documents tool window: a tree of files. */
     public static final String DOCUMENTS = "M2.5 2.5h4M4 2.5v10h3.5M4 7.5h3.5M8.5 6h5v3h-5zM8.5 11h5v3h-5z";
-
-    /** The Outline tool window: bullets and their lines (dots by round caps). */
-    public static final String OUTLINE = "M2.5 4h.2M2.5 8h.2M2.5 12h.2M5.5 4h8M5.5 8h8M5.5 12h8";
 
     /** The Output tool window: a console. */
     public static final String OUTPUT = "M1.75 2.75H14.25V13.25H1.75ZM4.5 6.25L6.5 8L4.5 9.75M8.5 9.75H11.5";
@@ -328,30 +313,19 @@ public final class Icons {
             Map.entry("help.debugLog", LOG),
             Map.entry("view.messageLog", MESSAGES),
             Map.entry("view.toggleToolbar", TOOLBAR),
-            Map.entry("view.toggleTabBar", TAB_BAR),
             Map.entry("view.toggleSimpleMode", SIMPLE_MODE),
             Map.entry("view.toggleZenMode", ZEN_MODE),
             Map.entry("view.toggleExpertMode", EXPERT_MODE),
             Map.entry("view.customizeToolbar", CUSTOMIZE_TOOLBAR),
             Map.entry("view.restoreToolbar", RESTORE_TOOLBAR),
             Map.entry("library.setFolderCore", CORE),
+            Map.entry("library.toggleGrid", GRID),
+            Map.entry("library.toggleHiddenRoms", EYE),
+            Map.entry("library.playRom", PLAY_ROM),
             Map.entry("view.uiZoomIn", ZOOM_IN),
             Map.entry("view.uiZoomOut", ZOOM_OUT),
             Map.entry("view.uiZoomReset", ZOOM_RESET),
-            Map.entry("view.welcome", HOME),
-            Map.entry("buffer.close", CLOSE),
-            Map.entry("buffer.closeOthers", CLOSE_OTHERS),
-            Map.entry("buffer.closeAll", CLOSE_ALL),
-            Map.entry("buffer.closeUnmodified", CLOSE_UNMODIFIED),
-            Map.entry("buffer.closeLeft", CLOSE_LEFT),
-            Map.entry("buffer.closeRight", CLOSE_RIGHT),
-            Map.entry("buffer.togglePin", PIN),
-            Map.entry("buffer.reopenClosed", REOPEN),
-            Map.entry("buffer.next", NEXT),
-            Map.entry("buffer.previous", PREVIOUS),
-            Map.entry("switcher.show", SWITCHER),
             Map.entry("tool.systems", DOCUMENTS),
-            Map.entry("tool.game", OUTLINE),
             Map.entry("tool.retroarch", OUTPUT),
             Map.entry("game.play", RUN),
             Map.entry("game.stop", STOP),
@@ -375,6 +349,10 @@ public final class Icons {
             Map.entry("keymap.changeBinding", BIND_KEY),
             Map.entry("settings.bindKey", BIND_KEY),
             Map.entry("keymap.resetBinding", RESET),
+            Map.entry("toolbar.moveUp", MOVE_UP),
+            Map.entry("toolbar.moveDown", MOVE_DOWN),
+            Map.entry("toolbar.remove", CLOSE),
+            Map.entry("folder.remove", CLOSE),
             Map.entry("settings.language", GLOBE),
             Map.entry("settings.toggleUpdateCheck", BELL),
             Map.entry("sync.setBranch", BRANCH),

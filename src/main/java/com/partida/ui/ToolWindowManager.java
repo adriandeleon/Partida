@@ -697,7 +697,8 @@ final class ToolWindowManager {
             boolean shown = !stripesHidden && ToolWindowVisibility.stripeShown(empty, dragging);
             stripe.setVisible(shown);
             stripe.setManaged(shown);
-            TabHeaders.toggle(stripe, "tool-stripe-drop-target", dragging && empty);
+            stripe.getStyleClass().remove("tool-stripe-drop-target");
+            if (dragging && empty) stripe.getStyleClass().add("tool-stripe-drop-target");
         }
     }
 

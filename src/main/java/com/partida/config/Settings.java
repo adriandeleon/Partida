@@ -44,9 +44,6 @@ public final class Settings {
 
     public boolean showStatusBar = true;
 
-    /** The strip of document tabs (TABS-12). */
-    public boolean showTabBar = true;
-
     /**
      * The menus and the title in one bar drawn by the app (JavaFX's {@code HeaderBar}), where the
      * platform supports it and the menus are in the window (not macOS). Applies on the next start.
@@ -200,7 +197,6 @@ public final class Settings {
         c.lastUpdateCheck = lastUpdateCheck;
         c.showToolbar = showToolbar;
         c.showStatusBar = showStatusBar;
-        c.showTabBar = showTabBar;
         c.titleBarMenus = titleBarMenus;
         c.simpleMode = simpleMode;
         c.toolbarLayout = new ArrayList<>(toolbarLayout);
@@ -210,8 +206,8 @@ public final class Settings {
         c.window.height = window.height;
         c.window.maximized = window.maximized;
         c.window.toolWindows = window.toolWindows.copy();
-        c.window.documents = window.documents == null ? null : new java.util.ArrayList<>(window.documents);
         c.window.activeDocument = window.activeDocument;
+        c.window.lastPlayed = new java.util.LinkedHashMap<>(window.lastPlayed);
         c.sync.repoUrl = sync.repoUrl;
         c.sync.branch = sync.branch;
         c.sync.auto = sync.auto;
@@ -236,16 +232,34 @@ public final class Settings {
         public ToolWindows toolWindows = new ToolWindows();
 
         /**
-         * The documents open at the last quit, in tab order (WIN-08), or null before the first quit: the next
-         * launch opens them again, unless it was started with {@code --no-session} (CLI-04).
+         * The system the browser showed at the last quit (WIN-08), or null for its empty state: the next launch
+         * shows it again, unless it was started with {@code --no-session} (CLI-04).
          */
-        public java.util.@Nullable List<String> documents;
-
-        /** The document that was selected, or null for the Welcome page. */
         public @Nullable String activeDocument;
 
-        /** At most this many documents are reopened: a hand-edited file can't open a thousand tabs. */
-        public static final int MAX_DOCUMENTS = 100;
+        /**
+         * The ROM Partida last started for each game, by the game's id ({@code library.GameTitle#id}), the latest
+         * last: Play starts it again when RetroArch's play history is off or has dropped it (decision 3).
+         */
+        public java.util.LinkedHashMap<String, String> lastPlayed = new java.util.LinkedHashMap<>();
+
+        /** At most this many games' last ROM are kept, the oldest dropped first. */
+        public static final int MAX_LAST_PLAYED = 1000;
+
+        /** Remembers {@code rom} as the one last played of game {@code id}: it moves to the end, the latest. */
+        public void played(String id, String rom) {
+            lastPlayed.remove(id);
+            lastPlayed.put(id, rom);
+            trimLastPlayed();
+        }
+
+        private void trimLastPlayed() {
+            var oldest = lastPlayed.keySet().iterator();
+            while (lastPlayed.size() > MAX_LAST_PLAYED && oldest.hasNext()) {
+                oldest.next();
+                oldest.remove();
+            }
+        }
 
         void clamp() {
             Window defaults = new Window();
@@ -257,16 +271,15 @@ public final class Settings {
             }
             if (toolWindows == null) toolWindows = new ToolWindows();
             toolWindows.clamp();
-            if (documents != null) {
-                documents = documents.stream()
-                        .filter(d -> d != null && !d.isBlank())
-                        .distinct()
-                        .limit(MAX_DOCUMENTS)
-                        .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+            if (activeDocument != null && activeDocument.isBlank()) activeDocument = null;
+            java.util.LinkedHashMap<String, String> kept = new java.util.LinkedHashMap<>();
+            if (lastPlayed != null) {
+                lastPlayed.forEach((id, rom) -> {
+                    if (id != null && !id.isBlank() && rom != null && !rom.isBlank()) kept.put(id, rom);
+                });
             }
-            if (activeDocument != null && (documents == null || !documents.contains(activeDocument))) {
-                activeDocument = null;
-            }
+            lastPlayed = kept;
+            trimLastPlayed();
         }
 
         private static boolean onScreen(@Nullable Double position) {
@@ -279,8 +292,8 @@ public final class Settings {
      * hidden or shown, floating, and every size. Machine-local, with the window it belongs to.
      */
     public static final class ToolWindows {
-        /** The windows open, docked or floating, in the order they opened. */
-        public List<String> open = new ArrayList<>();
+        /** The windows open, docked or floating, in the order they opened: the Systems list at first. */
+        public List<String> open = new ArrayList<>(List.of("systems"));
 
         /** A window's side where the user moved it from its home: {@code LEFT}, {@code RIGHT} or {@code BOTTOM}. */
         public Map<String, String> sides = new TreeMap<>();
@@ -401,6 +414,18 @@ public final class Settings {
         /** Whether RetroArch's play history is the first collection. */
         public boolean showRecentlyPlayed = true;
 
+        /**
+         * The regions ranked for a game never played, best first, by No-Intro's names ({@code Europe},
+         * {@code USA}); empty for the ranking of the system's country ({@code library.Regions}).
+         */
+        public List<String> regions = new ArrayList<>();
+
+        /** Whether the games show the ROMs a tag hides (bad dumps, hacks, betas, …), and the games of only those. */
+        public boolean showHiddenRoms;
+
+        /** The systems shown as a box-art grid rather than a list, by name. */
+        public List<String> gridSystems = new ArrayList<>();
+
         /** One folder of games and the core for all of it, blank to choose by file extension. */
         public static final class Folder {
             public String path = "";
@@ -449,6 +474,14 @@ public final class Settings {
             if (retroarchConfigDir == null || !isFullPath(retroarchConfigDir)) retroarchConfigDir = "";
             else retroarchConfigDir = retroarchConfigDir.strip();
             if (retroarchCommand == null) retroarchCommand = "";
+            regions = com.partida.library.Regions.known(regions);
+            gridSystems = gridSystems == null
+                    ? new ArrayList<>()
+                    : gridSystems.stream()
+                            .filter(n -> n != null && !n.isBlank())
+                            .distinct()
+                            .limit(1000)
+                            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         }
 
         /** Whether {@code text} is a full (absolute) path this OS can parse. Pure: nothing is read from disk. */
@@ -467,6 +500,9 @@ public final class Settings {
             c.retroarchConfigDir = retroarchConfigDir;
             c.retroarchCommand = retroarchCommand;
             c.showRecentlyPlayed = showRecentlyPlayed;
+            c.regions = new ArrayList<>(regions);
+            c.showHiddenRoms = showHiddenRoms;
+            c.gridSystems = new ArrayList<>(gridSystems);
             return c;
         }
     }

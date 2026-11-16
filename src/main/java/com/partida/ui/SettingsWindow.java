@@ -73,20 +73,25 @@ public final class SettingsWindow {
                             "settings.language",
                             "settings.toggleUpdateCheck",
                             "view.toggleToolbar",
-                            "view.toggleTabBar",
                             "view.toggleStatusBar",
                             "view.toggleSimpleMode",
                             null,
-                            "view.restoreToolbar"),
+                            "view.restoreToolbar",
+                            "toolbar.moveUp",
+                            "toolbar.moveDown",
+                            "toolbar.remove"),
             Page.LIBRARY,
                     java.util.Arrays.asList(
                             "library.addFolder",
                             "library.removeFolder",
+                            "folder.remove",
                             "library.setFolderCore",
                             null,
                             "library.setRetroArchFolder",
                             "library.setRetroArchCommand",
+                            "library.setRegions",
                             "library.toggleRecentlyPlayed",
+                            "library.toggleHiddenRoms",
                             null,
                             "library.refresh"),
             Page.APPEARANCE, java.util.Arrays.asList("settings.theme", "view.toggleTitleBarMenus"),
@@ -151,7 +156,6 @@ public final class SettingsWindow {
     private final ComboBox<String> language = new ComboBox<>();
     private final SettingSwitch updates = new SettingSwitch(Messages.tr("settings.updates.title"));
     private final SettingSwitch toolbar = new SettingSwitch(Messages.tr("settings.toolbar.title"));
-    private final SettingSwitch tabBar = new SettingSwitch(Messages.tr("settings.tabBar.title"));
     private final SettingSwitch simpleMode = new SettingSwitch(Messages.tr("settings.simpleMode.title"));
     private final SettingSwitch statusBar = new SettingSwitch(Messages.tr("settings.statusBar.title"));
     /** The toolbar's layout (TBAR-09): its buttons and gaps in order, {@link ToolbarLayout#GAP} for a gap. */
@@ -176,6 +180,10 @@ public final class SettingsWindow {
     private final Label retroarchStatus = new Label();
     private final TextField retroarchFolder = new TextField();
     private final TextField retroarchCommand = new TextField();
+    private final SettingSwitch hiddenRoms = new SettingSwitch(Messages.tr("settings.library.hiddenRoms.title"));
+    /** The region ranking (decision 3), blank for the system country's, which the prompt text shows. */
+    private final TextField regions = new TextField();
+
     private final SettingSwitch recentlyPlayed =
             new SettingSwitch(Messages.tr("settings.library.recentlyPlayed.title"));
     /**
@@ -334,8 +342,6 @@ public final class SettingsWindow {
         row(card, Page.GENERAL, "settings.updates", updates, "release version network");
         toolbar.setOnAction(e -> services.store().update(s -> s.showToolbar = toolbar.isSelected()));
         row(card, Page.GENERAL, "settings.toolbar", toolbar, "buttons icons");
-        tabBar.setOnAction(e -> services.store().update(s -> s.showTabBar = tabBar.isSelected()));
-        row(card, Page.GENERAL, "settings.tabBar", tabBar, "tabs documents strip");
         statusBar.setOnAction(e -> services.store().update(s -> s.showStatusBar = statusBar.isSelected()));
         row(card, Page.GENERAL, "settings.statusBar", statusBar, "echo messages");
         simpleMode.setOnAction(e -> services.store().update(s -> s.simpleMode = simpleMode.isSelected()));
@@ -345,7 +351,6 @@ public final class SettingsWindow {
             language.setValue(s.language);
             updates.setSelected(s.checkForUpdates);
             toolbar.setSelected(s.showToolbar);
-            tabBar.setSelected(s.showTabBar);
             statusBar.setSelected(s.showStatusBar);
             simpleMode.setSelected(s.simpleMode);
         });
@@ -368,7 +373,11 @@ public final class SettingsWindow {
                 "customize customise toolbar buttons order reorder move remove add gap restore default");
         toolbarList.getStyleClass().add("toolbar-layout-list");
         toolbarList.setAccessibleText(Messages.tr("settings.toolbarLayout.title"));
-        toolbarList.setCellFactory(v -> new ToolbarCell());
+        // Each entry's right-click menu is its commands (MENU-05); the Menu key opens it too (MENU-09).
+        CommandMenu toolbarMenu = new CommandMenu(
+                services, java.util.Arrays.asList("toolbar.moveUp", "toolbar.moveDown", null, "toolbar.remove"));
+        toolbarList.setCellFactory(v -> CommandMenu.onRow(new ToolbarCell(), () -> toolbarMenu));
+        RowContextMenu.install(toolbarList);
         UiZoom.bind(toolbarList.prefHeightProperty(), 220);
         toolbarList.getSelectionModel().selectedIndexProperty().addListener((obs, old, at) -> toolbarButtons());
         toolbarList.setOnKeyPressed(e -> {
@@ -380,9 +389,9 @@ public final class SettingsWindow {
                 e.consume();
             }
         });
-        toolbarUp.setOnAction(e -> moveToolbarEntry(-1));
-        toolbarDown.setOnAction(e -> moveToolbarEntry(1));
-        toolbarRemove.setOnAction(e -> removeToolbarEntry());
+        toolbarUp.setOnAction(e -> services.commands().run("toolbar.moveUp"));
+        toolbarDown.setOnAction(e -> services.commands().run("toolbar.moveDown"));
+        toolbarRemove.setOnAction(e -> services.commands().run("toolbar.remove"));
         HBox actions = UiZoom.hbox(6, toolbarUp, toolbarDown, toolbarRemove, toolbarAdd);
         actions.setAlignment(Pos.CENTER_LEFT);
         VBox editor = UiZoom.vbox(8, toolbarList, actions);
@@ -433,14 +442,31 @@ public final class SettingsWindow {
         if (last >= 0) toolbarList.getSelectionModel().select(found >= 0 ? found : Math.max(0, Math.min(at, last)));
     }
 
-    private void moveToolbarEntry(int delta) {
+    /** The selected toolbar entry's place in the layout, or -1. */
+    int selectedToolbarEntry() {
+        return toolbarList.getSelectionModel().getSelectedIndex();
+    }
+
+    /** How many entries the toolbar layout has, its gaps included. */
+    int toolbarEntries() {
+        return toolbarList.getItems().size();
+    }
+
+    /** Whether the selected toolbar entry can be removed: a gap can, a button unless it is the last. */
+    boolean canRemoveToolbarEntry() {
+        return ToolbarLayout.canRemove(toolbarLayout(), selectedToolbarEntry());
+    }
+
+    /** Moves the selected toolbar entry up ({@code -1}) or down ({@code 1}): {@code toolbar.moveUp} and Down. */
+    void moveToolbarEntry(int delta) {
         int at = toolbarList.getSelectionModel().getSelectedIndex();
         if (at < 0) return;
         List<@Nullable String> layout = toolbarLayout();
         saveToolbarLayout(ToolbarLayout.moved(layout, at, delta), layout.get(at), at + delta);
     }
 
-    private void removeToolbarEntry() {
+    /** Removes the selected toolbar entry: {@code toolbar.remove}. */
+    void removeToolbarEntry() {
         int at = toolbarList.getSelectionModel().getSelectedIndex();
         if (!ToolbarLayout.canRemove(toolbarLayout(), at)) return;
         saveToolbarLayout(ToolbarLayout.removed(toolbarLayout(), at), null, at);
@@ -530,6 +556,25 @@ public final class SettingsWindow {
         recentlyPlayed.setOnAction(
                 e -> services.store().update(s -> s.library.showRecentlyPlayed = recentlyPlayed.isSelected()));
         row(retroarch, Page.LIBRARY, "settings.library.recentlyPlayed", recentlyPlayed, "history recent");
+        hiddenRoms.setOnAction(e -> services.store().update(s -> s.library.showHiddenRoms = hiddenRoms.isSelected()));
+        row(
+                retroarch,
+                Page.LIBRARY,
+                "settings.library.hiddenRoms",
+                hiddenRoms,
+                "bad dump hack beta prototype demo unlicensed pirate translation variant");
+        regions.setPromptText(com.partida.library.Regions.format(
+                com.partida.library.Regions.forLocale(java.util.Locale.getDefault())));
+        regions.setOnAction(e -> commitRegions());
+        regions.focusedProperty().addListener((obs, was, focused) -> {
+            if (!focused) commitRegions();
+        });
+        row(
+                retroarch,
+                Page.LIBRARY,
+                "settings.library.regions",
+                regions,
+                "region country europe usa japan world rom variant release prefer");
 
         VBox folders = card(Page.LIBRARY, Messages.tr("settings.library.folders.heading"));
         Button add = new Button(Messages.tr("command.library.addFolder"));
@@ -543,7 +588,9 @@ public final class SettingsWindow {
             line.setWrapText(true);
         }
         folderList.setPlaceholder(noFolders);
-        folderList.setCellFactory(v -> new FolderCell());
+        CommandMenu folderMenu = new CommandMenu(services, java.util.Arrays.asList("folder.remove"));
+        folderList.setCellFactory(v -> CommandMenu.onRow(new FolderCell(), () -> folderMenu)); // MENU-05
+        RowContextMenu.install(folderList);
         folderFilter.setPredicate(f -> true);
         folderList.setItems(folderFilter);
         folderList
@@ -561,6 +608,9 @@ public final class SettingsWindow {
             retroarchFolder.setText(library.retroarchConfigDir);
             retroarchFolder.getStyleClass().remove("invalid");
             retroarchCommand.setText(library.retroarchCommand);
+            regions.setText(com.partida.library.Regions.format(library.regions));
+            hiddenRoms.setSelected(library.showHiddenRoms);
+            regions.getStyleClass().remove("invalid");
             recentlyPlayed.setSelected(library.showRecentlyPlayed);
             loadFolders();
             libraryStatus.request();
@@ -690,7 +740,9 @@ public final class SettingsWindow {
             });
             remove.setOnAction(e -> {
                 Settings.Library.Folder folder = getItem();
-                if (folder != null) MainWindow.removeFolder(services, stage, folder.path);
+                if (folder == null) return;
+                folderList.getSelectionModel().select(folder);
+                services.commands().run("folder.remove");
             });
             row = UiZoom.hbox(8, path, core, remove);
             row.setAlignment(Pos.CENTER_LEFT);
@@ -742,6 +794,22 @@ public final class SettingsWindow {
         retroarchFolder.getStyleClass().remove("invalid");
         if (!text.equals(services.settings().library.retroarchConfigDir)) {
             services.store().update(s -> s.library.retroarchConfigDir = text);
+        }
+    }
+
+    /** Commits the region ranking; a word that is no region marks the field and is never saved. */
+    private void commitRegions() {
+        String text = regions.getText();
+        List<String> ranked = com.partida.library.Regions.parse(text);
+        if (ranked == null) {
+            if (!regions.getStyleClass().contains("invalid"))
+                regions.getStyleClass().add("invalid");
+            services.echo("status.regionsInvalid", String.valueOf(com.partida.library.Regions.unknown(text)));
+            return;
+        }
+        regions.getStyleClass().remove("invalid");
+        if (!ranked.equals(services.settings().library.regions)) {
+            services.store().update(s -> s.library.regions = new ArrayList<>(ranked));
         }
     }
 
@@ -1259,6 +1327,10 @@ public final class SettingsWindow {
         return retroarchFolder;
     }
 
+    TextField regions() {
+        return regions;
+    }
+
     TextField retroarchCommand() {
         return retroarchCommand;
     }
@@ -1273,6 +1345,17 @@ public final class SettingsWindow {
 
     ListView<Settings.Library.Folder> folderList() {
         return folderList;
+    }
+
+    /** The games folder selected in Settings → Library, or null. */
+    Settings.Library.@Nullable Folder selectedFolder() {
+        return folderList.getSelectionModel().getSelectedItem();
+    }
+
+    /** Removes the selected games folder after asking: {@code folder.remove}. */
+    void removeSelectedFolder() {
+        Settings.Library.Folder folder = selectedFolder();
+        if (folder != null) MainWindow.removeFolder(services, stage, folder.path);
     }
 
     Stage stage() {
@@ -1346,10 +1429,6 @@ public final class SettingsWindow {
 
     SettingSwitch toolbarSwitch() {
         return toolbar;
-    }
-
-    SettingSwitch tabBarSwitch() {
-        return tabBar;
     }
 
     SettingSwitch statusBarSwitch() {

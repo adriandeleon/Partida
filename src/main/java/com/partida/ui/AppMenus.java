@@ -102,7 +102,6 @@ final class AppMenus {
             spec(
                     "menu.view",
                     "view.toggleToolbar",
-                    "view.toggleTabBar",
                     "view.toggleStatusBar",
                     null,
                     "settings.theme",
@@ -113,29 +112,23 @@ final class AppMenus {
                     "view.uiZoomOut",
                     "view.uiZoomReset",
                     null,
+                    "library.toggleGrid",
+                    "library.toggleHiddenRoms",
+                    null,
                     "view.toggleZenMode",
                     "view.toggleExpertMode",
                     "view.toggleSimpleMode"),
-            // The tabs and the tool windows: every one of their commands has a row (TABS-01).
-            spec("menu.game", "game.play", "game.stop", null, "systems.open", "library.setFolderCore"),
+            spec(
+                    "menu.game",
+                    "game.play",
+                    "library.playRom",
+                    "game.stop",
+                    null,
+                    "systems.open",
+                    "library.setFolderCore"),
             spec(
                     "menu.window",
-                    "switcher.show",
-                    "buffer.next",
-                    "buffer.previous",
-                    null,
-                    "buffer.close",
-                    "buffer.closeOthers",
-                    "buffer.closeLeft",
-                    "buffer.closeRight",
-                    "buffer.closeUnmodified",
-                    "buffer.closeAll",
-                    null,
-                    "buffer.togglePin",
-                    "buffer.reopenClosed",
-                    null,
                     "tool.systems",
-                    "tool.game",
                     "tool.retroarch",
                     null,
                     "toolWindow.openInSplit",
@@ -155,7 +148,6 @@ final class AppMenus {
                     "palette.show",
                     "help.documentation",
                     "help.keyboardShortcuts",
-                    "view.welcome",
                     null,
                     "help.checkForUpdates",
                     "view.messageLog",
@@ -173,30 +165,18 @@ final class AppMenus {
     private static final List<Spec> SIMPLE = List.of(
             spec("menu.file", "library.addFolder", null, "app.settings", null, "app.quit"),
             spec("menu.edit", "edit.copy", "edit.paste", null, "find.show", "library.filter"),
-            spec(
-                    "menu.view",
-                    "view.toggleToolbar",
-                    "view.toggleTabBar",
-                    "view.toggleStatusBar",
-                    null,
-                    "view.toggleSimpleMode"),
+            spec("menu.view", "view.toggleToolbar", "view.toggleStatusBar", null, "view.toggleSimpleMode"),
             spec("menu.game", "game.play", "game.stop"),
             spec(
                     "menu.window",
-                    "switcher.show",
-                    null,
-                    "buffer.close",
-                    "buffer.reopenClosed",
-                    null,
                     "tool.systems",
-                    "tool.game",
                     "tool.retroarch",
                     null,
                     // A tool window's header keeps its Float, Maximize and Close buttons in Simple mode too.
                     "view.floatToolWindow",
                     "view.maximizeToolWindow",
                     "view.closeFocusedToolWindow"),
-            spec("menu.help", "palette.show", "help.documentation", "view.welcome", null, "help.about"));
+            spec("menu.help", "palette.show", "help.documentation", null, "help.about"));
 
     private static Spec spec(String key, @Nullable String... ids) {
         return new Spec(key, java.util.Collections.unmodifiableList(java.util.Arrays.<@Nullable String>asList(ids)));
@@ -287,7 +267,9 @@ final class AppMenus {
             "retroarch.clear",
             "keymap.resetBinding",
             "config.import",
-            "library.removeFolder");
+            "library.removeFolder",
+            "view.restoreToolbar",
+            "folder.remove");
 
     /**
      * An in-window row (MENU-02): the command's glyph (or an empty slot, so titles line up), the title, a

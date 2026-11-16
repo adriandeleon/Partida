@@ -40,8 +40,8 @@ class StyleContrastTest {
      * test walks every rule of the app's stylesheets and fails any other that sets a text fill to it.
      */
     private static final Set<String> SUBTLE_TEXT = Set.of(
-            ".command-palette .list-cell.unavailable .plain", // a command that can't run now: disabled
-            ".command-palette .list-cell.unavailable .match",
+            ".command-palette .list-cell:unavailable .title-run", // a command that can't run now: disabled
+            ".command-palette .list-cell:unavailable .title-run:match",
             ".settings-sidebar .list-cell.no-match", // a page the search ruled out: disabled
             ".text-subtle", // the control themes' decorative utility class
             ".label.text-subtle",

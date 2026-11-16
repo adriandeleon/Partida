@@ -115,15 +115,15 @@
     -fx-border-color: transparent transparent transparent -color-accent-emphasis;
     -fx-border-width: 0 0 0 2;
 }
-.command-palette .list-cell .match {
+.command-palette .list-cell .title-run {
+    -fx-fill: -color-fg-default;
+}
+.command-palette .list-cell .title-run:match {
     -fx-font-weight: bold;
     -fx-fill: -color-accent-fg;
 }
-.command-palette .list-cell .plain {
-    -fx-fill: -color-fg-default;
-}
-.command-palette .list-cell.unavailable .plain,
-.command-palette .list-cell.unavailable .match {
+.command-palette .list-cell:unavailable .title-run,
+.command-palette .list-cell:unavailable .title-run:match {
     -fx-fill: -color-fg-subtle;
 }
 .key-chip {
@@ -431,80 +431,6 @@
     -fx-show-delay: 400ms; /* every tooltip, whoever made it (TBAR-14) */
 }
 
-/* ---- document tabs (Tabs and tool panels) ----
-   The header is the title (TABS-02): .tab-header holds the pin, the file glyph and .tab-title. Order matters
-   below: the Git colors follow read-only, so a read-only file still shows its status, and the unsaved rule is
-   more specific, so an unsaved tab is amber whatever its status (TABS-08). */
-.document-tabs > .tab-header-area {
-    -fx-padding: 3px 6px 0 6px;
-}
-.tab .tab-title {
-    -fx-text-fill: -color-fg-muted;
-}
-.tab:selected .tab-title {
-    -fx-text-fill: -color-fg-default;
-}
-.tab-header.pinned .tab-title {
-    -fx-font-weight: bold;
-}
-.tab-header.read-only .tab-title {
-    -fx-text-fill: -color-fg-muted;
-    -fx-font-style: italic;
-}
-.tab.git-status-modified .tab-title,
-.documents-list .git-status-modified {
-    -fx-text-fill: -state-accent;
-}
-.tab.git-status-added .tab-title,
-.documents-list .git-status-added {
-    -fx-text-fill: -state-green;
-}
-.tab.git-status-untracked .tab-title,
-.documents-list .git-status-untracked {
-    -fx-text-fill: -state-olive;
-}
-.tab.git-status-renamed .tab-title,
-.documents-list .git-status-renamed {
-    -fx-text-fill: -state-violet;
-}
-.tab.git-status-deleted .tab-title,
-.documents-list .git-status-deleted {
-    -fx-text-fill: -color-fg-muted;
-}
-.tab.git-status-conflict .tab-title,
-.documents-list .git-status-conflict {
-    -fx-text-fill: -state-red;
-}
-/* The Git status's letter after a tab's name (ACC-05): a little smaller, in the status's color. */
-.tab-header .git-letter {
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-padding: 0 0 0 2px;
-}
-/* Unsaved (TABS-03): a "• " prefix, amber italic, over any Git color. */
-.tab .tab-header.dirty .tab-title {
-    -fx-text-fill: -state-amber;
-    -fx-font-style: italic;
-}
-/* Dragging a tab (TABS-07): the dragged header dims, an accent line marks the edge where it will land. */
-.tab-header.tab-dragging {
-    -fx-opacity: 0.4;
-}
-.tab-header.tab-drop-before {
-    -fx-border-color: -color-accent-emphasis;
-    -fx-border-width: 0 0 0 2;
-}
-.tab-header.tab-drop-after {
-    -fx-border-color: -color-accent-emphasis;
-    -fx-border-width: 0 2 0 0;
-}
-/* Toggle Tab Bar (TABS-12): the strip folds away, the documents stay. */
-.tab-pane.no-tab-header > .tab-header-area {
-    -fx-pref-height: 0;
-    -fx-min-height: 0;
-    -fx-max-height: 0;
-    visibility: hidden;
-}
 .document-text {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
@@ -512,13 +438,6 @@
 }
 .document-text .content {
     -fx-padding: 6px 12px 6px 12px;
-}
-.switcher-header {
-    -fx-font-weight: bold;
-}
-.switcher-path {
-    -fx-text-fill: -color-fg-muted;
-    -fx-font-size: 11.5px;
 }
 
 /* ---- tool windows (Tabs and tool panels, Tool panels) ----
@@ -619,8 +538,42 @@
 
 /* The filter box over a system's games (FIND-03, FIND-13): its chips, the field and the key badge, in a row
    flush with the list under it. */
-.system-view > .game-filter-box {
+.system-view .game-filter-box {
     -fx-padding: 4px 8px 4px 8px;
+}
+
+/* The game browser (decision 3): the details column beside the games, the box-art tiles of the grid with the
+   selected one in the selection color, and a ROM a tag hides dimmed. */
+.game-details-pane {
+    -fx-border-color: transparent transparent transparent -color-border-muted;
+}
+.game-initials {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+}
+.tile-art {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 4px;
+}
+.game-tile {
+    -fx-padding: 6px;
+    -fx-background-radius: 6px;
+}
+.game-tile:selected {
+    -fx-background-color: -color-accent-subtle;
+}
+.tile-name {
+    -fx-font-size: 0.9em;
+}
+.game-grid .list-cell,
+.game-grid .list-cell:filled:selected,
+.game-grid .list-cell:filled:hover {
+    -fx-background-color: transparent;
+    -fx-padding: 4px 8px 4px 8px;
+}
+.rom-list .list-cell.hidden-rom .label {
+    -fx-text-fill: -color-fg-muted;
 }
 
 .filter-chip {

@@ -25,6 +25,38 @@ class SettingsLibraryTest {
                 .toString();
     }
 
+    /** Decision 3: the region ranking keeps only regions, and the last ROM per game is bounded, latest last. */
+    @Test
+    void regionsAndTheLastRomPlayedAreClampedAndCopied() {
+        Settings s = new Settings();
+        s.library.regions = new ArrayList<>(Arrays.asList("europe", "Narnia", null, "USA"));
+        s.window.lastPlayed.put("", "/rom.nes");
+        s.window.lastPlayed.put("nes | contra", " ");
+        s.window.lastPlayed.put("nes | mario", "/mario.nes");
+        s.clamped();
+        assertEquals(List.of("Europe", "USA"), s.library.regions);
+        assertEquals(List.of("nes | mario"), List.copyOf(s.window.lastPlayed.keySet()));
+
+        s.window.played("nes | contra", "/contra.nes");
+        s.window.played("nes | mario", "/mario (U).nes");
+        assertEquals(List.of("nes | contra", "nes | mario"), List.copyOf(s.window.lastPlayed.keySet()), "latest last");
+        assertEquals("/mario (U).nes", s.window.lastPlayed.get("nes | mario"));
+        for (int i = 0; i < Settings.Window.MAX_LAST_PLAYED + 5; i++) s.window.played("game " + i, "/" + i);
+        assertEquals(Settings.Window.MAX_LAST_PLAYED, s.window.lastPlayed.size());
+        assertFalse(s.window.lastPlayed.containsKey("nes | contra"), "the oldest went first");
+
+        Settings copy = s.copy();
+        assertEquals(s.window.lastPlayed, copy.window.lastPlayed);
+        assertNotSame(s.window.lastPlayed, copy.window.lastPlayed);
+        assertEquals(s.library.regions, copy.library.regions);
+        assertNotSame(s.library.regions, copy.library.regions);
+        s.window.lastPlayed = null;
+        s.library.regions = null;
+        s.clamped();
+        assertTrue(s.window.lastPlayed.isEmpty());
+        assertTrue(s.library.regions.isEmpty());
+    }
+
     @Test
     void aHandEditedLibraryIsClampedOnRead() {
         Settings s = new Settings();

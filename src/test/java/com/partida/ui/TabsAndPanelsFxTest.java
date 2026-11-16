@@ -9,13 +9,10 @@ import javafx.event.Event;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.Tab;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.stage.Window;
 
@@ -42,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** The tabs and the tool windows in a real headless toolkit, a test per rule of Pauta's Tabs and tool panels. */
+/** The browser and the tool windows in a real headless toolkit, a test per rule of Pauta's Tabs and tool panels. */
 @Tag("fx")
 class TabsAndPanelsFxTest {
 
@@ -53,7 +50,7 @@ class TabsAndPanelsFxTest {
     private Startup.Running app;
     private MainWindow window;
     private AppServices services;
-    private DocumentTabs tabs;
+    private Browser browser;
     private ToolWindowManager tools;
 
     @BeforeAll
@@ -66,7 +63,7 @@ class TabsAndPanelsFxTest {
         launch();
     }
 
-    /** Three of the fake library's systems, open beside Welcome as a first run's samples were. */
+    /** Three of the fake library's systems. */
     private static final String R = FakeLibrary.SYSTEMS.get(0);
 
     private static final String N = FakeLibrary.SYSTEMS.get(1);
@@ -76,17 +73,23 @@ class TabsAndPanelsFxTest {
         app = FxTestSupport.start(dir, host);
         window = app.window();
         services = app.services();
-        tabs = window.tabs();
+        browser = window.browser();
         tools = window.toolWindows();
         FakeLibrary.load(services, dir.resolve("library"));
-        if (titles().equals(List.of("Welcome"))) {
-            for (String name : List.of(R, N, L)) {
-                GameCollection system = FakeLibrary.collection(services, name);
-                run(() -> tabs.open(system));
-            }
-            select(tab("Welcome"));
+        if (firstLaunch) {
+            // The Systems window opens on a first run; the tests below start with every tool window closed.
+            assertTrue(tools.isOpen(window.systemsWindow()), "the Systems list opens on a first run");
+            run(() -> tools.close(window.systemsWindow()));
+            firstLaunch = false;
         }
         settle();
+    }
+
+    private boolean firstLaunch = true;
+
+    /** Shows the system {@code name} in the browser. */
+    private SystemView show(String name) throws Exception {
+        return call(() -> browser.show(name));
     }
 
     @AfterEach
@@ -119,146 +122,12 @@ class TabsAndPanelsFxTest {
         return call(() -> services.commands().run(id));
     }
 
-    private Tab tab(String name) throws Exception {
-        return call(() -> tabs.tabs().stream()
-                .filter(t -> tabs.title(t).equals(name))
-                .findFirst()
-                .orElseThrow(() -> new AssertionError("no tab " + name)));
-    }
-
-    private void select(Tab tab) throws Exception {
-        run(() -> tabs.tabPane().getSelectionModel().select(tab));
-    }
-
-    private List<String> titles() throws Exception {
-        return call(() -> tabs.tabs().stream().map(tabs::title).toList());
-    }
-
-    private static Region header(Tab tab) {
-        return (Region) Objects.requireNonNull(tab.getGraphic());
-    }
-
-    private static Label titleLabel(Tab tab) {
-        return (Label) Objects.requireNonNull(header(tab).lookup(".tab-title"));
-    }
-
     // ---- Tabs ----
-
-    /** TABS-01: every tab operation is a command with a menu row; the tab's menu lists the per-tab ones. */
-    @Test
-    void everyTabOperationIsACommandWithAMenuRow() throws Exception {
-        List<String> operations = List.of(
-                "buffer.close",
-                "buffer.closeOthers",
-                "buffer.closeAll",
-                "buffer.closeUnmodified",
-                "buffer.closeLeft",
-                "buffer.closeRight",
-                "buffer.togglePin",
-                "buffer.reopenClosed",
-                "buffer.next",
-                "buffer.previous");
-        List<String> rows = call(() -> window.menus().groups().stream()
-                .flatMap(List::stream)
-                .map(AppMenus.Row::commandId)
-                .toList());
-        for (String id : operations) {
-            assertNotNull(services.commands().get(id), id);
-            assertTrue(rows.contains(id), id + " has no menu row");
-            assertNotNull(Icons.forCommand(id), id + " has no glyph");
-        }
-        List<String> perTab = List.of(
-                "buffer.close", "buffer.closeOthers", "buffer.closeLeft", "buffer.closeRight", "buffer.togglePin");
-        assertTrue(TabContextMenu.COMMANDS.containsAll(perTab));
-
-        // A right-click on a tab selects it first and opens its menu of commands.
-        Tab notes = tab(N);
-        run(() -> Event.fireEvent(
-                header(notes), new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, false, null)));
-        assertSame(notes, call(tabs::selected));
-        List<String> items = call(() -> tabs.menu().items().stream()
-                .map(MenuItem::getId)
-                .filter(Objects::nonNull)
-                .toList());
-        assertEquals(perTab.size() + 2, items.size()); // and Close Unmodified, Close All
-        assertTrue(items.containsAll(perTab));
-    }
-
-    /** TABS-02, TABS-03, TABS-10: the header is the title and carries the pinned state; a system is never unsaved. */
-    @Test
-    void theHeaderIsTheTitleAndCarriesTheStates() throws Exception {
-        Tab notes = tab(N);
-        assertEquals("", notes.getText());
-        assertEquals(N, call(() -> titleLabel(notes).getText()));
-        assertEquals(
-                N + " — " + Messages.tr("systems.games", FakeLibrary.games(1)),
-                call(() -> notes.getTooltip().getText()));
-        select(notes);
-        assertEquals(N + " — Partida", call(() -> window.stage().getTitle()), "the system, then the app");
-        assertFalse(call(() -> header(notes).getStyleClass().contains("dirty")));
-        assertTrue(call(() -> tabs.unsavedNames().isEmpty()), "a quit loses nothing");
-
-        assertTrue(runCommand("buffer.togglePin"));
-        assertTrue(call(() -> header(notes).getStyleClass().contains("pinned")));
-    }
-
-    /** TABS-04, TABS-05: pinning moves to the pin boundary; bulk closes leave pinned tabs. */
-    @Test
-    void pinnedTabsSurviveBulkCloses() throws Exception {
-        assertEquals(List.of("Welcome", R, N, L), titles());
-        select(tab(L));
-        assertTrue(runCommand("buffer.togglePin")); // to the end of the pinned group: the front
-        assertEquals(List.of(L, "Welcome", R, N), titles());
-
-        // The Welcome page is no document and not pinned (WELC-11): a bulk close closes it too.
-        select(tab(N));
-        assertTrue(runCommand("buffer.closeLeft"));
-        assertEquals(List.of(L, N), titles());
-        assertTrue(runCommand("buffer.closeAll"));
-        assertEquals(List.of(L), titles());
-        assertFalse(runCommand("buffer.closeAll"), "nothing left to close but pinned tabs");
-
-        select(tab(L));
-        assertTrue(runCommand("buffer.togglePin")); // unpinned: just after the pinned group
-        assertEquals(List.of(L), titles());
-        assertFalse(call(() -> header(tab(L)).getStyleClass().contains("pinned")));
-    }
-
-    /** TABS-06: Reopen Closed Tab brings the system back with the game that was selected. */
-    @Test
-    void reopenBringsBackTheSystemAndItsSelectedGame() throws Exception {
-        Tab notes = tab(N);
-        select(notes);
-        SystemView view = Objects.requireNonNull(call(() -> tabs.view(notes)));
-        run(() -> view.list().getSelectionModel().select(2));
-        assertTrue(runCommand("buffer.close"));
-        assertFalse(titles().contains(N));
-
-        assertTrue(runCommand("buffer.reopenClosed"));
-        SystemView back = Objects.requireNonNull(call(tabs::activeView));
-        assertEquals(N, back.title());
-        assertEquals(2, call(back::selectedIndex));
-        assertEquals(
-                FakeLibrary.title(1, 3),
-                call(() -> Objects.requireNonNull(back.selected()).title()));
-        assertFalse(runCommand("buffer.reopenClosed"), "the list is empty again");
-    }
-
-    /** TABS-07: a dragged tab lands beside its target and stays in its group. */
-    @Test
-    void aDroppedTabLandsBesideItsTarget() throws Exception {
-        Tab readme = tab(R);
-        Tab license = tab(L);
-        Tab welcome = tab("Welcome");
-        run(() -> tabs.moveBeside(readme, license, true));
-        assertEquals(List.of("Welcome", N, L, R), titles());
-        run(() -> tabs.moveBeside(readme, welcome, false)); // the Welcome tab is not pinned (WELC-11)
-        assertEquals(List.of(R, "Welcome", N, L), titles());
-    }
 
     /** The Systems window lists every system with its game count, and says why when it lists none. */
     @Test
     void theSystemsWindowListsEverySystemWithItsCount() throws Exception {
+        show(N);
         assertTrue(runCommand("tool.systems"));
         settle();
         LibraryPanels.Systems systems = Objects.requireNonNull(window.systems());
@@ -281,74 +150,8 @@ class TabsAndPanelsFxTest {
         assertTrue(call(() -> systems.list().getItems().isEmpty()));
         assertEquals(
                 Messages.tr("systems.empty"), call(() -> systems.placeholder().getText()));
-        assertEquals(0, call(() -> Objects.requireNonNull(tabs.view(tab(N))).size()), "an open tab empties too");
-    }
-
-    /** TABS-09: the switcher moves, closes the highlighted file, and keeps its width. */
-    @Test
-    void theSwitcherMovesClosesAndKeepsItsWidth() throws Exception {
-        // C-n is the Emacs keymap's line chord; the switcher moves on it as the pickers do (QOPEN-12).
-        run(() -> services.store().update(st -> st.keymap = "emacs"));
-        assertTrue(runCommand("switcher.show"));
-        Switcher switcher = Objects.requireNonNull(window.switcher());
-        assertTrue(call(() -> window.overlays().isShowing()));
-        double width = call(() -> switcher.card().getPrefWidth());
-        assertSame(
-                call(tabs::selected),
-                call(() -> switcher.list().getSelectionModel().getSelectedItem()));
-
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.N, false, true, false, false)));
-        assertEquals(1, call(() -> switcher.list().getSelectionModel().getSelectedIndex()));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.BACK_SPACE, false, false, false, false)));
-        assertFalse(titles().contains(R));
-        assertEquals(width, call(() -> switcher.card().getPrefWidth()));
-
-        // Releasing Ctrl after moving with it held activates the highlighted file.
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.N, false, true, false, false)));
-        Tab highlighted = call(() -> switcher.list().getSelectionModel().getSelectedItem());
-        run(() -> Event.fireEvent(
-                switcher.list(),
-                new KeyEvent(KeyEvent.KEY_RELEASED, "", "", KeyCode.CONTROL, false, false, false, false)));
-        assertFalse(call(() -> window.overlays().isShowing()));
-        assertSame(highlighted, call(tabs::selected));
-        run(() -> services.store().update(st -> st.keymap = "cua"));
-    }
-
-    /** TABS-09: opened with C-x C-b, letting go of Ctrl does not close the list. */
-    @Test
-    void releasingCtrlWithoutMovingKeepsTheSwitcherOpen() throws Exception {
-        assertTrue(runCommand("switcher.show"));
-        Switcher switcher = Objects.requireNonNull(window.switcher());
-        run(() -> Event.fireEvent(
-                switcher.list(),
-                new KeyEvent(KeyEvent.KEY_RELEASED, "", "", KeyCode.CONTROL, false, false, false, false)));
-        assertTrue(call(() -> window.overlays().isShowing()));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.ENTER, false, false, false, false)));
-        assertFalse(call(() -> window.overlays().isShowing()));
-    }
-
-    /** TABS-12: a command hides the tab bar, and the choice is kept. */
-    @Test
-    void aCommandHidesTheTabBar() throws Exception {
-        assertTrue(runCommand("view.toggleTabBar"));
-        assertFalse(services.settings().showTabBar);
-        assertTrue(call(() -> tabs.tabPane().getStyleClass().contains("no-tab-header")));
-        assertTrue(runCommand("view.toggleTabBar"));
-        assertFalse(call(() -> tabs.tabPane().getStyleClass().contains("no-tab-header")));
-    }
-
-    /** Next Tab and Previous Tab cycle the strip; Welcome comes back. */
-    @Test
-    void nextAndPreviousCycleTheStrip() throws Exception {
-        select(tab("Welcome"));
-        assertTrue(runCommand("buffer.previous"));
-        assertEquals(L, call(() -> tabs.title(Objects.requireNonNull(tabs.selected()))));
-        assertTrue(runCommand("buffer.next"));
-        assertEquals("Welcome", call(() -> tabs.title(Objects.requireNonNull(tabs.selected()))));
-        assertTrue(runCommand("buffer.close"));
-        assertFalse(titles().contains("Welcome"));
-        assertTrue(runCommand("view.welcome"));
-        assertEquals("Welcome", titles().getFirst());
+        assertEquals(
+                0, call(() -> Objects.requireNonNull(browser.activeView()).size()), "the system shown empties too");
     }
 
     // ---- Tool panels ----
@@ -369,17 +172,18 @@ class TabsAndPanelsFxTest {
         assertFalse(tools.isOpen(window.systemsWindow()));
         // M-1 … in the Emacs keymap.
         assertEquals("M-1", com.partida.command.Keymap.load("emacs").bindings().get("tool.systems"));
+        assertEquals("M-2", com.partida.command.Keymap.load("emacs").bindings().get("tool.retroarch"));
     }
 
     /** TABS-14: no closed window builds its content before the first paint. */
     @Test
     void noClosedToolWindowIsBuiltAtStart() throws Exception {
-        for (ToolWindow tw : tools.all()) assertNull(tw.contentIfBuilt(), tw.id());
+        // Only the Systems window, open from the first run, was built.
+        assertNotNull(window.systemsWindow().contentIfBuilt());
+        assertNull(window.retroarchWindow().contentIfBuilt());
         assertNull(window.console());
-        assertNull(window.game());
         assertTrue(runCommand("tool.retroarch"));
         assertNotNull(window.retroarchWindow().contentIfBuilt());
-        assertNull(window.systemsWindow().contentIfBuilt());
     }
 
     /** TABS-15: what is open, where, in what order, hidden, and the sizes come back on the next launch. */
@@ -391,12 +195,12 @@ class TabsAndPanelsFxTest {
         double before = ToolWindowManager.DEFAULT_SHARE.get(ToolWindow.Side.LEFT);
         assertEquals(before, call(() -> tools.horizontalSplit().getDividerPositions()[0]), 0.002);
         run(() -> tools.moveTo(window.retroarchWindow(), ToolWindow.Side.LEFT));
-        run(() -> tools.setVisible(window.gameWindow(), false));
+        run(() -> tools.setVisible(window.retroarchWindow(), false));
         run(() -> tools.resize(window.systemsWindow(), ToolWindowManager.RESIZE_STEP));
         Settings.ToolWindows saved = call(tools::state);
         assertEquals(List.of("systems"), saved.open);
         assertEquals("LEFT", saved.sides.get("retroarch"));
-        assertEquals(List.of("game"), saved.hidden);
+        assertEquals(List.of("retroarch"), saved.hidden);
         double share = Objects.requireNonNull(saved.sizes.get("systems"));
         assertEquals(before + ToolWindowManager.RESIZE_STEP, share, 0.005);
         run(window::quit);
@@ -405,26 +209,25 @@ class TabsAndPanelsFxTest {
         launch();
         assertTrue(tools.isOpen(window.systemsWindow()));
         assertEquals(ToolWindow.Side.LEFT, tools.side(window.retroarchWindow()));
-        assertFalse(tools.isVisible(window.gameWindow()));
+        assertFalse(tools.isVisible(window.retroarchWindow()));
         assertEquals(share, Objects.requireNonNull(call(tools::state).sizes.get("systems")), 1e-9);
         // and the divider is where the share says, after the first layout too
         assertEquals(share, call(() -> tools.horizontalSplit().getDividerPositions()[0]), 0.002);
-        assertTrue(call(() -> tools.stripe(ToolWindow.Side.LEFT).getChildren().size() == 2));
+        assertTrue(call(() -> tools.stripe(ToolWindow.Side.LEFT).getChildren().size() == 1), "RetroArch's is hidden");
     }
 
-    /** TABS-16: a side holds two windows at most, stacked. */
+    /** TABS-16: a side holds two windows at most, stacked; one more opens in place of what is there. */
     @Test
     void aSideHoldsTwoWindowsAtMost() throws Exception {
-        run(() -> {
-            tools.moveTo(window.gameWindow(), ToolWindow.Side.LEFT);
-            tools.moveTo(window.retroarchWindow(), ToolWindow.Side.LEFT);
-        });
-        select(tab(N));
+        run(() -> tools.moveTo(window.retroarchWindow(), ToolWindow.Side.LEFT));
+        show(N);
         assertTrue(runCommand("tool.systems"));
-        run(() -> tools.openInSplit(window.gameWindow()));
+        run(() -> tools.openInSplit(window.retroarchWindow()));
         assertEquals(2, tools.openOn(ToolWindow.Side.LEFT).size());
-        assertFalse(call(() -> tools.canSplitWith(window.retroarchWindow())), "a third would not fit");
-        assertTrue(runCommand("tool.retroarch")); // in place of what is open there
+        assertFalse(call(() -> tools.canSplitWith(window.retroarchWindow())), "it is open already");
+        assertTrue(runCommand("tool.retroarch")); // closes it, the other stays
+        assertEquals(List.of(window.systemsWindow()), tools.openOn(ToolWindow.Side.LEFT));
+        assertTrue(runCommand("tool.retroarch")); // a plain open: in place of what is open there
         assertEquals(List.of(window.retroarchWindow()), tools.openOn(ToolWindow.Side.LEFT));
     }
 
@@ -477,9 +280,7 @@ class TabsAndPanelsFxTest {
     /** TABS-19: closing the window that holds focus returns it to where it was in the content. */
     @Test
     void closingTheFocusedWindowReturnsFocusToTheContent() throws Exception {
-        Tab notes = tab(N);
-        select(notes);
-        SystemView view = Objects.requireNonNull(call(() -> tabs.view(notes)));
+        SystemView view = show(N);
         run(() -> view.list().requestFocus());
         assertTrue(runCommand("tool.systems"));
         settle();
@@ -491,22 +292,22 @@ class TabsAndPanelsFxTest {
     /** TABS-20: a button shows only when the user has it shown and it is available; neither clobbers the other. */
     @Test
     void hiddenIsNotUnavailable() throws Exception {
-        ToolWindow game = window.gameWindow();
-        Button button = Objects.requireNonNull(tools.stripeButton(game));
-        select(tab("Welcome")); // no system: the Game window is unavailable
-        assertFalse(tools.isAvailable(game));
-        assertFalse(call(() -> tools.stripe(ToolWindow.Side.RIGHT).getChildren().contains(button)));
-        assertTrue(tools.isVisible(game), "the user's choice is untouched");
-        assertFalse(runCommand("tool.game"));
+        ToolWindow console = window.retroarchWindow();
+        Button button = Objects.requireNonNull(tools.stripeButton(console));
+        var stripe = tools.stripe(ToolWindow.Side.BOTTOM);
+        run(() -> tools.setAvailable(console, false)); // nothing to show: its button goes
+        assertFalse(call(() -> stripe.getChildren().contains(button)));
+        assertTrue(tools.isVisible(console), "the user's choice is untouched");
+        assertFalse(runCommand("tool.retroarch"));
 
-        select(tab(N));
-        assertTrue(call(() -> tools.stripe(ToolWindow.Side.RIGHT).getChildren().contains(button)));
-        run(() -> tools.setVisible(game, false)); // the user hides it
-        select(tab("Welcome"));
-        select(tab(R));
-        assertFalse(call(() -> tools.stripe(ToolWindow.Side.RIGHT).getChildren().contains(button)));
+        run(() -> tools.setAvailable(console, true));
+        assertTrue(call(() -> stripe.getChildren().contains(button)));
+        run(() -> tools.setVisible(console, false)); // the user hides it
+        run(() -> tools.setAvailable(console, false));
+        run(() -> tools.setAvailable(console, true));
+        assertFalse(call(() -> stripe.getChildren().contains(button)), "still hidden: the user's choice");
         assertTrue(runCommand("view.restoreStripeButtons"));
-        assertTrue(call(() -> tools.stripe(ToolWindow.Side.RIGHT).getChildren().contains(button)));
+        assertTrue(call(() -> stripe.getChildren().contains(button)));
     }
 
     /** TABS-21: the Output window opens taller on its first open; the others keep their side's size. */
@@ -542,7 +343,7 @@ class TabsAndPanelsFxTest {
         Node badge = Objects.requireNonNull(call(() -> button.lookup(".tool-stripe-busy")));
         assertFalse(call(badge::isVisible));
 
-        select(tab(N));
+        show(N);
         assertTrue(runCommand("game.play"));
         assertTrue(call(() -> window.retroarchWindow().busyProperty().get()));
         assertFalse(runCommand("game.play"), "one game at a time");
@@ -562,29 +363,6 @@ class TabsAndPanelsFxTest {
         waitUntil(() -> !badge.isVisible());
         assertFalse(call(services.library()::isPlaying));
         assertFalse(runCommand("game.stop"), "nothing left to stop");
-    }
-
-    /** TABS-23: the Game window follows the active tab and its selected game. */
-    @Test
-    void theGameWindowFollowsTheActiveTab() throws Exception {
-        select(tab(R));
-        assertTrue(runCommand("tool.game"));
-        LibraryPanels.GamePanel game = Objects.requireNonNull(window.game());
-        // What it shows is read off the FX thread (PERF-01): each step waits for the read to land.
-        waitUntil(() ->
-                !game.reading() && FakeLibrary.title(0, 1).equals(game.title().getText()));
-        select(tab(N));
-        waitUntil(() ->
-                !game.reading() && FakeLibrary.title(1, 1).equals(game.title().getText()));
-        SystemView notes = Objects.requireNonNull(call(tabs::activeView));
-        run(() -> notes.list().getSelectionModel().select(2));
-        waitUntil(() ->
-                !game.reading() && FakeLibrary.title(1, 3).equals(game.title().getText()));
-        assertEquals(
-                FakeLibrary.CORE,
-                call(() -> Objects.requireNonNull(game.core().getValue()).label()));
-        assertEquals("", call(() -> game.warning().getText()), "nothing missing");
-        assertNotNull(call(() -> game.selectedCore(notes.selected())));
     }
 
     // ---- the stripes are toolbars (TBAR-12, TBAR-13) ----
@@ -619,26 +397,20 @@ class TabsAndPanelsFxTest {
         assertFalse(tools.isVisible(systems));
     }
 
-    /** TBAR-13: the right stripe's first glyph sits on the content's first line: the first game's row. */
+    /** TBAR-13: a side stripe's first glyph sits on the content's first line: the first game's row. */
     @Test
     void theRightStripesFirstIconSitsOnTheFirstLineOfText() throws Exception {
-        Tab notes = tab(N);
-        select(notes);
+        run(() -> tools.moveTo(window.retroarchWindow(), ToolWindow.Side.RIGHT));
+        SystemView view = show(N);
         settle();
         settle();
-        SystemView view = Objects.requireNonNull(call(() -> tabs.view(notes)));
         Button first = call(
                 () -> (Button) tools.stripe(ToolWindow.Side.RIGHT).getChildren().getFirst());
         double line = call(() -> firstRowCenter(view));
-        assertEquals(line, call(() -> glyphCenter(first)), 2.0, "on the first row, not the tab strip");
-
-        // Hiding the tab strip moves the list up, and the glyph follows it.
-        assertTrue(runCommand("view.toggleTabBar"));
-        settle();
-        settle();
-        double after = call(() -> firstRowCenter(view));
-        assertTrue(after < line - 10, "the list moved up");
-        assertEquals(after, call(() -> glyphCenter(first)), 2.0);
+        assertEquals(line, call(() -> glyphCenter(first)), 2.0, "on the first row, not the filter box");
+        Button left = call(
+                () -> (Button) tools.stripe(ToolWindow.Side.LEFT).getChildren().getFirst());
+        assertEquals(line, call(() -> glyphCenter(left)), 2.0, "both stripes alike");
     }
 
     private static double firstRowCenter(SystemView view) {
@@ -656,25 +428,31 @@ class TabsAndPanelsFxTest {
     }
     // ---- the rest of the showcase, through its own controls ----
 
-    /** The Systems window opens a system on Enter or a double-click, and the system's list has the keyboard. */
+    /**
+     * The Systems window shows each system it walks onto in the browser; Enter or a double-click also gives that
+     * system's games the keyboard.
+     */
     @Test
     void theSystemsWindowOpensASystem() throws Exception {
         assertTrue(runCommand("tool.systems"));
         settle();
         var list = (javafx.scene.control.ListView<?>) Objects.requireNonNull(
                 Objects.requireNonNull(window.systemsWindow().contentIfBuilt()).lookup(".systems-list"));
+        run(() -> list.getSelectionModel().select(2));
+        assertEquals(FakeLibrary.SYSTEMS.get(2), call(browser::activePath), "selecting shows it");
+        assertSame(list, call(() -> window.stage().getScene().getFocusOwner()), "the keyboard stays in the list");
         run(() -> list.getSelectionModel().select(3));
         run(() -> Event.fireEvent(list, FxTestSupport.key(KeyCode.ENTER, false, false, false, false)));
-        assertEquals(FakeLibrary.SYSTEMS.get(3), call(() -> tabs.title(Objects.requireNonNull(tabs.selected()))));
+        assertEquals(FakeLibrary.SYSTEMS.get(3), call(browser::activePath));
         run(() -> list.getSelectionModel().select(4));
         run(() -> Event.fireEvent(list, click(list, 2)));
-        assertEquals(FakeLibrary.SYSTEMS.get(4), call(() -> tabs.title(Objects.requireNonNull(tabs.selected()))));
+        assertEquals(FakeLibrary.SYSTEMS.get(4), call(browser::activePath));
         assertSame(
-                Objects.requireNonNull(call(tabs::activeView)).list(),
+                Objects.requireNonNull(call(browser::activeView)).list(),
                 call(() -> window.stage().getScene().getFocusOwner()));
-        assertTrue(runCommand("systems.open"), "an open system is selected again, not opened twice");
-        assertEquals(
-                1, titles().stream().filter(FakeLibrary.SYSTEMS.get(4)::equals).count());
+        SystemView shown = call(browser::activeView);
+        assertTrue(runCommand("systems.open"));
+        assertSame(shown, call(browser::activeView), "a system shown again keeps its view");
     }
 
     private static javafx.scene.input.MouseEvent click(Node target, int count) {
@@ -703,7 +481,7 @@ class TabsAndPanelsFxTest {
     @Test
     void anEmptyStripeIsADropZoneWhileDragging() throws Exception {
         var right = tools.stripe(ToolWindow.Side.RIGHT);
-        assertFalse(call(right::isVisible), "Welcome: nothing on the right");
+        assertFalse(call(right::isVisible), "nothing on the right");
         run(() -> tools.setDragging(true));
         assertTrue(call(right::isVisible));
         assertTrue(call(() -> right.getStyleClass().contains("tool-stripe-drop-target")));
@@ -840,43 +618,6 @@ class TabsAndPanelsFxTest {
                 call(close::getAccessibleText), call(() -> close.getTooltip().getText()));
     }
 
-    /** The other closes, and the switcher's other keys. */
-    @Test
-    void theOtherClosesAndSwitcherKeys() throws Exception {
-        select(tab(R));
-        assertTrue(runCommand("buffer.closeRight"));
-        assertEquals(List.of("Welcome", R), titles());
-        assertTrue(runCommand("buffer.reopenClosed"));
-        assertTrue(runCommand("buffer.reopenClosed"));
-        select(tab(N));
-        assertTrue(runCommand("buffer.closeOthers"));
-        assertEquals(List.of(N), titles());
-        assertTrue(runCommand("buffer.closeUnmodified"));
-        assertEquals(List.of(), titles());
-        // WELC-04: the last tab closed leaves the empty area's hint, with the ways in, and the keyboard.
-        assertTrue(call(() -> tabs.emptyHint().isVisible()));
-        assertTrue(call(
-                () -> tabs.emptyHint().getText().contains(services.keybindings().label("palette.show"))));
-        settle();
-        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == tabs.emptyHint()), "it has the keyboard");
-        assertTrue(runCommand("view.welcome"));
-        assertFalse(call(() -> tabs.emptyHint().isVisible()), "a tab hides it");
-        assertFalse(runCommand("buffer.next"), "one tab: nothing to cycle");
-
-        assertTrue(runCommand("buffer.reopenClosed"));
-        assertTrue(runCommand("switcher.show"));
-        Switcher switcher = Objects.requireNonNull(window.switcher());
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.TAB, false, false, false, false)));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.TAB, true, false, false, false)));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.DOWN, false, false, false, false)));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.UP, false, false, false, false)));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.A, false, false, false, false)));
-        run(() -> Event.fireEvent(switcher.list(), FxTestSupport.key(KeyCode.DELETE, false, false, false, false)));
-        assertEquals(1, titles().size());
-        run(() -> Event.fireEvent(switcher.list(), click(switcher.list(), 1)));
-        assertFalse(call(() -> window.overlays().isShowing()));
-    }
-
     /** PERF-11: the RetroArch console is bounded, and the newest lines are the ones it keeps. */
     @Test
     void theConsoleKeepsTheNewestLinesUpToItsCap() throws Exception {
@@ -901,7 +642,7 @@ class TabsAndPanelsFxTest {
     /** ACC-06: the region commands move the keyboard from the documents to each open tool window and back. */
     @Test
     void theRegionCommandsWalkTheDocumentsAndTheOpenToolWindows() throws Exception {
-        select(tab(R));
+        show(R);
         assertTrue(runCommand("tool.systems"));
         assertTrue(runCommand("tool.retroarch"));
         settle();

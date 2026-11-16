@@ -83,28 +83,7 @@ final class Chrome {
         return null;
     }
 
-    /** Why a tab command can't run: no tab is selected (QUAL-05). */
-    static @Nullable String closeUnavailable(boolean tabSelected) {
-        return tabSelected ? null : Messages.tr("palette.disabled.noTab");
-    }
-
-    /** Why Close Others, Close to the Left and their kin can't run: no tab, or none they would close. */
-    static @Nullable String nothingToClose(boolean tabSelected, int wouldClose) {
-        if (!tabSelected) return Messages.tr("palette.disabled.noTab");
-        return wouldClose == 0 ? Messages.tr("palette.disabled.nothingToClose") : null;
-    }
-
-    /** Why Reopen Closed Tab can't run: nothing was closed. */
-    static @Nullable String reopenUnavailable(int closedTabs) {
-        return closedTabs == 0 ? Messages.tr("palette.disabled.noClosedTab") : null;
-    }
-
-    /** Why Next Tab and Previous Tab can't run: fewer than two tabs. */
-    static @Nullable String cycleUnavailable(int tabs) {
-        return tabs < 2 ? Messages.tr("palette.disabled.oneTab") : null;
-    }
-
-    /** Why Open cannot run in the Documents window: no file is selected. */
+    /** Why Open cannot run in the Systems window: no system is selected. */
     static @Nullable String systemsOpenUnavailable(boolean selected) {
         return selected ? null : Messages.tr("palette.disabled.noSystemSelected");
     }
@@ -133,14 +112,6 @@ final class Chrome {
     /** Why Stop can't act, or null: only a game Partida started can be stopped (QUAL-05). */
     static @Nullable String stopUnavailable(boolean running) {
         return running ? null : Messages.tr("palette.disabled.noGameRunning");
-    }
-
-    /**
-     * Whether the Game window is available: only over a system's tab, whose selected game it shows (TABS-20);
-     * on the Welcome page its stripe button hides.
-     */
-    static boolean gameWindowAvailable(boolean systemTab) {
-        return systemTab;
     }
 
     /**
@@ -176,6 +147,27 @@ final class Chrome {
     /** Why Check for Updates cannot run, or null when it can. */
     static @Nullable String checkForUpdatesUnavailable(boolean checking) {
         return checking ? Messages.tr("palette.disabled.checking") : null;
+    }
+
+    /**
+     * Why Move Up or Move Down can't move the selected toolbar entry in Settings → General: none is selected,
+     * or it is at that end of the layout.
+     */
+    static @Nullable String toolbarMoveUnavailable(int at, int size, int delta) {
+        if (at < 0 || at >= size) return Messages.tr("palette.disabled.noToolbarEntry");
+        int to = at + delta;
+        return to < 0 || to >= size ? Messages.tr("palette.disabled.toolbarEntryEnd") : null;
+    }
+
+    /** Why Remove can't take the selected toolbar entry away: none is selected, or it is the last button. */
+    static @Nullable String toolbarRemoveUnavailable(boolean selected, boolean removable) {
+        if (!selected) return Messages.tr("palette.disabled.noToolbarEntry");
+        return removable ? null : Messages.tr("palette.disabled.toolbarLastButton");
+    }
+
+    /** Why a games folder's row command can't run: no folder is selected in Settings → Library. */
+    static @Nullable String folderRowUnavailable(boolean selected) {
+        return selected ? null : Messages.tr("palette.disabled.noFolderSelected");
     }
 
     /** Why a key-binding row's command cannot run: no row is selected in Settings → Keymap. */
@@ -254,27 +246,27 @@ final class Chrome {
     }
 
     /** What chrome the window shows: one answer of {@link #shown}'s truth table. */
-    record Shown(boolean menus, boolean toolbar, boolean tabBar, boolean stripes, boolean statusBar) {}
+    record Shown(boolean menus, boolean toolbar, boolean stripes, boolean statusBar) {}
 
     /**
      * The one truth table of the window's chrome per mode (WIN-10), over the user's own show and hide
      * choices, which no mode changes:
      *
      * <pre>
-     *            menus   toolbar  tab bar  stripes  status bar
-     *   none     yes     setting  setting  yes      setting
-     *   expert   no      no       no       no       setting
-     *   zen      no      no       no       no       no
+     *            menus   toolbar  stripes  status bar
+     *   none     yes     setting  yes      setting
+     *   expert   no      no       no       setting
+     *   zen      no      no       no       no
      * </pre>
      *
      * A screen menu bar (macOS) is the system's, not the window's: it stays in every mode. In a window that
      * draws its own title bar the menus go and the title and the window buttons stay.
      */
-    static Shown shown(Focus focus, boolean systemMenu, boolean toolbar, boolean tabBar, boolean statusBar) {
+    static Shown shown(Focus focus, boolean systemMenu, boolean toolbar, boolean statusBar) {
         return switch (focus) {
-            case NONE -> new Shown(true, toolbar, tabBar, true, statusBar);
-            case EXPERT -> new Shown(systemMenu, false, false, false, statusBar);
-            case ZEN -> new Shown(systemMenu, false, false, false, false);
+            case NONE -> new Shown(true, toolbar, true, statusBar);
+            case EXPERT -> new Shown(systemMenu, false, false, statusBar);
+            case ZEN -> new Shown(systemMenu, false, false, false);
         };
     }
 

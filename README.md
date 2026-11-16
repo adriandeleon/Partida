@@ -40,8 +40,9 @@ Built to [Pauta (the adl desktop apps guidelines)](https://pauta-project.dev/), 
   runs every command. CUA and Emacs keymaps, with your own bindings on top. A toolbar puts the everyday
   ones a click away, each button naming its key, and Simple mode trims the menus and the toolbar to the
   essentials.
-- **Tabs and tool windows.** Documents in tabs you can pin, reorder, switch between and reopen, and tool
-  windows docked on three sides that you can move, float, maximize and resize, every action a command.
+- **One browser for your library.** Pick a system on the left; its games, one entry each with every ROM
+  under it, fill the window as a list or a box-art grid, beside the selected game's details. The tool
+  windows dock on three sides and move, float, maximize and resize, every action a command.
 - **Settings that apply as you change them.** A searchable Settings window, a palette command for
   every setting, and a versioned config folder that older versions never overwrite.
 - **Light and dark**, following your system: Caret & Ink, the Pauta family palette, with the Inter

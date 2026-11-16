@@ -7,7 +7,7 @@ import com.partida.command.Keybindings;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The keys of every list overlay, the palette, the pickers and the tab switcher alike (PAL-06, QOPEN-06,
+ * The keys of every list overlay, the palette and the pickers alike (PAL-06, QOPEN-06,
  * QOPEN-12), after Editora's {@code PickerKeys}: the active keymap's line and page chords (the {@code nav.*}
  * commands, {@code C-n}, {@code C-p}, {@code C-v} and {@code M-v} in Emacs) move the selection, as do the keys
  * that always work: ↑ ↓, Page Up and Down, and Ctrl+Home and Ctrl+End (Cmd on macOS). Plain Home and End stay
@@ -100,35 +100,6 @@ final class PickerKeys {
     /** A page down or up of {@code page} rows from {@code at}, held to the list. Pure. */
     static int page(int at, int size, int page, boolean down) {
         return down ? Math.min(size - 1, at + page) : Math.max(0, at - page);
-    }
-
-    /** What a key does in the tab switcher (TABS-03): moves, open, close, or nothing of its own. */
-    enum SwitcherKey {
-        NEXT,
-        PREVIOUS,
-        PAGE_DOWN,
-        PAGE_UP,
-        FIRST,
-        LAST,
-        OPEN,
-        CLOSE,
-        NONE
-    }
-
-    /**
-     * The switcher's keys: the overlay's moves, Tab and Shift+Tab to step, Enter to open, Backspace, Delete or
-     * Ctrl+D to close the selected tab. Pure.
-     */
-    static SwitcherKey switcher(Move move, String code, boolean shift, boolean ctrl) {
-        if (move == Move.LINE_DOWN || ("TAB".equals(code) && !shift)) return SwitcherKey.NEXT;
-        if (move == Move.LINE_UP || "TAB".equals(code)) return SwitcherKey.PREVIOUS;
-        if (move == Move.PAGE_DOWN) return SwitcherKey.PAGE_DOWN;
-        if (move == Move.PAGE_UP) return SwitcherKey.PAGE_UP;
-        if (move == Move.FIRST) return SwitcherKey.FIRST;
-        if (move == Move.LAST) return SwitcherKey.LAST;
-        if ("ENTER".equals(code)) return SwitcherKey.OPEN;
-        if ("BACK_SPACE".equals(code) || "DELETE".equals(code) || (ctrl && "D".equals(code))) return SwitcherKey.CLOSE;
-        return SwitcherKey.NONE;
     }
 
     /** Whether a key in a filter field over a list leads into the list: Down or Enter, when it has rows. */

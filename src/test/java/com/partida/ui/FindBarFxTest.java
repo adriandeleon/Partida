@@ -172,7 +172,7 @@ class FindBarFxTest {
         assertEquals(
                 List.of(FakeLibrary.title(1, 2)),
                 call(() -> view.list().getItems().stream()
-                        .map(com.partida.library.Game::title)
+                        .map(com.partida.library.GameTitle::title)
                         .toList()));
         assertEquals(all, (int) call(view::size), "the system still has every game");
         run(() -> filter.setText("GAME"));
@@ -209,7 +209,7 @@ class FindBarFxTest {
         assertEquals(2, (int) call(view::selectedIndex), "its index among all the system's games");
 
         // On the Welcome tab there is nothing to filter: find.show says why.
-        run(() -> window.tabs().tabPane().getSelectionModel().select(0));
+        run(() -> window.browser().showEmpty());
         assertNotNull(app.services().commands().get("find.show").unavailableReason());
     }
 
@@ -261,6 +261,24 @@ class FindBarFxTest {
             press(filter, KeyCode.ESCAPE, false, false, false, false);
         });
         assertEquals(List.of(), call(view::chipTerms), "Escape empties the chips too");
+
+        // FIND-16: a chip before the last is taken away from its own button, which Tab reaches.
+        run(() -> {
+            filter.requestFocus();
+            filter.setText("ext:bin");
+            filter.positionCaret(7);
+            press(filter, KeyCode.SPACE, false, false, false, false);
+            filter.setText("ext:zip");
+            filter.positionCaret(7);
+            press(filter, KeyCode.SPACE, false, false, false, false);
+        });
+        assertEquals(2, call(view::chipTerms).size());
+        javafx.scene.control.Button first = call(() -> (javafx.scene.control.Button)
+                view.node().lookupAll(".filter-chip").iterator().next());
+        assertTrue(call(first::isFocusTraversable), "in the Tab order");
+        run(first::fire);
+        assertEquals(List.of(new GameFilter.Term("ext", "zip")), call(view::chipTerms));
+        run(() -> press(filter, KeyCode.ESCAPE, false, false, false, false));
         assertEquals("", call(filter::getText));
 
         boolean shown = app.services().settings().showStatusBar;
@@ -281,8 +299,8 @@ class FindBarFxTest {
     /** Opens the fake library's system {@code index} in a tab and returns its view. */
     private SystemView openSystem(int index) throws Exception {
         var system = FakeLibrary.collection(app.services(), index);
-        run(() -> app.window().tabs().open(system));
-        SystemView view = call(() -> app.window().tabs().activeView());
+        run(() -> app.window().browser().open(system));
+        SystemView view = call(() -> app.window().browser().activeView());
         assertNotNull(view);
         return view;
     }
@@ -360,6 +378,20 @@ class FindBarFxTest {
         }));
     }
 
+    /** A view's hooks with no window: Play does nothing and starts a game's best ROM. */
+    static SystemView.Hooks hooks() {
+        return new SystemView.Hooks(
+                () -> {},
+                () -> {},
+                t -> t.best().game(),
+                List::of,
+                () -> false,
+                new BoxArt(() -> null),
+                () -> null,
+                () -> null,
+                () -> null);
+    }
+
     /**
      * FIND-03 on one view, outside a window: Down goes to the list on its first kept game, a step with nothing
      * selected starts at an end, a step over an emptied list does nothing, and a reload keeps the selected game.
@@ -370,7 +402,7 @@ class FindBarFxTest {
                 new com.partida.library.Game("Alpha", Path.of("/r/a.bin"), "S", null),
                 new com.partida.library.Game("Beta", Path.of("/r/b.bin"), "S", null),
                 new com.partida.library.Game("Alphabet", Path.of("/r/c.bin"), "", null));
-        SystemView view = call(() -> new SystemView("S", games, 1, () -> {}, () -> null));
+        SystemView view = call(() -> new SystemView("S", games, 2, hooks()));
         assertEquals("Beta", call(() -> view.selected().title()), "the session's selection");
         assertEquals(3, (int) call(view::size));
         assertFalse(call(view::filtering));
@@ -394,13 +426,13 @@ class FindBarFxTest {
         // A reload keeps the selected game when it is still there, and leaves the rest alone.
         run(() -> view.setGames(List.of(games.get(2), games.get(0))));
         assertEquals("Alphabet", call(() -> view.selected().title()));
-        assertEquals(0, (int) call(view::selectedIndex));
+        assertEquals(1, (int) call(view::selectedIndex), "games in title order: Alpha, then Alphabet");
         run(() -> view.setGames(List.of(games.get(1))));
         assertTrue(call(() -> view.list().getItems().isEmpty()), "the filter keeps nothing");
         run(() -> view.step(true));
         assertEquals(-1, (int) call(view::selectedIndex));
         run(() -> view.filter().clear());
         assertEquals(1, (int) call(() -> view.list().getItems().size()));
-        assertEquals(1, (int) call(() -> new SystemView("T", List.of(), 5, () -> {}, () -> null).size() + 1));
+        assertEquals(1, (int) call(() -> new SystemView("T", List.of(), 5, hooks()).size() + 1));
     }
 }

@@ -393,6 +393,10 @@ public final class Picker<T> {
         // re-labels these nodes, it does not make new ones.
         private final TextFlow title = new TextFlow();
         private final List<Text> runs = new ArrayList<>();
+        /** A row's states as pseudo-classes, so a keystroke changes no style class list (PERF-10). */
+        private static final javafx.css.PseudoClass MATCH = javafx.css.PseudoClass.getPseudoClass("match");
+
+        private static final javafx.css.PseudoClass UNAVAILABLE = javafx.css.PseudoClass.getPseudoClass("unavailable");
         private final Label rowChip = chip("", "row-chip");
         private final HBox line = UiZoom.hbox(8, title, rowChip);
         private final Tooltip tip = new Tooltip();
@@ -405,7 +409,7 @@ public final class Picker<T> {
         @Override
         protected void updateItem(@Nullable Ranked<T> row, boolean empty) {
             super.updateItem(row, empty);
-            getStyleClass().remove("unavailable");
+            pseudoClassStateChanged(UNAVAILABLE, false);
             setTooltip(null);
             if (empty || row == null) {
                 setGraphic(null);
@@ -419,7 +423,7 @@ public final class Picker<T> {
             rowChip.setManaged(!row.item().chip().isEmpty());
             String unavailable = row.item().unavailable();
             if (unavailable != null) {
-                getStyleClass().add("unavailable");
+                pseudoClassStateChanged(UNAVAILABLE, true);
                 tip.setText(unavailable);
                 setTooltip(tip);
             }
@@ -447,10 +451,14 @@ public final class Picker<T> {
                     if (endHit) next++;
                     end++;
                 }
-                if (used == runs.size()) runs.add(new Text());
+                if (used == runs.size()) {
+                    Text made = new Text();
+                    made.getStyleClass().add("title-run"); // set once: a match is a pseudo-class (PERF-10)
+                    runs.add(made);
+                }
                 Text run = runs.get(used++);
                 run.setText(text.substring(start, end));
-                run.getStyleClass().setAll(hit ? "match" : "plain");
+                run.pseudoClassStateChanged(MATCH, hit);
                 start = end;
             }
             if (title.getChildren().size() != used) title.getChildren().setAll(runs.subList(0, used));

@@ -72,10 +72,7 @@ final class Commands {
         r.register("view.customizeToolbar", window::customizeToolbar);
         r.register(
                 "view.restoreToolbar",
-                () -> {
-                    services.store().update(s -> s.toolbarLayout = new java.util.ArrayList<>());
-                    services.echo("status.toolbarRestored");
-                },
+                window::restoreToolbar,
                 () -> services.settings().toolbarLayout.isEmpty()
                         ? com.partida.i18n.Messages.tr("palette.disabled.toolbarDefault")
                         : null);
@@ -93,12 +90,6 @@ final class Commands {
             services.echo(services.settings().showStatusBar ? "status.statusBarOn" : "status.statusBarOff");
         });
 
-        r.register("view.toggleTabBar", () -> {
-            services.store().update(s -> s.showTabBar = !s.showTabBar);
-            services.echo(services.settings().showTabBar ? "status.tabBarOn" : "status.tabBarOff");
-        });
-
-        registerTabs(window, r);
         registerToolWindows(window, r);
         registerLibrary(window, services);
 
@@ -118,6 +109,20 @@ final class Commands {
                 "keymap.resetBinding",
                 window::resetSelectedBinding,
                 () -> Chrome.bindingRowUnavailable(window.selectedBinding() != null));
+        // The rows of Settings → General's toolbar layout and Settings → Library's folders (MENU-05).
+        r.register(
+                "toolbar.moveUp", () -> onSettings(window, w -> w.moveToolbarEntry(-1)), () -> toolbarMove(window, -1));
+        r.register(
+                "toolbar.moveDown", () -> onSettings(window, w -> w.moveToolbarEntry(1)), () -> toolbarMove(window, 1));
+        r.register("toolbar.remove", () -> onSettings(window, SettingsWindow::removeToolbarEntry), () -> {
+            SettingsWindow w = openSettings(window);
+            return Chrome.toolbarRemoveUnavailable(
+                    w != null && w.selectedToolbarEntry() >= 0, w != null && w.canRemoveToolbarEntry());
+        });
+        r.register("folder.remove", () -> onSettings(window, SettingsWindow::removeSelectedFolder), () -> {
+            SettingsWindow w = openSettings(window);
+            return Chrome.folderRowUnavailable(w != null && w.selectedFolder() != null);
+        });
         r.register("settings.toggleUpdateCheck", () -> {
             services.store().update(s -> s.checkForUpdates = !s.checkForUpdates);
             services.echo(services.settings().checkForUpdates ? "status.updateCheckOn" : "status.updateCheckOff");
@@ -211,61 +216,12 @@ final class Commands {
     }
 
     /**
-     * Every tab operation is a command (TABS-01): bound to a chord, in the palette, a row in the Window menu,
-     * and the per-tab ones on the tab's right-click menu ({@link TabContextMenu}). Each acts on the selected
-     * tab. The ids are Editora's.
-     */
-    private static void registerTabs(MainWindow window, CommandRegistry r) {
-        r.register(
-                "buffer.close",
-                () -> window.onSelectedTab(t -> window.tabs().closeTab(t)),
-                () -> window.tabs().closeUnavailable());
-        for (String id : java.util.List.of(
-                "buffer.closeOthers",
-                "buffer.closeAll",
-                "buffer.closeUnmodified",
-                "buffer.closeLeft",
-                "buffer.closeRight")) {
-            r.register(
-                    id,
-                    () -> window.onSelectedTab(t -> {
-                        switch (id) {
-                            case "buffer.closeOthers" -> window.tabs().closeOtherTabs(t);
-                            case "buffer.closeAll" -> window.tabs().closeAllTabs();
-                            case "buffer.closeUnmodified" -> window.tabs().closeUnmodifiedTabs();
-                            case "buffer.closeLeft" -> window.tabs().closeTabsToLeft(t);
-                            default -> window.tabs().closeTabsToRight(t);
-                        }
-                    }),
-                    () -> window.tabs().nothingToClose(id));
-        }
-        r.register(
-                "buffer.togglePin",
-                () -> window.onSelectedTab(t -> window.tabs().togglePin(t)),
-                () -> window.tabs().closeUnavailable());
-        r.register(
-                "buffer.reopenClosed",
-                () -> window.tabs().reopenClosed(),
-                () -> window.tabs().reopenUnavailable());
-        r.register(
-                "buffer.next",
-                () -> window.tabs().selectNext(1),
-                () -> window.tabs().cycleUnavailable());
-        r.register(
-                "buffer.previous",
-                () -> window.tabs().selectNext(-1),
-                () -> window.tabs().cycleUnavailable());
-        r.register("switcher.show", window::showSwitcher, () -> window.tabs().closeUnavailable());
-        r.register("view.welcome", () -> window.tabs().showWelcome());
-    }
-
-    /**
      * Each tool window's {@code tool.<id>} command (TABS-13), which its stripe button runs, and the commands
      * that float, maximize, resize, close and re-show them from the keyboard (TABS-18). Those act on the
      * window whose stripe menu or header was used, else the one holding focus, else the last one opened.
      */
     private static void registerToolWindows(MainWindow window, CommandRegistry r) {
-        for (String id : java.util.List.of("systems", "game", "retroarch")) {
+        for (String id : java.util.List.of("systems", "retroarch")) {
             r.register(
                     "tool." + id,
                     () -> window.toolWindows().toggle(toolWindow(window, id)),
@@ -416,6 +372,27 @@ final class Commands {
     private static void registerLibrary(MainWindow window, AppServices services) {
         CommandRegistry r = services.commands();
         r.register("game.play", window::playSelected, window::playUnavailable);
+        // Decision 3: a ROM of the selected game other than the one Play starts, and the browser's two views.
+        r.register("library.playRom", window::playSelectedRom, window::playRomUnavailable);
+        r.register(
+                "library.toggleGrid",
+                () -> {
+                    SystemView view = window.activeSystem();
+                    if (view == null) return;
+                    String system = view.title();
+                    services.store().update(s -> {
+                        if (!s.library.gridSystems.remove(system)) s.library.gridSystems.add(system);
+                    });
+                    services.echo(
+                            services.settings().library.gridSystems.contains(system)
+                                    ? "status.gridOn"
+                                    : "status.gridOff");
+                },
+                () -> window.activeSystem() == null ? com.partida.i18n.Messages.tr("palette.disabled.noSystem") : null);
+        r.register("library.toggleHiddenRoms", () -> {
+            services.store().update(s -> s.library.showHiddenRoms = !s.library.showHiddenRoms);
+            services.echo(services.settings().library.showHiddenRoms ? "status.hiddenRomsOn" : "status.hiddenRomsOff");
+        });
         r.register(
                 "game.stop",
                 () -> services.library().stop(),
@@ -438,6 +415,7 @@ final class Commands {
                         !services.settings().library.folders.isEmpty()));
         r.register("library.setRetroArchFolder", window::promptRetroArchFolder);
         r.register("library.setRetroArchCommand", window::promptRetroArchCommand);
+        r.register("library.setRegions", window::promptRegions);
         r.register("library.toggleRecentlyPlayed", () -> {
             services.store().update(s -> s.library.showRecentlyPlayed = !s.library.showRecentlyPlayed);
             services.echo(
@@ -473,6 +451,23 @@ final class Commands {
 
     private static void stepFind(@org.jspecify.annotations.Nullable FindBar bar, boolean forward) {
         if (bar != null && bar.isOpen()) bar.step(forward);
+    }
+
+    /** The Settings window while it shows, or null: what its rows' commands act on. */
+    private static @org.jspecify.annotations.Nullable SettingsWindow openSettings(MainWindow window) {
+        SettingsWindow w = window.settingsWindow();
+        return w != null && w.stage().isShowing() ? w : null;
+    }
+
+    private static void onSettings(MainWindow window, java.util.function.Consumer<SettingsWindow> action) {
+        SettingsWindow w = openSettings(window);
+        if (w != null) action.accept(w);
+    }
+
+    private static @org.jspecify.annotations.Nullable String toolbarMove(MainWindow window, int delta) {
+        SettingsWindow w = openSettings(window);
+        return Chrome.toolbarMoveUnavailable(
+                w == null ? -1 : w.selectedToolbarEntry(), w == null ? 0 : w.toolbarEntries(), delta);
     }
 
     private static ToolWindow toolWindow(MainWindow window, String id) {

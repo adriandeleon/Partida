@@ -5,6 +5,9 @@ this file in the same change ([docs/conventions.md](docs/conventions.md#docs-in-
 
 ## Next
 
+- **Group a game's ROMs by checksum, not only by name** ([decision 3](docs/decisions/0003-browse-by-game-not-by-rom.md)).
+  Two games of one name merge, and variants named differently (`Pokemon Red`, `Pokemon - Red Version`) split;
+  libretro-database's CRCs would settle both, with the box-art matching below.
 - **A system for a games folder.** A folder can be given a core; let it be given a system name too, for
   box art, when its core covers several (the scanner already takes one).
 - **RetroArch's own settings.** A curated set of `retroarch.cfg` options, written only while RetroArch is

@@ -10,6 +10,10 @@ one-line summary written for users.
 
 ### Added
 
+- **Preferred regions.** Settings → Library → Preferred regions (or Set Preferred Regions… in the palette)
+  ranks regions such as `Europe, USA, World, Japan`. When a game has ROMs from several regions, Play starts
+  your first-ranked one, unless you've played another ROM of it before: then that one again. Left blank, the
+  order comes from your country.
 - **Arrange the toolbar your way.** Settings → General → Toolbar Buttons lists the toolbar's buttons: move
   them, remove them, add others (the Systems, Game and RetroArch windows, Filter Games, Welcome, the
   documentation) and gaps between groups, or Restore Default. Customize Toolbar… and Restore Default Toolbar

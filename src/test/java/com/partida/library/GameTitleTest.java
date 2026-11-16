@@ -123,4 +123,24 @@ class GameTitleTest {
         assertEquals("boy and his blob", GameTitle.sortKey("a boy and his blob"));
         assertEquals("a", GameTitle.sortKey("a"));
     }
+
+    @Test
+    void theRegionRankingComesBeforeTheDump() {
+        List<Game> games = List.of(
+                file(NES, "Contra (U) [!].nes"), file(NES, "Contra (E).nes"), file(NES, "Probotector (E) [!].nes"));
+        GameTitle europe = GameTitle.group(games, List.of("Europe", "USA")).getFirst();
+        assertEquals("Contra (E).nes", europe.best().game().contentName());
+        GameTitle plain = GameTitle.group(games).getFirst();
+        assertEquals("Contra (U) [!].nes", plain.best().game().contentName(), "unranked: the verified dump");
+        assertEquals("Contra (E).nes", plain.best(List.of("Europe")).game().contentName());
+    }
+
+    @Test
+    void aGameKeepsItsIdAcrossItsRoms() {
+        GameTitle mario = GameTitle.group(
+                        List.of(file(NES, "Super Mario Bros. (E) [!].nes"), file(NES, "Super Mario Bros (U).nes")))
+                .getFirst();
+        assertEquals(NES + " | super mario bros", mario.id());
+        for (GameTitle.Rom rom : mario.roms()) assertEquals(mario.id(), GameTitle.idOf(rom.game()));
+    }
 }

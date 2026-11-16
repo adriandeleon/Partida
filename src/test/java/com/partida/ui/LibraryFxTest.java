@@ -184,6 +184,54 @@ class LibraryFxTest {
                 call(() -> services.library().state().status()));
     }
 
+    /** Decision 3: the region ranking from the prompt and Settings, and the ROM Play starts for a game. */
+    @Test
+    void preferredRegionsAndTheRomPlayedLastChooseWhatPlayStarts() throws Exception {
+        TextInputDialog prompt = call(() -> window.promptRegions());
+        Button ok = (Button) prompt.getDialogPane().lookupButton(javafx.scene.control.ButtonType.OK);
+        run(() -> prompt.getEditor().setText("Europe, Narnia"));
+        assertTrue(call(ok::isDisabled), "Narnia is no region");
+        run(() -> prompt.getEditor().setText("japan, usa"));
+        run(ok::fire);
+        assertEquals(List.of("Japan", "USA"), services.settings().library.regions);
+
+        run(() -> window.openSettings(SettingsWindow.Page.LIBRARY));
+        SettingsWindow settings = java.util.Objects.requireNonNull(window.settingsWindow());
+        assertEquals("Japan, USA", call(() -> settings.regions().getText()));
+        run(() -> {
+            settings.regions().setText("Europe, Narnia");
+            settings.regions().fireEvent(new javafx.event.ActionEvent());
+        });
+        assertTrue(call(() -> settings.regions().getStyleClass().contains("invalid")));
+        assertEquals(List.of("Japan", "USA"), services.settings().library.regions, "unchanged");
+        assertEchoed(Messages.tr("status.regionsInvalid", "Narnia"));
+        run(() -> {
+            settings.regions().setText(" europe , usa ");
+            settings.regions().fireEvent(new javafx.event.ActionEvent());
+        });
+        assertFalse(call(() -> settings.regions().getStyleClass().contains("invalid")));
+        assertEquals(List.of("Europe", "USA"), services.settings().library.regions);
+        assertEquals(List.of("Europe", "USA"), call(() -> services.library().regions()));
+
+        // Never played: the best ROM for the ranking. Played: that ROM, until another is played.
+        String nes = "Nintendo - Nintendo Entertainment System";
+        Game usa = new Game("", dir.resolve("Contra (U) [!].nes"), nes, null);
+        Game europe = new Game("", dir.resolve("Contra (E) [!].nes"), nes, null);
+        com.partida.library.GameTitle contra =
+                com.partida.library.GameTitle.group(List.of(usa, europe)).getFirst();
+        LibraryService library = services.library();
+        assertEquals(europe, call(() -> library.romToPlay(contra)));
+        run(() -> library.remember(usa));
+        assertEquals(usa.rom().toString(), services.settings().window.lastPlayed.get(contra.id()));
+        assertEquals(usa, call(() -> library.romToPlay(contra)));
+        run(() -> library.remember(usa)); // the same ROM again: nothing to write
+        run(() -> {
+            settings.regions().setText("");
+            settings.regions().fireEvent(new javafx.event.ActionEvent());
+        });
+        assertTrue(services.settings().library.regions.isEmpty(), "blank: the country's ranking");
+    }
+
     // ---- Settings → Library ----
 
     @Test

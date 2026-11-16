@@ -236,6 +236,34 @@ final class LibraryService {
         return key.toString();
     }
 
+    /** Remembers {@code game}'s ROM as the one Play starts next time for its game, if the history doesn't say. */
+    void remember(Game game) {
+        String id = com.partida.library.GameTitle.idOf(game);
+        String rom = game.rom().toString();
+        if (!rom.equals(services.settings().window.lastPlayed.get(id))) {
+            services.store().update(s -> s.window.played(id, rom));
+        }
+    }
+
+    /**
+     * The ROM Play starts for {@code title} (decision 3): the one played last, by RetroArch's play history or
+     * else by Partida's own record, or its best ROM for the region ranking in force.
+     */
+    Game romToPlay(com.partida.library.GameTitle title) {
+        return com.partida.library.PlayChoice.choose(
+                        title,
+                        state.library().history(),
+                        services.settings().window.lastPlayed.get(title.id()),
+                        regions())
+                .game();
+    }
+
+    /** The region ranking in force: the user's from Settings, else the one for the system's country. */
+    List<String> regions() {
+        return com.partida.library.Regions.effective(
+                services.settings().library.regions, java.util.Locale.getDefault());
+    }
+
     State state() {
         return state;
     }
@@ -320,6 +348,7 @@ final class LibraryService {
             }
             Platform.runLater(() -> {
                 process = started;
+                remember(game);
                 // Stop asked while RetroArch was starting: it ends now that there is a process to end.
                 if (stopRequested) {
                     stopRequested = false;

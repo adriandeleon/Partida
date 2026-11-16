@@ -140,6 +140,38 @@ public record RomName(
             Map.entry("latin america", "Latin America"),
             Map.entry("unknown", "Unknown"));
 
+    /** Every region a name can give, by its No-Intro name, the most common first. */
+    public static final List<String> REGIONS = List.of(
+            "World",
+            "USA",
+            "Europe",
+            "Japan",
+            "UK",
+            "France",
+            "Germany",
+            "Spain",
+            "Italy",
+            "Netherlands",
+            "Sweden",
+            "Scandinavia",
+            "Denmark",
+            "Norway",
+            "Finland",
+            "Portugal",
+            "Poland",
+            "Greece",
+            "Russia",
+            "Australia",
+            "Canada",
+            "Brazil",
+            "Latin America",
+            "Korea",
+            "China",
+            "Hong Kong",
+            "Taiwan",
+            "Asia",
+            "Unknown");
+
     /** GoodTools' region codes, a tag of its own: {@code (U)}, {@code (E)}, {@code (JU)}, {@code (UK)}. */
     private static final Map<String, List<String>> GOOD_REGIONS = Map.ofEntries(
             Map.entry("u", List.of("USA")),

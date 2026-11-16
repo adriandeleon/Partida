@@ -111,6 +111,8 @@ class LibraryLoaderTest {
         assertEquals(
                 List.of("Nintendo - Super Nintendo Entertainment System"),
                 library.collections().stream().map(GameCollection::name).toList());
+        // Hidden from the systems, the history is still read: Play starts the ROM of a game played last.
+        assertEquals(List.of(roms.resolve("gba/Golden Sun.gba")), library.history());
     }
 
     @Test

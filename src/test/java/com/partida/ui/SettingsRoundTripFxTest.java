@@ -152,6 +152,14 @@ class SettingsRoundTripFxTest {
                         field.fireEvent(new ActionEvent());
                         break;
                     }
+                    // Settings → Library's preferred regions take region names.
+                    if (com.partida.library.Regions.format(
+                                    com.partida.library.Regions.forLocale(java.util.Locale.getDefault()))
+                            .equals(field.getPromptText())) {
+                        field.setText("Japan, Europe");
+                        field.fireEvent(new ActionEvent());
+                        break;
+                    }
                     if (texts.isEmpty()) break;
                     field.setText(texts.removeFirst());
                     field.fireEvent(new ActionEvent());

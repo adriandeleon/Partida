@@ -438,6 +438,7 @@ final class Commands {
                         !services.settings().library.folders.isEmpty()));
         r.register("library.setRetroArchFolder", window::promptRetroArchFolder);
         r.register("library.setRetroArchCommand", window::promptRetroArchCommand);
+        r.register("library.setRegions", window::promptRegions);
         r.register("library.toggleRecentlyPlayed", () -> {
             services.store().update(s -> s.library.showRecentlyPlayed = !s.library.showRecentlyPlayed);
             services.echo(

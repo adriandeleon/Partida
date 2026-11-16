@@ -86,6 +86,7 @@ public final class SettingsWindow {
                             null,
                             "library.setRetroArchFolder",
                             "library.setRetroArchCommand",
+                            "library.setRegions",
                             "library.toggleRecentlyPlayed",
                             null,
                             "library.refresh"),
@@ -176,6 +177,9 @@ public final class SettingsWindow {
     private final Label retroarchStatus = new Label();
     private final TextField retroarchFolder = new TextField();
     private final TextField retroarchCommand = new TextField();
+    /** The region ranking (decision 3), blank for the system country's, which the prompt text shows. */
+    private final TextField regions = new TextField();
+
     private final SettingSwitch recentlyPlayed =
             new SettingSwitch(Messages.tr("settings.library.recentlyPlayed.title"));
     /**
@@ -530,6 +534,18 @@ public final class SettingsWindow {
         recentlyPlayed.setOnAction(
                 e -> services.store().update(s -> s.library.showRecentlyPlayed = recentlyPlayed.isSelected()));
         row(retroarch, Page.LIBRARY, "settings.library.recentlyPlayed", recentlyPlayed, "history recent");
+        regions.setPromptText(com.partida.library.Regions.format(
+                com.partida.library.Regions.forLocale(java.util.Locale.getDefault())));
+        regions.setOnAction(e -> commitRegions());
+        regions.focusedProperty().addListener((obs, was, focused) -> {
+            if (!focused) commitRegions();
+        });
+        row(
+                retroarch,
+                Page.LIBRARY,
+                "settings.library.regions",
+                regions,
+                "region country europe usa japan world rom variant release prefer");
 
         VBox folders = card(Page.LIBRARY, Messages.tr("settings.library.folders.heading"));
         Button add = new Button(Messages.tr("command.library.addFolder"));
@@ -561,6 +577,8 @@ public final class SettingsWindow {
             retroarchFolder.setText(library.retroarchConfigDir);
             retroarchFolder.getStyleClass().remove("invalid");
             retroarchCommand.setText(library.retroarchCommand);
+            regions.setText(com.partida.library.Regions.format(library.regions));
+            regions.getStyleClass().remove("invalid");
             recentlyPlayed.setSelected(library.showRecentlyPlayed);
             loadFolders();
             libraryStatus.request();
@@ -742,6 +760,22 @@ public final class SettingsWindow {
         retroarchFolder.getStyleClass().remove("invalid");
         if (!text.equals(services.settings().library.retroarchConfigDir)) {
             services.store().update(s -> s.library.retroarchConfigDir = text);
+        }
+    }
+
+    /** Commits the region ranking; a word that is no region marks the field and is never saved. */
+    private void commitRegions() {
+        String text = regions.getText();
+        List<String> ranked = com.partida.library.Regions.parse(text);
+        if (ranked == null) {
+            if (!regions.getStyleClass().contains("invalid"))
+                regions.getStyleClass().add("invalid");
+            services.echo("status.regionsInvalid", String.valueOf(com.partida.library.Regions.unknown(text)));
+            return;
+        }
+        regions.getStyleClass().remove("invalid");
+        if (!ranked.equals(services.settings().library.regions)) {
+            services.store().update(s -> s.library.regions = new ArrayList<>(ranked));
         }
     }
 
@@ -1257,6 +1291,10 @@ public final class SettingsWindow {
 
     TextField retroarchFolder() {
         return retroarchFolder;
+    }
+
+    TextField regions() {
+        return regions;
     }
 
     TextField retroarchCommand() {

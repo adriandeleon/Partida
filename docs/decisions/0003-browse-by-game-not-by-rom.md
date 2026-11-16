@@ -1,6 +1,7 @@
 # 3. Browse by game, with its ROMs under it, in one library browser
 
-- Status: accepted; phase 1 (the name parser and the grouping) is built, phases 2 to 4 are planned
+- Status: accepted; phases 1 (the name parser and the grouping) and 2 (the ROM Play starts) are built,
+  phases 3 and 4 are planned
 - Date: 2026-11-16
 
 ## Context
@@ -20,9 +21,13 @@ became a list of a thousand rows, most of them variants nobody browses for.
 - **Hidden by default:** bad dumps and overdumps; hacks, trainers, fixes and translations; betas, protos and
   demos; unlicensed and pirate releases (`RomName.Flag.HIDDEN`). A hidden ROM stays listed under its game; a
   game whose ROMs are all hidden drops out of browsing. A filter shows them again.
-- **Play starts the ROM last played** of that game. A game never played starts its best ROM
-  (`GameTitle.ORDER`: a clean release, verified, the original before an alternate, the latest revision, the
-  first disc), and a region ranking in Settings will decide between regions.
+- **Play starts the ROM last played** of that game (`PlayChoice`): the one of its ROMs nearest the top of
+  RetroArch's play history, which every launch puts there, from Partida or from RetroArch; else the ROM
+  Partida last started for it (`lastPlayed` in `session.json`, for when the history is off or has dropped
+  it). A game never played starts its best ROM (`GameTitle.order`: a clean release, the region ranked first,
+  verified, the original before an alternate, the latest revision, the first disc). The ranking is the
+  user's (Settings → Library → Preferred regions) or, by default, one from the system's country (`Regions`):
+  its own region, then Europe's or the USA's as its TV standard favors, the world release, Japan last.
 - **One browser**, not a tab per system: systems down the left, the system's games in the middle as a list or a
   box-art grid (remembered per system), and on the right the selected game's box art, a Play button and its
   ROMs, each of which can be played.

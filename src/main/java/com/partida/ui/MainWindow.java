@@ -757,6 +757,25 @@ public final class MainWindow {
                 text -> services.store().update(s -> s.library.retroarchCommand = text.strip()));
     }
 
+    /** Set Preferred Regions… (decision 3): the ranking, typed as region names split on commas. */
+    TextInputDialog promptRegions() {
+        return Prompts.text(
+                stage,
+                Messages.tr("command.library.setRegions"),
+                Messages.tr("settings.library.regions.title"),
+                com.partida.library.Regions.format(services.settings().library.regions),
+                MainWindow::regionsProblem,
+                text -> services.store()
+                        .update(s -> s.library.regions = new java.util.ArrayList<>(
+                                java.util.Objects.requireNonNull(com.partida.library.Regions.parse(text)))));
+    }
+
+    /** Why {@code text} is no region ranking, or null when it is one (blank is the system country's). */
+    static @Nullable String regionsProblem(String text) {
+        String unknown = com.partida.library.Regions.unknown(text);
+        return unknown == null ? null : Messages.tr("settings.library.regions.invalid", unknown);
+    }
+
     /** Settings → Keymap from the palette: pick a command, then type its keys (blank unbinds). */
     void chooseBinding() {
         List<Picker.Item<Command>> items = services.commands().all().stream()

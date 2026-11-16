@@ -212,6 +212,7 @@ public final class Settings {
         c.window.toolWindows = window.toolWindows.copy();
         c.window.documents = window.documents == null ? null : new java.util.ArrayList<>(window.documents);
         c.window.activeDocument = window.activeDocument;
+        c.window.lastPlayed = new java.util.LinkedHashMap<>(window.lastPlayed);
         c.sync.repoUrl = sync.repoUrl;
         c.sync.branch = sync.branch;
         c.sync.auto = sync.auto;
@@ -247,6 +248,30 @@ public final class Settings {
         /** At most this many documents are reopened: a hand-edited file can't open a thousand tabs. */
         public static final int MAX_DOCUMENTS = 100;
 
+        /**
+         * The ROM Partida last started for each game, by the game's id ({@code library.GameTitle#id}), the latest
+         * last: Play starts it again when RetroArch's play history is off or has dropped it (decision 3).
+         */
+        public java.util.LinkedHashMap<String, String> lastPlayed = new java.util.LinkedHashMap<>();
+
+        /** At most this many games' last ROM are kept, the oldest dropped first. */
+        public static final int MAX_LAST_PLAYED = 1000;
+
+        /** Remembers {@code rom} as the one last played of game {@code id}: it moves to the end, the latest. */
+        public void played(String id, String rom) {
+            lastPlayed.remove(id);
+            lastPlayed.put(id, rom);
+            trimLastPlayed();
+        }
+
+        private void trimLastPlayed() {
+            var oldest = lastPlayed.keySet().iterator();
+            while (lastPlayed.size() > MAX_LAST_PLAYED && oldest.hasNext()) {
+                oldest.next();
+                oldest.remove();
+            }
+        }
+
         void clamp() {
             Window defaults = new Window();
             width = Settings.clamp(width, MIN_WINDOW_SIZE, MAX_WINDOW_SIZE, defaults.width);
@@ -267,6 +292,14 @@ public final class Settings {
             if (activeDocument != null && (documents == null || !documents.contains(activeDocument))) {
                 activeDocument = null;
             }
+            java.util.LinkedHashMap<String, String> kept = new java.util.LinkedHashMap<>();
+            if (lastPlayed != null) {
+                lastPlayed.forEach((id, rom) -> {
+                    if (id != null && !id.isBlank() && rom != null && !rom.isBlank()) kept.put(id, rom);
+                });
+            }
+            lastPlayed = kept;
+            trimLastPlayed();
         }
 
         private static boolean onScreen(@Nullable Double position) {
@@ -401,6 +434,12 @@ public final class Settings {
         /** Whether RetroArch's play history is the first collection. */
         public boolean showRecentlyPlayed = true;
 
+        /**
+         * The regions ranked for a game never played, best first, by No-Intro's names ({@code Europe},
+         * {@code USA}); empty for the ranking of the system's country ({@code library.Regions}).
+         */
+        public List<String> regions = new ArrayList<>();
+
         /** One folder of games and the core for all of it, blank to choose by file extension. */
         public static final class Folder {
             public String path = "";
@@ -449,6 +488,7 @@ public final class Settings {
             if (retroarchConfigDir == null || !isFullPath(retroarchConfigDir)) retroarchConfigDir = "";
             else retroarchConfigDir = retroarchConfigDir.strip();
             if (retroarchCommand == null) retroarchCommand = "";
+            regions = com.partida.library.Regions.known(regions);
         }
 
         /** Whether {@code text} is a full (absolute) path this OS can parse. Pure: nothing is read from disk. */
@@ -467,6 +507,7 @@ public final class Settings {
             c.retroarchConfigDir = retroarchConfigDir;
             c.retroarchCommand = retroarchCommand;
             c.showRecentlyPlayed = showRecentlyPlayed;
+            c.regions = new ArrayList<>(regions);
             return c;
         }
     }

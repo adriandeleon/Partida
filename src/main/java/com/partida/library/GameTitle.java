@@ -36,18 +36,34 @@ public record GameTitle(String key, String title, String system, List<Rom> roms)
     }
 
     /**
-     * The order of a game's ROMs, best first, which is also the one Play starts when nothing else says: a clean
-     * release before a hidden one, a verified dump before an unverified one, the original before an alternate
-     * dump, the latest revision, the first disc, the fewest tags this app does not know, then by file name.
+     * The order of a game's ROMs, best first, which is also the one Play starts when no ROM of it was played: a
+     * clean release before a hidden one, the region ranked first in {@code regions} (a ROM of no region listed
+     * after them all), a verified dump before an unverified one, the original before an alternate dump, the
+     * latest revision, the first disc, the fewest tags this app does not know, then by file name.
      */
-    public static final Comparator<Rom> ORDER = Comparator.<Rom, Boolean>comparing(
-                    r -> r.name().hidden())
-            .thenComparing(r -> !r.name().has(RomName.Flag.VERIFIED))
-            .thenComparing(r -> r.name().has(RomName.Flag.ALTERNATE))
-            .thenComparing(r -> -r.name().revisionRank())
-            .thenComparingInt(r -> r.name().disc())
-            .thenComparingInt(r -> r.name().other().size())
-            .thenComparing(r -> r.game().contentName().toLowerCase(Locale.ROOT));
+    public static Comparator<Rom> order(List<String> regions) {
+        return Comparator.<Rom, Boolean>comparing(r -> r.name().hidden())
+                .thenComparingInt(r -> regionRank(r.name(), regions))
+                .thenComparing(r -> !r.name().has(RomName.Flag.VERIFIED))
+                .thenComparing(r -> r.name().has(RomName.Flag.ALTERNATE))
+                .thenComparing(r -> -r.name().revisionRank())
+                .thenComparingInt(r -> r.name().disc())
+                .thenComparingInt(r -> r.name().other().size())
+                .thenComparing(r -> r.game().contentName().toLowerCase(Locale.ROOT));
+    }
+
+    /** {@link #order} with no region ranked above another. */
+    public static final Comparator<Rom> ORDER = order(List.of());
+
+    /** Where a ROM's best region stands in {@code regions}; past the end when none of its regions is there. */
+    static int regionRank(RomName name, List<String> regions) {
+        int rank = regions.size();
+        for (String region : name.regions()) {
+            int at = regions.indexOf(region);
+            if (at >= 0) rank = Math.min(rank, at);
+        }
+        return rank;
+    }
 
     public GameTitle {
         roms = List.copyOf(roms);
@@ -68,6 +84,28 @@ public record GameTitle(String key, String title, String system, List<Rom> roms)
     /** The best ROM: the first of {@link #roms}, the one Play starts when no ROM was played before. */
     public Rom best() {
         return roms.getFirst();
+    }
+
+    /** The best ROM with {@code regions} ranked: {@link #order}. */
+    public Rom best(List<String> regions) {
+        return roms.stream().min(order(regions)).orElseThrow();
+    }
+
+    /** What names this game across launches: its system and its key ({@link #idOf}). */
+    public String id() {
+        return system + ID_SEPARATOR + key;
+    }
+
+    private static final String ID_SEPARATOR = " | ";
+
+    /** The {@link #id} of the game {@code game} is a ROM of, read from its name. */
+    public static String idOf(Game game) {
+        return game.system() + ID_SEPARATOR + keyOf(Rom.of(game));
+    }
+
+    private static String keyOf(Rom rom) {
+        String key = rom.name().key();
+        return key.isEmpty() ? rom.game().contentName().toLowerCase(Locale.ROOT) : key;
     }
 
     /** The regions of the shown ROMs, without repeats, in the order of the ROMs. */
@@ -96,19 +134,22 @@ public record GameTitle(String key, String title, String system, List<Rom> roms)
      * first, the entries in {@link #BY_TITLE} order. A ROM is never in two entries.
      */
     public static List<GameTitle> group(List<Game> games) {
+        return group(games, List.of());
+    }
+
+    /** {@link #group(List)}, each game's ROMs in {@link #order} for {@code regions}. */
+    public static List<GameTitle> group(List<Game> games, List<String> regions) {
         Map<String, List<Rom>> bySystemAndKey = new LinkedHashMap<>();
         for (Game game : games) {
             Rom rom = Rom.of(game);
-            String key = rom.name().key().isEmpty()
-                    ? game.contentName().toLowerCase(Locale.ROOT)
-                    : rom.name().key();
+            String key = keyOf(rom);
             bySystemAndKey
                     .computeIfAbsent(game.system() + '\u0000' + key, k -> new ArrayList<>())
                     .add(rom);
         }
         List<GameTitle> titles = new ArrayList<>();
         bySystemAndKey.forEach((systemAndKey, roms) -> {
-            roms.sort(ORDER);
+            roms.sort(order(regions));
             Rom best = roms.getFirst();
             String key = systemAndKey.substring(systemAndKey.indexOf('\u0000') + 1);
             titles.add(new GameTitle(key, best.name().title(), best.game().system(), roms));

@@ -103,13 +103,15 @@ public final class UiZoom {
     }
 
     /**
-     * A stylesheet at {@code percent}: every pixel length multiplied, rounded to a hundredth. An em or a
-     * percentage is relative already and is left alone. Pure.
+     * A stylesheet at {@code percent}: every pixel length multiplied, rounded to a hundredth. A length written
+     * as a bare number in a padding, gap, radius, inset or size is a pixel length too, as JavaFX reads it, so
+     * the control themes stay Editora's files unchanged (ICON-05); a border's or a stroke's width stays a bare
+     * number and a hairline. An em or a percentage is relative already and is left alone. Pure.
      */
     static String scale(String css, int percent) {
         if (percent == Settings.DEFAULT_UI_ZOOM) return css;
         double factor = percent / 100.0;
-        Matcher m = PX.matcher(css);
+        Matcher m = PX.matcher(pixels(css));
         StringBuilder out = new StringBuilder(css.length() + 256);
         while (m.find()) {
             double scaled = Math.round(Double.parseDouble(m.group(1)) * factor * 100) / 100.0;
@@ -117,6 +119,33 @@ public final class UiZoom {
                     ? Long.toString((long) scaled)
                     : String.format(Locale.ROOT, "%s", scaled);
             m.appendReplacement(out, Matcher.quoteReplacement(number + "px"));
+        }
+        m.appendTail(out);
+        return out.toString();
+    }
+
+    /** The declarations whose bare numbers are pixel lengths the zoom scales. */
+    static final Pattern LENGTHS = Pattern.compile(
+            "(-fx-(?:padding|spacing|hgap|vgap|background-insets|background-radius|border-radius|border-insets"
+                    + "|(?:min|max|pref)-(?:width|height)|graphic-text-gap|arrow-button-gap)\\s*:\\s*)([^;{}]+)(;)");
+
+    /** A bare number in a declaration: no unit after it, and not part of a name, a color or another number. */
+    private static final Pattern BARE = Pattern.compile("(?<![\\w.#%-])(-?\\d*\\.?\\d+)(?![\\w.%])");
+
+    /** {@code css} with every non-zero bare number of a {@link #LENGTHS} declaration written in px. Pure. */
+    static String pixels(String css) {
+        Matcher m = LENGTHS.matcher(css);
+        StringBuilder out = new StringBuilder(css.length() + 256);
+        while (m.find()) {
+            Matcher n = BARE.matcher(m.group(2));
+            StringBuilder value = new StringBuilder();
+            while (n.find()) {
+                String number = n.group(1);
+                n.appendReplacement(
+                        value, Matcher.quoteReplacement(Double.parseDouble(number) == 0 ? number : number + "px"));
+            }
+            n.appendTail(value);
+            m.appendReplacement(out, Matcher.quoteReplacement(m.group(1) + value + m.group(3)));
         }
         m.appendTail(out);
         return out.toString();

@@ -1,7 +1,7 @@
 {
   "$schema": "https://pauta-project.dev/6.1.0/audit.schema.json",
   "app": "Partida",
-  "commit": "24f3e75",
+  "commit": "fe34648",
   "edition": "6.1.0",
   "date": "2026-11-16",
   "scope": [],
@@ -52,8 +52,8 @@
     {
       "id": "PAUTA-04",
       "level": "MUST",
-      "status": "fail",
-      "evidence": "Unmet with no exception in pauta.json: PERF-10, ICON-05. No result reports an entry for a rule that passes. Judged last from every other result of the edition."
+      "status": "pass",
+      "evidence": "No MUST or SHOULD fails, and no result reports a pauta.json entry for a rule that passes. Judged last from every other result of the edition; the app-only entries are reported as problems (PAUTA-16)."
     },
     {
       "id": "PAUTA-05",
@@ -516,8 +516,8 @@
     {
       "id": "PERF-10",
       "level": "SHOULD",
-      "status": "fail",
-      "evidence": "The palette re-sets each visible title run's style class on every keystroke (src/main/java/com/partida/ui/Picker.java:453) where a pseudo-class would keep classes stable (as OverlayToggles.OPEN does). The grid's selection is a pseudo-class set on the tiles in sight, with no refresh (src/main/java/com/partida/ui/SystemView.java:174,691-697). applyCss only on one row's list, on a keyboard menu request (src/main/java/com/partida/ui/RowContextMenu.java:40,73)."
+      "status": "pass",
+      "evidence": "Style classes stay stable: the palette's title runs get title-run once and a :match pseudo-class per keystroke, and an unavailable row an :unavailable pseudo-class (src/main/java/com/partida/ui/Picker.java:426,456,461); the grid's selected tile is a pseudo-class set on the tiles in sight, with no refresh (src/main/java/com/partida/ui/SystemView.java:174,691-697). applyCss only on one row's list, on a keyboard menu request (src/main/java/com/partida/ui/RowContextMenu.java:40,73). Rich text runs are one Text per change of style (Picker.fill)."
     },
     {
       "id": "PERF-11",
@@ -840,8 +840,8 @@
     {
       "id": "ICON-05",
       "level": "SHOULD",
-      "status": "fail",
-      "evidence": "src/main/resources/com/partida/styles/editora-light.css and editora-dark.css are no longer identical to ../Editora/src/main/resources/com/editora/styles/atlantafx-themes/ (cmp differs from line 255; 100+ changed lines each): commit d242942 rewrote bare lengths as px (e.g. editora-light.css:255 '0 3px 0 3px' for '0 3 0 3', :483 '50px') so UI zoom scales them (src/test/java/com/partida/ui/UiZoomTest.java:70-90). Fix: take the px change upstream into Editora's copies, or record a deviation in pauta.json with its reason and link."
+      "status": "pass",
+      "evidence": "src/main/resources/com/partida/styles/editora-light.css and editora-dark.css are byte-identical to Editora's src/main/resources/com/editora/styles/atlantafx-themes/ copies (cmp, ../Editora at ca34cfc66); the UI zoom reads their bare lengths as pixels at zoom time instead of editing them (src/main/java/com/partida/ui/UiZoom.java:114,136), asserted by src/test/java/com/partida/ui/UiZoomTest.java."
     },
     {
       "id": "ICON-06",

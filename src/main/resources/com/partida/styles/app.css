@@ -115,15 +115,15 @@
     -fx-border-color: transparent transparent transparent -color-accent-emphasis;
     -fx-border-width: 0 0 0 2;
 }
-.command-palette .list-cell .match {
+.command-palette .list-cell .title-run {
+    -fx-fill: -color-fg-default;
+}
+.command-palette .list-cell .title-run:match {
     -fx-font-weight: bold;
     -fx-fill: -color-accent-fg;
 }
-.command-palette .list-cell .plain {
-    -fx-fill: -color-fg-default;
-}
-.command-palette .list-cell.unavailable .plain,
-.command-palette .list-cell.unavailable .match {
+.command-palette .list-cell:unavailable .title-run,
+.command-palette .list-cell:unavailable .title-run:match {
     -fx-fill: -color-fg-subtle;
 }
 .key-chip {

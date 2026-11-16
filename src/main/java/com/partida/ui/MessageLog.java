@@ -20,7 +20,12 @@ public final class MessageLog {
         ERROR
     }
 
-    public record Entry(LocalTime time, String text, Severity severity) {}
+    /** One message; {@code lowerText} is its text in lower case, made once, for the filter (PERF-09). */
+    public record Entry(LocalTime time, String text, Severity severity, String lowerText) {
+        public Entry(LocalTime time, String text, Severity severity) {
+            this(time, text, severity, text.toLowerCase(java.util.Locale.ROOT));
+        }
+    }
 
     static final int MAX_ENTRIES = 200;
     static final long REPEAT_MILLIS = 2000;

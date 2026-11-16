@@ -71,4 +71,18 @@ class CfgFileTest {
             assertEquals(1, files.count(), "temporary file should be gone");
         }
     }
+
+    /** PERF-12: a file past the limit is refused before its content is read; one at the limit is read. */
+    @Test
+    void aFilePastTheLimitIsNotRead(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("big.cfg");
+        Files.writeString(file, "a = \"1\"\n");
+        long size = Files.size(file);
+        assertEquals("a = \"1\"\n", Inputs.read(file, size));
+        java.io.IOException e = assertThrows(java.io.IOException.class, () -> Inputs.read(file, size - 1));
+        assertTrue(e.getMessage().contains("big.cfg"), e.getMessage());
+        assertTrue(Inputs.CONFIG_LIMIT < Inputs.PLAYLIST_LIMIT);
+        Files.write(file, new byte[(int) Inputs.CONFIG_LIMIT + 1]);
+        assertThrows(java.io.IOException.class, () -> CfgFile.load(file), "retroarch.cfg goes through the limit");
+    }
 }

@@ -43,8 +43,9 @@ public final class CfgFile {
         if (!Files.exists(file)) {
             return empty();
         }
-        // Decode leniently: a stray non-UTF-8 byte in a path shouldn't make the whole file unreadable.
-        return parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+        // Decode leniently: a stray non-UTF-8 byte in a path shouldn't make the whole file unreadable. A file past
+        // the limit is refused before it is read (PERF-12).
+        return parse(Inputs.read(file, Inputs.CONFIG_LIMIT));
     }
 
     public static CfgFile parse(String text) {

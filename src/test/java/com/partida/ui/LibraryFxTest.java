@@ -16,6 +16,7 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 
+import com.partida.AppInfo;
 import com.partida.i18n.Messages;
 import com.partida.library.Game;
 import com.partida.retroarch.CoreCatalog;
@@ -125,6 +126,15 @@ class LibraryFxTest {
                                 c -> c.games().stream().anyMatch(g -> g.title().equals("Extra")))),
                 "the folder's game is in the library");
 
+        // CONF-01: the user made the folder, so removing it asks first; a no keeps it.
+        host.confirmAnswer = false;
+        assertTrue(runCommand("library.removeFolder"));
+        pick("my-games");
+        assertEquals(1, services.settings().library.folders.size(), "kept on a no");
+        assertEquals(
+                Messages.tr("confirm.removeFolder.question", AppInfo.tildeHome(roms.toString())),
+                host.questions.getLast().message());
+        host.confirmAnswer = true;
         assertTrue(runCommand("library.removeFolder"));
         pick("my-games");
         assertTrue(services.settings().library.folders.isEmpty());
@@ -171,7 +181,7 @@ class LibraryFxTest {
                 SettingsWindow.Page.LIBRARY,
                 call(() -> settings.sidebar().getSelectionModel().getSelectedItem()));
         assertTrue(call(() -> settings.retroarchStatus().getText()).contains("retroarch"), "the folder in use");
-        assertTrue(call(() -> settings.folderRows().getChildren().size() == 1), "the no-folders line");
+        assertTrue(call(() -> settings.folderList().getItems().isEmpty()), "the no-folders line is the placeholder");
 
         // A full path commits; anything else is marked and kept out.
         run(() -> {
@@ -195,7 +205,7 @@ class LibraryFxTest {
                 .update(s ->
                         s.library.folders.add(new com.partida.config.Settings.Library.Folder(roms.toString(), ""))));
         FakeLibrary.waitLoaded(services);
-        HBox row = call(() -> (HBox) settings.folderRows().getChildren().getFirst());
+        HBox row = folderRow(settings);
         @SuppressWarnings("unchecked")
         ComboBox<String> core = (ComboBox<String>) row.getChildren().get(1);
         assertTrue(call(() -> core.getItems().contains("fake_libretro")));
@@ -205,10 +215,14 @@ class LibraryFxTest {
         FakeLibrary.waitLoaded(services);
         run(() -> services.store().update(s -> s.library.folders.getFirst().coreId = ""));
         FakeLibrary.waitLoaded(services);
-        HBox rebuilt = call(() -> (HBox) settings.folderRows().getChildren().getFirst());
+        HBox rebuilt = folderRow(settings);
         assertEquals(
                 "", call(() -> ((ComboBox<?>) rebuilt.getChildren().get(1)).getValue()), "a change made elsewhere");
         Button remove = (Button) rebuilt.getChildren().get(2);
+        host.confirmAnswer = false;
+        run(remove::fire);
+        assertEquals(1, services.settings().library.folders.size(), "Remove asks first (CONF-01)");
+        host.confirmAnswer = true;
         run(remove::fire);
         assertTrue(services.settings().library.folders.isEmpty());
 
@@ -225,6 +239,151 @@ class LibraryFxTest {
     }
 
     // ---- the Game window ----
+
+    /**
+     * SET-03: the search finds a games folder by its path or its core, opens Library on it and hides the folders
+     * that don't match. PERF-08: the folders are a virtualized list.
+     */
+    @Test
+    void theSettingsSearchFindsAGamesFolder() throws Exception {
+        Path snes = Files.createDirectories(dir.resolve("snes-roms"));
+        Path gba = Files.createDirectories(dir.resolve("gba-roms"));
+        run(() -> services.store().update(s -> {
+            s.library.folders.add(new com.partida.config.Settings.Library.Folder(snes.toString(), "fake_libretro"));
+            s.library.folders.add(new com.partida.config.Settings.Library.Folder(gba.toString(), ""));
+        }));
+        FakeLibrary.waitLoaded(services);
+        assertTrue(runCommand("app.settings"));
+        SettingsWindow settings = Objects.requireNonNull(window.settingsWindow());
+        run(() -> settings.sidebar().getSelectionModel().select(SettingsWindow.Page.GENERAL));
+        assertEquals(2, (int) call(() -> settings.folderList().getItems().size()));
+
+        run(() -> settings.applySearch("gba-roms"));
+        assertEquals(
+                SettingsWindow.Page.LIBRARY,
+                call(() -> settings.sidebar().getSelectionModel().getSelectedItem()),
+                "the page of the best match opens");
+        assertEquals(
+                List.of(gba.toString()),
+                call(() -> settings.folderList().getItems().stream()
+                        .map(f -> f.path)
+                        .toList()));
+        run(() -> settings.applySearch("fake"));
+        assertEquals(
+                List.of(snes.toString()),
+                call(() -> settings.folderList().getItems().stream()
+                        .map(f -> f.path)
+                        .toList()),
+                "found by the core it is given");
+        run(() -> settings.applySearch("add"));
+        assertTrue(call(() -> settings.folderList().getItems().isEmpty()));
+        assertEquals(
+                Messages.tr("settings.library.folders.noMatch"),
+                call(() -> ((javafx.scene.control.Label) settings.folderList().getPlaceholder()).getText()),
+                "there are folders; none matches");
+        run(() -> settings.applySearch(""));
+        assertEquals(2, (int) call(() -> settings.folderList().getItems().size()));
+        assertTrue(call(() -> settings.folderList().getFixedCellSize() > 0), "a fixed cell size");
+    }
+
+    /** PERF-12: box art past the limit isn't read; the Game window shows the initials instead. */
+    @Test
+    void boxArtPastTheLimitIsNotRead() throws Exception {
+        Path small = Files.writeString(dir.resolve("small.png"), "x");
+        assertTrue(LibraryPanels.GameInfo.fits(small));
+        Path big = dir.resolve("big.png");
+        try (var file = new java.io.RandomAccessFile(big.toFile(), "rw")) {
+            file.setLength(LibraryPanels.GameInfo.BOXART_LIMIT + 1); // sparse: no real 16 MB written
+        }
+        assertFalse(LibraryPanels.GameInfo.fits(big));
+        assertFalse(LibraryPanels.GameInfo.fits(dir.resolve("missing.png")));
+    }
+
+    /**
+     * QOPEN-02, QOPEN-03: the core picker is titled with its command and names the folder in its prompt; opened
+     * before RetroArch is read, it fills in when the load lands, and keeps what was typed.
+     */
+    @Test
+    void theCorePickerFillsInWhenTheLibraryLandsAndKeepsTheQuery() throws Exception {
+        Path roms = Files.createDirectories(dir.resolve("late-roms"));
+        run(() -> services.store().update(s -> {
+            s.library.retroarchConfigDir = ""; // no RetroArch: the picker opens with detection alone
+            s.library.folders.add(new com.partida.config.Settings.Library.Folder(roms.toString(), ""));
+        }));
+        FakeLibrary.waitLoaded(services);
+        assertTrue(runCommand("library.setFolderCore"));
+        pick("late-roms");
+        Picker<String> picker = Objects.requireNonNull(call(window::corePicker));
+        assertEquals(
+                Messages.tr("command.library.setFolderCore"),
+                call(() -> picker.title().getText()));
+        assertEquals(
+                Messages.tr("picker.coreFor", AppInfo.tildeHome(roms.toString())),
+                call(() -> picker.query().getPromptText()));
+        assertEquals(1, (int) call(() -> picker.list().getItems().size()), "detection alone, for now");
+        run(() -> picker.query().setText("fak"));
+        run(() -> services.store().update(s -> s.library.retroarchConfigDir = config.toString()));
+        FakeLibrary.waitLoaded(services);
+        waitUntil(() -> fx(() -> picker.list().getItems().size() == 1
+                && picker.list().getItems().getFirst().item().value().equals("fake_libretro")));
+        assertEquals("fak", call(picker::queryText), "the query stays");
+        run(() -> window.overlays().hide());
+    }
+
+    /** TBAR-17: Play and Stop on the toolbar follow whether they can run: a game selected, none running. */
+    @Test
+    void playAndStopOnTheToolbarFollowTheirCommands() throws Exception {
+        javafx.scene.control.Button play =
+                Objects.requireNonNull(call(() -> window.toolbar().button("game.play")));
+        javafx.scene.control.Button stop =
+                Objects.requireNonNull(call(() -> window.toolbar().button("game.stop")));
+        run(() -> window.tabs().tabPane().getSelectionModel().select(0)); // Welcome: no game
+        waitUntil(() -> fx(play::isDisabled));
+        assertTrue(call(stop::isDisabled), "nothing running");
+        var system = FakeLibrary.collection(services, 1);
+        run(() -> window.tabs().open(system));
+        waitUntil(() -> fx(() -> !play.isDisabled()));
+        assertTrue(call(stop::isDisabled));
+        run(() -> window.tabs().tabPane().getSelectionModel().select(0));
+        waitUntil(() -> fx(play::isDisabled));
+    }
+
+    /** PERF-09: a game row's glyph is made once per cell; showing another game only changes the text. */
+    @Test
+    void aRowKeepsItsGlyphFromGameToGame() throws Exception {
+        var system = FakeLibrary.collection(services, 2);
+        run(() -> window.tabs().open(system));
+        SystemView view = Objects.requireNonNull(call(() -> window.tabs().activeView()));
+        List<Object> seen = call(() -> {
+            javafx.scene.control.ListCell<Game> cell =
+                    view.list().getCellFactory().call(view.list());
+            cell.updateListView(view.list());
+            cell.updateIndex(0);
+            Object first = cell.getGraphic();
+            String firstText = cell.getText();
+            cell.updateIndex(1);
+            return List.of(first == cell.getGraphic(), !firstText.equals(cell.getText()));
+        });
+        assertEquals(List.of(true, true), seen);
+    }
+
+    /** {@code check} read on the FX thread, for {@code waitUntil}. */
+    private static boolean fx(java.util.concurrent.Callable<Boolean> check) {
+        try {
+            return call(check);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** The first games-folder row of Settings → Library, laid out. */
+    private static HBox folderRow(SettingsWindow settings) throws Exception {
+        return call(() -> {
+            settings.folderList().applyCss();
+            settings.folderList().layout();
+            return (HBox) Objects.requireNonNull(settings.folderList().lookup(".library-folder-row"));
+        });
+    }
 
     @Test
     void theGameWindowSaysWhatIsMissing() throws Exception {
@@ -304,14 +463,18 @@ class LibraryFxTest {
             FakeLibrary.waitLoaded(services);
             Game game = FakeLibrary.collection(services, 0).games().getFirst();
             LibraryService library = services.library();
+            javafx.scene.control.Button stopButton =
+                    Objects.requireNonNull(call(() -> window.toolbar().button("game.stop")));
             run(() -> library.play(game, null));
+            // TBAR-17: Stop can act from the moment Play runs, and the toolbar's button says so, whether or not
+            // RetroArch's process has started yet; a Stop in between ends it once it has.
+            assertNull(call(library::stopUnavailable));
+            waitUntil(() -> fx(() -> !stopButton.isDisabled()));
             assertEquals(Messages.tr("palette.disabled.gameRunning"), call(() -> library.playUnavailable(game)));
             assertEquals(game, call(library::running));
             run(() -> library.play(game, null));
             assertEquals(Messages.tr("status.gameCannotStartRunning"), echo());
-            waitUntil(() -> library.stopUnavailable() == null);
-
-            run(library::stop);
+            run(library::stop); // straight away: RetroArch may still be starting
             byte[] buffer = new byte[64];
             DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
             retroArch.receive(packet);

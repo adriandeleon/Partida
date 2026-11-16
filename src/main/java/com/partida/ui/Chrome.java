@@ -31,11 +31,25 @@ final class Chrome {
         return null;
     }
 
-    /** {@link #titleBarMenusUnavailable(boolean, boolean)} for this OS and this toolkit. */
-    static @Nullable String titleBarMenusUnavailable() {
-        return titleBarMenusUnavailable(
-                com.partida.Os.isMac(),
-                javafx.application.Platform.isSupported(javafx.application.ConditionalFeature.EXTENDED_WINDOW));
+    /** Why Zoom Text In cannot run: the text is at its largest. */
+    static @Nullable String textZoomInUnavailable(int percent) {
+        return percent >= com.partida.config.Settings.MAX_TEXT_ZOOM
+                ? Messages.tr("palette.disabled.textZoomLargest")
+                : null;
+    }
+
+    /** Why Zoom Text Out cannot run: the text is at its smallest. */
+    static @Nullable String textZoomOutUnavailable(int percent) {
+        return percent <= com.partida.config.Settings.MIN_TEXT_ZOOM
+                ? Messages.tr("palette.disabled.textZoomSmallest")
+                : null;
+    }
+
+    /** Why Actual Text Size cannot run: the text is at its default size already. */
+    static @Nullable String textZoomResetUnavailable(int percent) {
+        return percent == com.partida.config.Settings.DEFAULT_TEXT_ZOOM
+                ? Messages.tr("palette.disabled.textZoomDefault")
+                : null;
     }
 
     /** Why Zoom In cannot run: the UI is at its largest. */
@@ -63,10 +77,31 @@ final class Chrome {
      * Why a text command cannot run: no text has the keyboard, or (for Cut and Paste, which {@code edits})
      * the text is read-only.
      */
-    static @Nullable String editUnavailable(javafx.scene.control.@Nullable TextInputControl text, boolean edits) {
-        if (text == null) return Messages.tr("palette.disabled.noText");
-        if (edits && !text.isEditable()) return Messages.tr("palette.disabled.readOnlyText");
+    static @Nullable String editUnavailable(boolean focusedText, boolean editable, boolean edits) {
+        if (!focusedText) return Messages.tr("palette.disabled.noText");
+        if (edits && !editable) return Messages.tr("palette.disabled.readOnlyText");
         return null;
+    }
+
+    /** Why a tab command can't run: no tab is selected (QUAL-05). */
+    static @Nullable String closeUnavailable(boolean tabSelected) {
+        return tabSelected ? null : Messages.tr("palette.disabled.noTab");
+    }
+
+    /** Why Close Others, Close to the Left and their kin can't run: no tab, or none they would close. */
+    static @Nullable String nothingToClose(boolean tabSelected, int wouldClose) {
+        if (!tabSelected) return Messages.tr("palette.disabled.noTab");
+        return wouldClose == 0 ? Messages.tr("palette.disabled.nothingToClose") : null;
+    }
+
+    /** Why Reopen Closed Tab can't run: nothing was closed. */
+    static @Nullable String reopenUnavailable(int closedTabs) {
+        return closedTabs == 0 ? Messages.tr("palette.disabled.noClosedTab") : null;
+    }
+
+    /** Why Next Tab and Previous Tab can't run: fewer than two tabs. */
+    static @Nullable String cycleUnavailable(int tabs) {
+        return tabs < 2 ? Messages.tr("palette.disabled.oneTab") : null;
     }
 
     /** Why Open cannot run in the Documents window: no file is selected. */
@@ -84,12 +119,51 @@ final class Chrome {
         return overlay ? null : Messages.tr("palette.disabled.nothingToCancel");
     }
 
+    /**
+     * Why Play can't start a game, or null when it can (QUAL-05): RetroArch found, a game selected, and none
+     * running already, in that order. Pure: the toolbar, the menus and the palette all read it.
+     */
+    static @Nullable String playUnavailable(boolean retroArchFound, boolean gameSelected, boolean playing) {
+        if (!retroArchFound) return Messages.tr("palette.disabled.noRetroArch");
+        if (!gameSelected) return Messages.tr("palette.disabled.noGame");
+        if (playing) return Messages.tr("palette.disabled.gameRunning");
+        return null;
+    }
+
+    /** Why Stop can't act, or null: only a game Partida started can be stopped (QUAL-05). */
+    static @Nullable String stopUnavailable(boolean running) {
+        return running ? null : Messages.tr("palette.disabled.noGameRunning");
+    }
+
+    /**
+     * Whether the Game window is available: only over a system's tab, whose selected game it shows (TABS-20);
+     * on the Welcome page its stripe button hides.
+     */
+    static boolean gameWindowAvailable(boolean systemTab) {
+        return systemTab;
+    }
+
+    /**
+     * A system as the user reads it: its name, or for the play history, which the library names by a fixed
+     * id, that name in the user's language (INTL-07).
+     */
+    static String systemName(String name) {
+        return name.equals(com.partida.library.LibraryLoader.RECENTLY_PLAYED)
+                ? Messages.tr("systems.recentlyPlayed")
+                : name;
+    }
+
     /** Why Find Next or Find Previous cannot run: their find bar is not open. */
     static @Nullable String findStepUnavailable(boolean open) {
         return open ? null : Messages.tr("palette.disabled.findBarClosed");
     }
 
-    /** Why Find cannot run: the active tab is the Welcome page, which has no text to search. */
+    /** Why Find Next or Find Previous can't step the game list: its filter box is empty. */
+    static @Nullable String filterStepUnavailable(boolean filtering) {
+        return filtering ? null : Messages.tr("palette.disabled.noFilter");
+    }
+
+    /** Why Find cannot run: the active tab is the Welcome page, which has no games to filter. */
     static @Nullable String findUnavailable(boolean document) {
         return document ? null : Messages.tr("palette.disabled.noDocument");
     }
@@ -142,5 +216,30 @@ final class Chrome {
     /** Why Debug Log: Refresh cannot run, or null when it can. */
     static @Nullable String debugLogRefreshUnavailable(boolean open) {
         return open ? null : Messages.tr("palette.disabled.debugLogClosed");
+    }
+
+    /**
+     * Which separators stay, given the bar's items in order: {@code null} for a separator, else whether
+     * that item is visible. A separator stays only with a visible item somewhere before it, back to the
+     * last separator kept, and one somewhere after it. Entries for items echo their own visibility.
+     */
+    static boolean[] separatorsShown(java.util.List<@Nullable Boolean> items) {
+        boolean[] shown = new boolean[items.size()];
+        boolean itemSinceKept = false;
+        for (int i = 0; i < items.size(); i++) {
+            Boolean item = items.get(i);
+            if (item != null) {
+                shown[i] = item;
+                itemSinceKept |= item;
+                continue;
+            }
+            boolean itemAfter = false;
+            for (int j = i + 1; j < items.size() && !itemAfter; j++) {
+                itemAfter = Boolean.TRUE.equals(items.get(j));
+            }
+            shown[i] = itemSinceKept && itemAfter;
+            if (shown[i]) itemSinceKept = false;
+        }
+        return shown;
     }
 }

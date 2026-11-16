@@ -6,10 +6,16 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 
 import com.partida.config.Settings;
 
@@ -58,6 +64,42 @@ public final class UiZoom {
     /** Binds {@code property} to {@code px} at the current zoom: a fixed size of the code, zoomed. */
     static void bind(DoubleProperty property, double px) {
         property.bind(times(px));
+    }
+
+    /** A row whose gap is {@code px} at the current zoom (WIN-12): a gap the code fixes, zoomed. */
+    static HBox hbox(double px, Node... children) {
+        HBox box = new HBox(children);
+        bind(box.spacingProperty(), px);
+        return box;
+    }
+
+    /** A column whose gap is {@code px} at the current zoom (WIN-12). */
+    static VBox vbox(double px, Node... children) {
+        VBox box = new VBox(children);
+        bind(box.spacingProperty(), px);
+        return box;
+    }
+
+    /** The region's padding, in pixels at 100%, following the zoom (WIN-12). */
+    static void pad(Region region, double top, double right, double bottom, double left) {
+        region.paddingProperty()
+                .bind(Bindings.createObjectBinding(
+                        () -> {
+                            double f = FACTOR.get();
+                            return new Insets(top * f, right * f, bottom * f, left * f);
+                        },
+                        FACTOR));
+    }
+
+    /** Insets in pixels at 100%, at the zoom now: for a placement made once, as an overlay's when it opens. */
+    static Insets insets(double top, double right, double bottom, double left) {
+        double f = FACTOR.get();
+        return new Insets(top * f, right * f, bottom * f, left * f);
+    }
+
+    /** The same padding on every side, following the zoom (WIN-12). */
+    static void pad(Region region, double all) {
+        pad(region, all, all, all, all);
     }
 
     /**

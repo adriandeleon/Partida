@@ -14,6 +14,7 @@
     "tool.game": "Ctrl+Shift+O",
     "tool.retroarch": "Ctrl+Shift+U",
     "view.messageLog": "Ctrl+Shift+M",
+    "library.filter": "Ctrl+K",
     "find.show": "Ctrl+F",
     "find.next": "F3",
     "find.previous": "Shift+F3",

@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.stream.Stream;
 
+import com.partida.Os;
+
 /** The cores installed in RetroArch's cores folder, with what their .info files say about them. */
 public final class CoreCatalog {
 
@@ -69,13 +71,12 @@ public final class CoreCatalog {
         return cores.stream().filter(c -> c.supports(ext)).toList();
     }
 
-    /** The file extension of a core library on this OS: .so, .dll or .dylib. */
+    /** The file extension of a core library on this OS: .so, .dll or .dylib. {@link Os} says which OS (OS-02). */
     public static String libraryExtension() {
-        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-        if (os.contains("win")) {
+        if (Os.isWindows()) {
             return ".dll";
         }
-        if (os.contains("mac")) {
+        if (Os.isMac()) {
             return ".dylib";
         }
         return ".so";

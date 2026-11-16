@@ -75,6 +75,12 @@ final class CommandMenu {
         }
     }
 
+    /** Each command row, as built: for the tests that read a row's chord. */
+    List<AppMenus.Row> rows() {
+        menu();
+        return List.copyOf(rows);
+    }
+
     List<MenuItem> items() {
         return menu().getItems();
     }

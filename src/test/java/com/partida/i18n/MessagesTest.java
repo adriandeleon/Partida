@@ -145,4 +145,42 @@ class MessagesTest {
                             language + ": " + key + " translates a modifier: " + value));
         }
     }
+
+    /**
+     * KBD-13: no catalog value writes out a command's chord; a label shows the active keymap's. Each chord-like
+     * word in every catalog is checked against every chord every bundled keymap binds: a syntax example such as
+     * Settings' "Ctrl+Alt+J or C-x C-s" binds nothing and may stay.
+     */
+    @Test
+    void noCatalogWritesACommandsChord() throws Exception {
+        Set<String> bound = new TreeSet<>();
+        com.fasterxml.jackson.databind.ObjectMapper json = new com.fasterxml.jackson.databind.ObjectMapper();
+        try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/com/partida/keymaps"))) {
+            for (var file : files.filter(f -> f.toString().endsWith(".json")).toList()) {
+                json.readTree(file.toFile()).path("bindings").forEach(chord -> {
+                    if (chord.isArray()) chord.forEach(c -> bound.add(c.asText()));
+                    else bound.add(chord.asText());
+                });
+            }
+        }
+        assertTrue(bound.contains("C-g"), "the keymaps were read");
+        Pattern chordWord = Pattern.compile("(?<![\\w-])(?:C|M|S|Ctrl|Cmd|Shortcut|Alt|Shift)[-+][^\\s·,.)]+");
+        Set<String> written = new TreeSet<>();
+        try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/com/partida/i18n"))) {
+            for (var file :
+                    files.filter(f -> f.toString().endsWith(".properties")).toList()) {
+                java.util.Properties catalog = new java.util.Properties();
+                try (var in = java.nio.file.Files.newBufferedReader(file)) {
+                    catalog.load(in);
+                }
+                for (String key : catalog.stringPropertyNames()) {
+                    var m = chordWord.matcher(catalog.getProperty(key));
+                    while (m.find()) {
+                        if (bound.contains(m.group())) written.add(file.getFileName() + " " + key + ": " + m.group());
+                    }
+                }
+            }
+        }
+        assertEquals(Set.of(), written);
+    }
 }

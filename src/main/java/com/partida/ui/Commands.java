@@ -3,7 +3,6 @@ package com.partida.ui;
 import com.partida.AppInfo;
 import com.partida.command.Command;
 import com.partida.command.CommandRegistry;
-import com.partida.i18n.Messages;
 
 /**
  * Every command the starter registers, in one place. Each needs {@code command.<id>} and
@@ -31,21 +30,15 @@ final class Commands {
         r.register(
                 "view.zoomIn",
                 () -> zoomText(services, services.settings().textZoom + TEXT_ZOOM_STEP),
-                () -> services.settings().textZoom >= com.partida.config.Settings.MAX_TEXT_ZOOM
-                        ? Messages.tr("palette.disabled.textZoomLargest")
-                        : null);
+                () -> Chrome.textZoomInUnavailable(services.settings().textZoom));
         r.register(
                 "view.zoomOut",
                 () -> zoomText(services, services.settings().textZoom - TEXT_ZOOM_STEP),
-                () -> services.settings().textZoom <= com.partida.config.Settings.MIN_TEXT_ZOOM
-                        ? Messages.tr("palette.disabled.textZoomSmallest")
-                        : null);
+                () -> Chrome.textZoomOutUnavailable(services.settings().textZoom));
         r.register(
                 "view.zoomReset",
                 () -> zoomText(services, com.partida.config.Settings.DEFAULT_TEXT_ZOOM),
-                () -> services.settings().textZoom == com.partida.config.Settings.DEFAULT_TEXT_ZOOM
-                        ? Messages.tr("palette.disabled.textZoomDefault")
-                        : null);
+                () -> Chrome.textZoomResetUnavailable(services.settings().textZoom));
         // The UI zoom (WIN-12): three commands, kept across launches through the setting.
         r.register(
                 "view.uiZoomIn",
@@ -183,11 +176,6 @@ final class Commands {
         r.register("help.reportProblem", window::openReportProblem);
     }
 
-    /**
-     * Every tab operation is a command (TABS-01): bound to a chord, in the palette, a row in the Window menu,
-     * and the per-tab ones on the tab's right-click menu ({@link TabContextMenu}). Each acts on the selected
-     * tab. The ids are Editora's.
-     */
     /** One step of the text zoom, in percent. */
     static final int TEXT_ZOOM_STEP = 10;
 
@@ -202,6 +190,11 @@ final class Commands {
         services.echo("status.uiZoom", percent);
     }
 
+    /**
+     * Every tab operation is a command (TABS-01): bound to a chord, in the palette, a row in the Window menu,
+     * and the per-tab ones on the tab's right-click menu ({@link TabContextMenu}). Each acts on the selected
+     * tab. The ids are Editora's.
+     */
     private static void registerTabs(MainWindow window, CommandRegistry r) {
         r.register(
                 "buffer.close",
@@ -320,23 +313,32 @@ final class Commands {
                         window.toolWindows().bottomTarget(),
                         tw -> window.toolWindows().resize(tw, -ToolWindowManager.RESIZE_STEP)),
                 () -> Chrome.toolWindowUnavailable(window.toolWindows().bottomTarget() != null));
-        // Find (FIND-04): find.show over the documents, retroarch.find over the console; each, run while its
-        // bar is open, finds the next match. The bars hand Enter, Shift+Enter and their buttons to these.
+        // Find (FIND-03, FIND-04): find.show focuses the filter box over the active system's games, and while it
+        // narrows the list find.next and find.previous step through the games it keeps; retroarch.find is the
+        // console's find bar, whose Enter, Shift+Enter and buttons run its own two.
         r.register(
                 "find.show",
                 () -> {
-                    FindBar bar = window.documentFindBar();
-                    if (bar != null) bar.openOrNext();
+                    SystemView view = window.activeSystem();
+                    if (view != null) view.focusFilter();
                 },
-                () -> Chrome.findUnavailable(window.documentFindBar() != null));
+                () -> Chrome.findUnavailable(window.activeSystem() != null));
+        // FIND-13: the filter box's own command, on Ctrl+K (Cmd+K on macOS), drawn as the box's key badge.
+        r.register(
+                "library.filter",
+                () -> {
+                    SystemView view = window.activeSystem();
+                    if (view != null) view.focusFilter();
+                },
+                () -> Chrome.findUnavailable(window.activeSystem() != null));
         r.register(
                 "find.next",
-                () -> stepFind(window.documentFindBar(), true),
-                () -> Chrome.findStepUnavailable(isOpen(window.documentFindBar())));
+                () -> stepFilter(window.activeSystem(), true),
+                () -> Chrome.filterStepUnavailable(filtering(window.activeSystem())));
         r.register(
                 "find.previous",
-                () -> stepFind(window.documentFindBar(), false),
-                () -> Chrome.findStepUnavailable(isOpen(window.documentFindBar())));
+                () -> stepFilter(window.activeSystem(), false),
+                () -> Chrome.filterStepUnavailable(filtering(window.activeSystem())));
         r.register("retroarch.find", window::findInConsole);
         r.register(
                 "retroarch.findNext",
@@ -356,19 +358,19 @@ final class Commands {
         r.register(
                 "edit.cut",
                 () -> onText(window, javafx.scene.control.TextInputControl::cut),
-                () -> Chrome.editUnavailable(window.focusedText(), true));
+                () -> editUnavailable(window, true));
         r.register(
                 "edit.copy",
                 () -> onText(window, javafx.scene.control.TextInputControl::copy),
-                () -> Chrome.editUnavailable(window.focusedText(), false));
+                () -> editUnavailable(window, false));
         r.register(
                 "edit.paste",
                 () -> onText(window, javafx.scene.control.TextInputControl::paste),
-                () -> Chrome.editUnavailable(window.focusedText(), true));
+                () -> editUnavailable(window, true));
         r.register(
                 "edit.selectAll",
                 () -> onText(window, javafx.scene.control.TextInputControl::selectAll),
-                () -> Chrome.editUnavailable(window.focusedText(), false));
+                () -> editUnavailable(window, false));
         r.register(
                 "systems.open",
                 () -> {
@@ -429,6 +431,20 @@ final class Commands {
             MainWindow window, java.util.function.Consumer<javafx.scene.control.TextInputControl> action) {
         javafx.scene.control.TextInputControl text = window.focusedText();
         if (text != null) action.accept(text);
+    }
+
+    /** The facts {@link Chrome#editUnavailable} decides on: the text that has the keyboard, if any. */
+    private static @org.jspecify.annotations.Nullable String editUnavailable(MainWindow window, boolean edits) {
+        javafx.scene.control.TextInputControl text = window.focusedText();
+        return Chrome.editUnavailable(text != null, text != null && text.isEditable(), edits);
+    }
+
+    private static boolean filtering(@org.jspecify.annotations.Nullable SystemView view) {
+        return view != null && view.filtering();
+    }
+
+    private static void stepFilter(@org.jspecify.annotations.Nullable SystemView view, boolean forward) {
+        if (view != null && view.filtering()) view.step(forward);
     }
 
     private static boolean isOpen(@org.jspecify.annotations.Nullable FindBar bar) {

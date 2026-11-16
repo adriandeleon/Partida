@@ -31,9 +31,16 @@ import com.partida.retroarch.Playlist;
  */
 public final class FolderScanner {
 
-    public record Result(List<Game> games, List<Path> unmatched) {}
+    /** @param capped the folder held more than {@link #MAX_FILES} files, and only the first were scanned */
+    public record Result(List<Game> games, List<Path> unmatched, boolean capped) {}
 
     private static final int MAX_DEPTH = 6;
+
+    /**
+     * The most files one folder's scan looks at (PERF-12): a folder pointed at the wrong place (a home folder, a
+     * whole disk) stops here instead of walking it all; the result says it was cut.
+     */
+    static final int MAX_FILES = 100_000;
 
     private static final Set<String> IGNORED = Set.of(
             // Not "md": that's Mega Drive.
@@ -69,6 +76,11 @@ public final class FolderScanner {
     private FolderScanner() {}
 
     public static Result scan(LibraryFolder folder, CoreCatalog catalog) throws IOException {
+        return scan(folder, catalog, MAX_FILES);
+    }
+
+    /** {@link #scan(LibraryFolder, CoreCatalog)}, looking at no more than {@code maxFiles} files. */
+    static Result scan(LibraryFolder folder, CoreCatalog catalog, int maxFiles) throws IOException {
         Path root = Path.of(folder.path());
         String coreId = folder.coreId();
         Optional<CoreInfo> forced = coreId != null && !coreId.isBlank() ? catalog.byId(coreId) : Optional.empty();
@@ -77,9 +89,12 @@ public final class FolderScanner {
         try (Stream<Path> s = Files.walk(root, MAX_DEPTH)) {
             files = s.filter(Files::isRegularFile)
                     .filter(p -> !p.getFileName().toString().startsWith("."))
+                    .limit(maxFiles + 1L)
                     .sorted()
                     .toList();
         }
+        boolean capped = files.size() > maxFiles;
+        if (capped) files = files.subList(0, maxFiles);
 
         Map<Path, Set<String>> extensionsByDir = new HashMap<>();
         for (Path f : files) {
@@ -113,7 +128,7 @@ public final class FolderScanner {
                     title, file, system.get(), forced.map(CoreInfo::library).orElse(null)));
         }
         games.sort(Comparator.comparing(Game::title, String.CASE_INSENSITIVE_ORDER));
-        return new Result(List.copyOf(games), List.copyOf(unmatched));
+        return new Result(List.copyOf(games), List.copyOf(unmatched), capped);
     }
 
     private static Optional<String> systemForForcedCore(LibraryFolder folder, CoreInfo core, String ext) {

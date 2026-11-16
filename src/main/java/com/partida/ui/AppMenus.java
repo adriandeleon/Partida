@@ -3,7 +3,6 @@ package com.partida.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.CustomMenuItem;
@@ -95,6 +94,7 @@ final class AppMenus {
                     "edit.selectAll",
                     null,
                     "find.show",
+                    "library.filter",
                     "find.next",
                     "find.previous",
                     null,
@@ -164,13 +164,13 @@ final class AppMenus {
                     "help.about"));
 
     /**
-     * Simple mode's menus: the same four, each cut to what a person new to the app reaches for. Every
-     * button the toolbar keeps in Simple mode has its row here too (TBAR-08), and every command is still
-     * in the palette.
+     * Simple mode's menus: the same six, each cut to what a person new to the app reaches for. Every
+     * button the toolbar and the tool windows' headers keep in Simple mode has its row here too (TBAR-08), and
+     * every command is still in the palette.
      */
     private static final List<Spec> SIMPLE = List.of(
             spec("menu.file", "library.addFolder", null, "app.settings", null, "app.quit"),
-            spec("menu.edit", "edit.copy", "edit.paste", null, "find.show"),
+            spec("menu.edit", "edit.copy", "edit.paste", null, "find.show", "library.filter"),
             spec(
                     "menu.view",
                     "view.toggleToolbar",
@@ -188,7 +188,12 @@ final class AppMenus {
                     null,
                     "tool.systems",
                     "tool.game",
-                    "tool.retroarch"),
+                    "tool.retroarch",
+                    null,
+                    // A tool window's header keeps its Float, Maximize and Close buttons in Simple mode too.
+                    "view.floatToolWindow",
+                    "view.maximizeToolWindow",
+                    "view.closeFocusedToolWindow"),
             spec("menu.help", "palette.show", "help.documentation", "view.welcome", null, "help.about"));
 
     private static Spec spec(String key, @Nullable String... ids) {
@@ -271,16 +276,21 @@ final class AppMenus {
     }
 
     /**
-     * An in-window row (MENU-02): the command's glyph (or an empty slot, so titles line up), the title, a
-     * spacer and the chord. The right-click menus ({@link CommandMenu}) draw their rows the same way.
-     */
-    /**
      * The rows that delete, discard or reset, styled as dangerous (MENU-12): their title in the red. Whether
      * each asks first is the confirm dialog's business, not the row's.
      */
     static final java.util.Set<String> DESTRUCTIVE = java.util.Set.of(
-            "messageLog.clear", "debugLog.clear", "retroarch.clear", "keymap.resetBinding", "config.import");
+            "messageLog.clear",
+            "debugLog.clear",
+            "retroarch.clear",
+            "keymap.resetBinding",
+            "config.import",
+            "library.removeFolder");
 
+    /**
+     * An in-window row (MENU-02): the command's glyph (or an empty slot, so titles line up), the title, a
+     * spacer and the chord. The right-click menus ({@link CommandMenu}) draw their rows the same way.
+     */
     static Row inWindowRow(String id) {
         Node glyph = Icons.commandGlyph(id);
         Region slot = new Region();
@@ -299,8 +309,11 @@ final class AppMenus {
         column.getStyleClass().add("menu-item-icon");
         UiZoom.bind(column.minWidthProperty(), ICON_SLOT);
         UiZoom.bind(column.prefWidthProperty(), ICON_SLOT);
-        HBox box = new HBox(8, column, title, spacer, chord);
-        HBox.setMargin(chord, new Insets(0, 0, 0, 18)); // the chord starts 18 px or more after the title (MENU-18)
+        // The chord starts 18 px or more after the title (MENU-18), at the zoom (WIN-12).
+        Region gap = new Region();
+        UiZoom.bind(gap.minWidthProperty(), 18);
+        UiZoom.bind(gap.prefWidthProperty(), 18);
+        HBox box = UiZoom.hbox(8, column, title, spacer, gap, chord);
         box.setAlignment(Pos.CENTER_LEFT);
         // A row drawn from nodes reads as its title and chord to a screen reader (ACC-01).
         box.accessibleTextProperty()

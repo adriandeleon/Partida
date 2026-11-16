@@ -13,7 +13,7 @@ one-line summary written for users.
 - **Your RetroArch library, by system.** Partida finds RetroArch on its own (installed natively, as the
   `org.libretro.RetroArch` Flatpak, or in a folder you choose), and lists your games from its playlists, its
   play history and your own games folders. The Systems window lists each system with its game count; a system
-  opens in a tab, with a find bar over its games' titles. The Game window shows the selected game's box art,
+  opens in a tab, with a filter box over its games. The Game window shows the selected game's box art,
   the core it starts with (pick another there) and any BIOS file that core is missing.
 - **Play and Stop.** Enter, a double-click, the toolbar or the Game menu starts the selected game in
   RetroArch; the RetroArch window shows what it prints, busy while the game runs. Stop asks RetroArch to quit
@@ -133,6 +133,31 @@ one-line summary written for users.
 
 ### Changed
 
+- **A system's games are narrowed by a filter box,** not searched with a find bar: type in the box over the
+  list (Filter Games, `Ctrl+K` / `Cmd+K`, shown in the box; Find focuses it too) and only the games whose
+  title has every word stay. `ext:zip`, `core:snes9x` or `system:snes` becomes a chip that narrows by file
+  type, core or system; `>` and a command's name runs it. Escape empties the box, then goes back to the list;
+  Find Next and Find Previous step through what it keeps (Pauta FIND-03, FIND-13).
+- **Removing a games folder asks first,** from Settings → Library and from the palette: the folder and the
+  core you gave it are yours (Pauta CONF-01).
+- **Settings → Library's games folders are a list the search reaches:** a search finds a folder by its path
+  or its core and hides the others, and any number of folders stays quick (Pauta SET-03, PERF-08).
+- **The UI zoom scales every gap and padding,** in the stylesheets and the code, not only the text (Pauta
+  WIN-12).
+- **The toolbar's overflow chevron lists its commands with their shortcuts,** in place of a menu of bare
+  icons (Pauta MENU-15).
+- **The Doctor checks RetroArch first:** found, with its folder and cores; found with no cores; or not found,
+  with where to get it (Pauta DIAG-07).
+- **RetroArch is found and started through your login shell's PATH** on macOS and Linux, so a Partida opened
+  from the Finder or a launcher finds the same `retroarch` your terminal does (Pauta CLI-10).
+- **Play and Stop on the toolbar turn on and off as they can run:** when the library loads, the selected game
+  changes, or a game starts or ends (Pauta TBAR-17).
+- **The core picker names its command and fills in when the library lands,** keeping what you typed (Pauta
+  QOPEN-02, QOPEN-03).
+- **Every picker's key hint shows your keymap's keys,** not Emacs's (Pauta KBD-13).
+- **Simple mode's Window menu lists Float, Maximize and Close Tool Window,** the buttons a tool window's
+  header keeps (Pauta TBAR-08).
+
 - **Partida is built to Pauta 6.1.0.** The minor edition makes a menu row's icon a MAY instead of a MUST
   (MENU-14): rows keep their glyphs. The copy of the edition's rules and the `pauta-audit` skill are 6.1.0's,
   and `pom.xml`, the README and `AGENTS.md` name it.
@@ -207,6 +232,21 @@ one-line summary written for users.
 
 ### Fixed
 
+- **The Menu key and Shift+F10 open a game's and a system's right-click menu** (Pauta MENU-09).
+- **"Recently played" is in your language,** and counts read "1 game", not "1 games" (Pauta INTL-07,
+  INTL-12).
+- **Remove Folder is red in the menus,** as the other rows that remove something are (Pauta MENU-12).
+- **Stop works from the moment you press Play,** even while RetroArch is still starting (Pauta TBAR-17).
+- **Lighter typing in searches and filters:** the Settings search, the game filter and the Message Log filter
+  read each row's text once, not on every key, and list rows reuse their icons (Pauta PERF-09).
+- **A hand-edited Settings file can't leave the library stuck loading:** a RetroArch folder or a games folder
+  that isn't a full path is dropped on read, and anything the RetroArch lookup throws ends the load with a
+  message (Pauta SET-11).
+- **Very large files are refused, not read:** a `retroarch.cfg` or core info file over 4 MB, a playlist over
+  64 MB, and a games folder past 100,000 files (scanned up to there, with a message) (Pauta PERF-12).
+- **A library change refreshes each view once,** not once per change it brings (Pauta PERF-06).
+- Only `Os` works out which OS Partida runs on (Pauta OS-02), and finding the login shell's PATH no longer
+  blocks a thread of the shared pool (Pauta PERF-05).
 - **git and gh are found from your login shell's PATH** on macOS and Linux, so an app opened from the Finder
   finds Homebrew's tools (Pauta CLI-10).
 - **Faster to start and to type in the palette:** release builds carry precompiled stylesheets, and the

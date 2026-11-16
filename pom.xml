@@ -404,6 +404,17 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
+                                    <includes><include>com.partida.retroarch</include></includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.89</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
                                     <includes><include>com.partida.sync</include></includes>
                                     <limits>
                                         <limit>

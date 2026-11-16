@@ -7,7 +7,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import com.partida.AppInfo;
@@ -43,7 +42,7 @@ public final class ReportProblemWindow {
         Label note = new Label(Messages.tr("report.note"));
         note.setWrapText(true);
         dialog.setTitle(Messages.tr("report.title"));
-        dialog.getDialogPane().setContent(new VBox(10, note, report));
+        dialog.getDialogPane().setContent(UiZoom.vbox(10, note, report));
         UiZoom.bind(dialog.getDialogPane().prefWidthProperty(), 680);
         submit = new ButtonType(Messages.tr("report.submit"), ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(submit, ButtonType.CANCEL);

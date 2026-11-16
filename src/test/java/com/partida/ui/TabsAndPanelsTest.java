@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import com.partida.i18n.Messages;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -88,14 +89,98 @@ class TabsAndPanelsTest {
         assertEquals("Partida", DocumentTabs.windowTitle(null));
     }
 
-    /** The find bar's list target: a match's offset names its row. */
+    /** QUAL-05: whether Play, Stop and the Game window can act is decided by pure rules, in this order. */
     @Test
-    void aMatchOffsetNamesItsRow() {
-        int[] starts = {0, 6, 13};
-        assertEquals(0, FindBar.ListTarget.rowAt(starts, 0));
-        assertEquals(0, FindBar.ListTarget.rowAt(starts, 5));
-        assertEquals(1, FindBar.ListTarget.rowAt(starts, 6));
-        assertEquals(2, FindBar.ListTarget.rowAt(starts, 40));
+    void playStopAndTheGameWindowFollowPureRules() {
+        assertEquals(Messages.tr("palette.disabled.noRetroArch"), Chrome.playUnavailable(false, true, false));
+        assertEquals(Messages.tr("palette.disabled.noGame"), Chrome.playUnavailable(true, false, false));
+        assertEquals(Messages.tr("palette.disabled.gameRunning"), Chrome.playUnavailable(true, true, true));
+        assertNull(Chrome.playUnavailable(true, true, false));
+        assertNull(Chrome.stopUnavailable(true));
+        assertEquals(Messages.tr("palette.disabled.noGameRunning"), Chrome.stopUnavailable(false));
+        assertTrue(Chrome.gameWindowAvailable(true));
+        assertFalse(Chrome.gameWindowAvailable(false));
+        assertNull(Chrome.filterStepUnavailable(true));
+        assertEquals(Messages.tr("palette.disabled.noFilter"), Chrome.filterStepUnavailable(false));
+    }
+
+    /** INTL-07: the play history shows by its name in the user's language; a system by its own. */
+    @Test
+    void thePlayHistoryIsNamedInTheUsersLanguage() {
+        assertEquals(
+                Messages.tr("systems.recentlyPlayed"),
+                Chrome.systemName(com.partida.library.LibraryLoader.RECENTLY_PLAYED));
+        assertEquals("Nintendo - SNES", Chrome.systemName("Nintendo - SNES"));
+    }
+
+    /**
+     * FIND-03, FIND-13: the filter keeps a game whose title has every word typed, in any case and order, and that
+     * meets every {@code key:value} term; a {@code >} query filters nothing and names a command.
+     */
+    @Test
+    void theFilterReadsWordsTermsAndCommands() {
+        com.partida.library.Game mario = new com.partida.library.Game(
+                "Super Mario World",
+                java.nio.file.Path.of("/roms/snes/smw.zip#Super Mario World.sfc"),
+                "Nintendo - SNES",
+                java.nio.file.Path.of("/cores/snes9x_libretro.so"));
+        com.partida.library.Game zelda = new com.partida.library.Game(
+                "Zelda", java.nio.file.Path.of("/roms/gb/zelda.gb"), "Nintendo - Game Boy", null);
+
+        GameFilter.Query plain = GameFilter.parse(" Mario  WORLD ", List.of());
+        assertEquals(List.of("mario", "world"), plain.words());
+        assertTrue(GameFilter.matches(mario, GameFilter.parse("world mario", List.of())));
+        assertTrue(GameFilter.parse("   ", List.of()).isEmpty());
+        assertFalse(GameFilter.matches(mario, GameFilter.parse("mario kart", List.of())));
+
+        assertEquals(
+                new GameFilter.Term("ext", "sfc"), GameFilter.term("EXT:SFC").orElseThrow());
+        assertTrue(GameFilter.term("colour:red").isEmpty(), "an unknown key is a plain word");
+        assertTrue(GameFilter.term("ext:").isEmpty());
+        assertTrue(GameFilter.term(":zip").isEmpty());
+        assertEquals("ext:sfc", new GameFilter.Term("ext", "sfc").text());
+        assertTrue(GameFilter.matches(mario, GameFilter.parse("ext:sfc", List.of())), "the file inside the archive");
+        assertFalse(GameFilter.matches(zelda, GameFilter.parse("ext:sfc", List.of())));
+        assertTrue(GameFilter.matches(mario, GameFilter.parse("", List.of(new GameFilter.Term("core", "snes9x")))));
+        assertFalse(GameFilter.matches(zelda, GameFilter.parse("core:snes9x", List.of())), "no core: no match");
+        assertTrue(GameFilter.matches(zelda, GameFilter.parse("system:boy zel", List.of())));
+
+        assertEquals("play", GameFilter.command("  > play "));
+        assertNull(GameFilter.command("play"));
+        assertTrue(GameFilter.parse(">play", List.of()).isEmpty(), "a command filters nothing");
+        java.util.Map<String, String> commands = new java.util.LinkedHashMap<>();
+        commands.put("game.stop", "Stop Game");
+        commands.put("game.play", "Play Game");
+        commands.put("find.show", "Find…");
+        commands.put("game.playAgain", "Play");
+        assertEquals("game.playAgain", GameFilter.commandFor("play", commands).orElseThrow(), "the exact title first");
+        assertEquals("game.play", GameFilter.commandFor("PLAY G", commands).orElseThrow(), "then a start");
+        assertEquals("game.stop", GameFilter.commandFor("stop", commands).orElseThrow());
+        assertEquals("find.show", GameFilter.commandFor("find", commands).orElseThrow(), "the … left out");
+        assertEquals("game.stop", GameFilter.commandFor("game", commands).orElseThrow(), "then one that holds it");
+        assertTrue(GameFilter.commandFor("  ", commands).isEmpty());
+        assertTrue(GameFilter.commandFor("quit", commands).isEmpty());
+    }
+
+    /** FIND-07, FIND-13, FIND-14, QUAL-05: where each key in the filter box leads, decided without a toolkit. */
+    @Test
+    void theFilterBoxsKeysLeadWhereTheRulesSay() {
+        assertEquals(GameFilter.KeyAction.TO_LIST, GameFilter.keyAction("ESCAPE", "", 0, false, false));
+        assertEquals(GameFilter.KeyAction.CLEAR, GameFilter.keyAction("ESCAPE", "mario", 5, false, false));
+        assertEquals(GameFilter.KeyAction.CLEAR, GameFilter.keyAction("ESCAPE", "", 0, false, true), "chips too");
+        assertEquals(GameFilter.KeyAction.CHIP, GameFilter.keyAction("SPACE", "mario ext:zip", 13, false, false));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("SPACE", "mario ext:zip", 3, false, false));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("SPACE", "mario", 5, false, false));
+        assertEquals(GameFilter.KeyAction.UNCHIP, GameFilter.keyAction("BACK_SPACE", "x", 0, false, true));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("BACK_SPACE", "x", 0, true, true));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("BACK_SPACE", "x", 1, false, true));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("BACK_SPACE", "", 0, false, false));
+        assertEquals(GameFilter.KeyAction.RUN, GameFilter.keyAction("ENTER", ">play", 5, false, false));
+        assertEquals(GameFilter.KeyAction.CHIP, GameFilter.keyAction("ENTER", "core:snes", 9, false, false));
+        assertEquals(GameFilter.KeyAction.TO_LIST, GameFilter.keyAction("ENTER", "mario", 5, false, false));
+        assertEquals(GameFilter.KeyAction.TO_LIST, GameFilter.keyAction("DOWN", "mario", 2, false, false));
+        assertEquals(GameFilter.KeyAction.NONE, GameFilter.keyAction("A", "mario", 2, false, false));
+        assertTrue(GameFilter.chipAt("> ext:zip", 9).isEmpty(), "never inside a command");
     }
 
     /** The Game window's initials, where there is no box art. */

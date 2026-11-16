@@ -14,6 +14,7 @@
     "tool.game": "Cmd+7",
     "tool.retroarch": "Cmd+4",
     "view.closeFocusedToolWindow": "Shift+Esc",
+    "library.filter": "Cmd+K",
     "find.show": "Cmd+F",
     "find.next": "Cmd+G",
     "find.previous": "Cmd+Shift+G",

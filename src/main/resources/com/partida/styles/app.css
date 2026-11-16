@@ -41,7 +41,7 @@
 
 /* ---- window ---- */
 .welcome {
-    -fx-padding: 40;
+    -fx-padding: 40px;
 }
 .welcome-title {
     -fx-font-size: 28px;
@@ -57,7 +57,7 @@
 
 /* ---- status bar ---- */
 .status-bar {
-    -fx-padding: 3 10 3 10;
+    -fx-padding: 3px 10px 3px 10px;
     -fx-background-color: -color-bg-subtle;
     -fx-font-size: 12px;
     -fx-min-height: 26px;
@@ -75,8 +75,8 @@
 .status-bar .unread-errors {
     -fx-background-color: -state-red-emphasis;
     -fx-text-fill: -color-fg-emphasis;
-    -fx-background-radius: 8;
-    -fx-padding: 0 6 0 6;
+    -fx-background-radius: 8px;
+    -fx-padding: 0 6px 0 6px;
     -fx-font-size: 11px;
     -fx-cursor: hand;
 }
@@ -96,9 +96,9 @@
 .command-palette, .message-log {
     -fx-background-color: -color-bg-overlay;
     -fx-border-color: -color-border-default;
-    -fx-border-radius: 12;
-    -fx-background-radius: 12;
-    -fx-padding: 6;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 6px;
     -fx-effect: dropshadow(gaussian, -shadow, 24, 0.1, 0, 6);
 }
 .command-palette .list-view, .message-log .list-view {
@@ -107,8 +107,8 @@
 }
 .command-palette .list-cell {
     -fx-font-size: 12.5px;
-    -fx-padding: 7 16 7 16;
-    -fx-background-radius: 6;
+    -fx-padding: 7px 16px 7px 16px;
+    -fx-background-radius: 6px;
 }
 .command-palette .list-cell:selected {
     -fx-background-color: -color-accent-subtle;
@@ -129,30 +129,30 @@
 .key-chip {
     -fx-background-color: -color-bg-subtle;
     -fx-border-color: -color-border-default;
-    -fx-border-radius: 4;
-    -fx-background-radius: 4;
-    -fx-padding: 1 6 1 6;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 1px 6px 1px 6px;
     -fx-font-size: 11px;
     -fx-text-fill: -color-accent-fg;
 }
 .palette-description {
     -fx-text-fill: -color-fg-muted;
-    -fx-padding: 2 10 0 10;
+    -fx-padding: 2px 10px 0 10px;
     -fx-text-overrun: ellipsis;
 }
 .palette-hint {
     -fx-text-fill: -color-fg-muted;
     -fx-font-size: 11px;
-    -fx-padding: 0 10 2 10;
+    -fx-padding: 0 10px 2px 10px;
 }
 .message-log-title {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-padding: 4 4 0 4;
+    -fx-padding: 4px 4px 0 4px;
 }
 .message-log-list .list-cell {
-    -fx-padding: 2 4 2 4;
-    -fx-background-radius: 5;
+    -fx-padding: 2px 4px 2px 4px;
+    -fx-background-radius: 5px;
 }
 .message-log-list .time {
     -fx-font-family: "JetBrains Mono";
@@ -168,8 +168,8 @@
 
 /* ---- settings ---- */
 .settings-sidebar .list-cell {
-    -fx-padding: 6 8 6 8;
-    -fx-graphic-text-gap: 8;
+    -fx-padding: 6px 8px 6px 8px;
+    -fx-graphic-text-gap: 8px;
 }
 .settings-sidebar .list-cell.no-match {
     -fx-text-fill: -color-fg-subtle;
@@ -196,19 +196,19 @@
 }
 .settings-card {
     -fx-background-color: -color-bg-subtle;
-    -fx-background-radius: 8;
+    -fx-background-radius: 8px;
     -fx-border-color: -color-border-muted;
-    -fx-border-radius: 8;
-    -fx-padding: 4 14 4 14;
+    -fx-border-radius: 8px;
+    -fx-padding: 4px 14px 4px 14px;
 }
 .settings-card-heading {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
     -fx-text-fill: -color-fg-muted;
-    -fx-padding: 8 0 2 0;
+    -fx-padding: 8px 0 2px 0;
 }
 .setting-row {
-    -fx-padding: 10 0 10 0;
+    -fx-padding: 10px 0 10px 0;
 }
 .setting-title {
     -fx-font-weight: bold;
@@ -221,8 +221,8 @@
     -fx-border-color: -state-red-emphasis;
 }
 .pill {
-    -fx-background-radius: 10;
-    -fx-padding: 2 10 2 10;
+    -fx-background-radius: 10px;
+    -fx-padding: 2px 10px 2px 10px;
     -fx-font-size: 11.5px;
 }
 .pill.green {
@@ -299,7 +299,7 @@
 }
 .pauta-group {
     -fx-font-weight: bold;
-    -fx-padding: 6 0 2 0;
+    -fx-padding: 6px 0 2px 0;
 }
 .pauta-rule {
     -fx-font-family: "JetBrains Mono";
@@ -392,18 +392,18 @@
    pinned tail, which never does. Both paint the band's ground, so the seam between them is invisible.
    The insets are asymmetric as in Editora: nothing sits above the bar but the menus. */
 .tool-bar {
-    -fx-padding: 5 1 2 6;
-    -fx-spacing: 5;
+    -fx-padding: 5px 1px 2px 6px;
+    -fx-spacing: 5px;
 }
 .toolbar-tail {
-    -fx-padding: 5 6 2 0;
-    -fx-spacing: 5;
+    -fx-padding: 5px 6px 2px 0;
+    -fx-spacing: 5px;
 }
 /* An icon button: 28px, padding 3 x 5, radius 4, no border; the glyph muted, full strength under the
    pointer. The stroke is thinned so a 20px toolbar glyph draws the same weight as an 18px menu glyph. */
 .toolbar-button {
-    -fx-padding: 3 5 3 5;
-    -fx-background-radius: 4;
+    -fx-padding: 3px 5px 3px 5px;
+    -fx-background-radius: 4px;
     -fx-min-height: 28px;
     -fx-pref-height: 28px;
     -fx-max-height: 28px;
@@ -436,7 +436,7 @@
    below: the Git colors follow read-only, so a read-only file still shows its status, and the unsaved rule is
    more specific, so an unsaved tab is amber whatever its status (TABS-08). */
 .document-tabs > .tab-header-area {
-    -fx-padding: 3 6 0 6;
+    -fx-padding: 3px 6px 0 6px;
 }
 .tab .tab-title {
     -fx-text-fill: -color-fg-muted;
@@ -511,7 +511,7 @@
     -fx-border-width: 0;
 }
 .document-text .content {
-    -fx-padding: 6 12 6 12;
+    -fx-padding: 6px 12px 6px 12px;
 }
 .switcher-header {
     -fx-font-weight: bold;
@@ -528,17 +528,17 @@
 .tool-stripe {
     -fx-background-color: -color-bg-subtle;
     -fx-border-color: -color-border-muted;
-    -fx-spacing: 6;
+    -fx-spacing: 6px;
 }
 .tool-stripe-vertical {
-    -fx-pref-width: 34;
-    -fx-min-width: 34;
-    -fx-padding: 8 0 8 0;
+    -fx-pref-width: 34px;
+    -fx-min-width: 34px;
+    -fx-padding: 8px 0 8px 0;
 }
 .tool-stripe-horizontal {
-    -fx-pref-height: 32;
-    -fx-min-height: 32;
-    -fx-padding: 0 4 0 4;
+    -fx-pref-height: 32px;
+    -fx-min-height: 32px;
+    -fx-padding: 0 4px 0 4px;
 }
 .tool-stripe-left {
     -fx-border-width: 0 1 0 0;
@@ -585,8 +585,8 @@
     -fx-border-color: -color-accent-emphasis;
     -fx-border-width: 1;
     -fx-border-style: segments(4, 4) line-cap round;
-    -fx-min-width: 34;
-    -fx-min-height: 32;
+    -fx-min-width: 34px;
+    -fx-min-height: 32px;
 }
 .tool-stripe.tool-stripe-drop-over {
     -fx-background-color: -color-accent-muted;
@@ -595,26 +595,45 @@
     -fx-background-color: -color-bg-default;
 }
 .tool-window-header {
-    -fx-padding: 3 4 3 8;
+    -fx-padding: 3px 4px 3px 8px;
     -fx-background-color: -color-bg-subtle;
     -fx-border-color: transparent transparent -color-border-muted transparent;
 }
 .tool-window-title {
     -fx-font-weight: bold;
-    -fx-graphic-text-gap: 6;
+    -fx-graphic-text-gap: 6px;
 }
 .tool-window-header-button {
-    -fx-padding: 2 4 2 4;
+    -fx-padding: 2px 4px 2px 4px;
 }
 .tool-window-split > .split-pane-divider {
-    -fx-padding: 0 1 0 1;
+    -fx-padding: 0 1px 0 1px;
 }
 .output-bar {
-    -fx-padding: 4 8 4 8;
+    -fx-padding: 4px 8px 4px 8px;
 }
 .output-console {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
+}
+
+/* The filter box over a system's games (FIND-03, FIND-13): its chips, the field and the key badge, in a row
+   flush with the list under it. */
+.system-view > .game-filter-box {
+    -fx-padding: 4px 8px 4px 8px;
+}
+
+.filter-chip {
+    -fx-padding: 1px 8px 1px 8px;
+    -fx-background-radius: 10px;
+    -fx-background-color: -state-accent-bg;
+}
+
+/* The badge reads the Filter Games chord in the keyboard color, as menu chords do (ICON-06). */
+.key-badge {
+    -fx-padding: 1px 6px 1px 6px;
+    -fx-text-fill: -state-key;
+    -fx-font-size: 0.85em;
 }
 
 /* ---- Keyboard focus ----
@@ -635,8 +654,8 @@
 .check-box:focus-visible,
 .radio-button:focus-visible {
     -fx-border-width: 2;
-    -fx-border-insets: -3;
-    -fx-border-radius: 6;
+    -fx-border-insets: -3px;
+    -fx-border-radius: 6px;
 }
 /* A text field draws it inside, by widening its own focus border to 2 px. */
 .text-input:focus-visible {

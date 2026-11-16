@@ -13,6 +13,7 @@
     "tool.systems": "Ctrl+K Ctrl+B",
     "tool.game": "Ctrl+R",
     "tool.retroarch": "Ctrl+BACK_QUOTE",
+    "library.filter": "Ctrl+K Ctrl+F",
     "find.show": [
       "Ctrl+F",
       "F3"

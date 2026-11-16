@@ -1,6 +1,5 @@
 package com.partida.ui;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -30,7 +29,7 @@ public final class AboutDialog {
 
     private final AppServices services;
     private final Dialog<Void> dialog = new Dialog<>();
-    private final VBox updateBlock = new VBox(2);
+    private final VBox updateBlock = UiZoom.vbox(2);
     private final Button copy = new Button(Messages.tr("about.copyDetails"));
     private final Runnable listener = this::refreshUpdate;
 
@@ -45,7 +44,7 @@ public final class AboutDialog {
         Label tagline = new Label(Messages.tr("app.tagline"));
         tagline.getStyleClass().add("about-tagline");
         tagline.setWrapText(true);
-        HBox head = new HBox(16, icon(), new VBox(2, name, version, tagline));
+        HBox head = UiZoom.hbox(16, icon(), UiZoom.vbox(2, name, version, tagline));
         head.setAlignment(Pos.CENTER_LEFT);
 
         Label copyright = new Label(AppInfo.COPYRIGHT);
@@ -70,9 +69,9 @@ public final class AboutDialog {
             services.commands().run("help.copyDetails");
             copy.setText(Messages.tr("about.copied"));
         });
-        VBox content = new VBox(14, head, updateBlock, copyright, links, environment, copy);
+        VBox content = UiZoom.vbox(14, head, updateBlock, copyright, links, environment, copy);
         content.getStyleClass().add("about-content");
-        content.setPadding(new Insets(6, 8, 2, 8));
+        UiZoom.pad(content, 6, 8, 2, 8);
         UiZoom.bind(content.prefWidthProperty(), 460);
 
         dialog.getDialogPane().setContent(content);
@@ -90,8 +89,8 @@ public final class AboutDialog {
         java.net.URL url = AboutDialog.class.getResource("/com/partida/icons/app-128.png");
         if (url != null) {
             ImageView view = new ImageView(new Image(url.toExternalForm(), 72, 72, true, true, true));
-            view.setFitWidth(72);
-            view.setFitHeight(72);
+            UiZoom.bind(view.fitWidthProperty(), 72);
+            UiZoom.bind(view.fitHeightProperty(), 72);
             return view;
         }
         return new Label();
@@ -139,7 +138,7 @@ public final class AboutDialog {
             default -> status = styled(last.isEmpty() ? Messages.tr("about.notChecked") : last, "muted");
         }
         updateBlock.getChildren().add(status);
-        HBox second = new HBox(4);
+        HBox second = UiZoom.hbox(4);
         second.setAlignment(Pos.CENTER_LEFT);
         boolean statusIsLast = updates.state() == UpdateCoordinator.State.NEVER;
         if (!last.isEmpty() && !statusIsLast) second.getChildren().add(styled(last, "muted"));

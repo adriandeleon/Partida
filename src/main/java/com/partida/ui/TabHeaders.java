@@ -52,7 +52,7 @@ final class TabHeaders {
      */
     void systemHeader(Tab tab, SystemView view) {
         boolean isPinned = pinned.test(tab);
-        Label title = new Label(view.title());
+        Label title = new Label(view.shownName());
         title.getStyleClass().add("tab-title");
         HBox header = header(tab);
         toggle(header, "pinned", isPinned);
@@ -62,7 +62,7 @@ final class TabHeaders {
         header.getChildren().addAll(glyph, title);
         tab.setText("");
         tab.setGraphic(header);
-        tooltip(tab, view.title() + " — " + com.partida.i18n.Messages.tr("systems.games", view.size()));
+        tooltip(tab, view.shownName() + " — " + com.partida.i18n.Messages.tr("systems.games", view.size()));
     }
 
     /** Renders a tab that holds no file (Welcome): its title alone, as its tooltip too. */
@@ -79,7 +79,7 @@ final class TabHeaders {
     }
 
     private HBox header(Tab tab) {
-        HBox header = new HBox(6);
+        HBox header = UiZoom.hbox(6);
         header.getStyleClass().add("tab-header");
         header.setAlignment(Pos.CENTER_LEFT);
         enableTabDrag(header, tab);

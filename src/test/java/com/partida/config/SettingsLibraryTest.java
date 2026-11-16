@@ -18,29 +18,50 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Settings → Library's model: clamped on every read, copied deep, and never imported from another computer. */
 class SettingsLibraryTest {
 
+    /** A full path on this OS: "/games/x" isn't one on Windows. */
+    private static String full(String name) {
+        return java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "games", name)
+                .toAbsolutePath()
+                .toString();
+    }
+
     @Test
     void aHandEditedLibraryIsClampedOnRead() {
         Settings s = new Settings();
         Settings.Library.Folder blank = new Settings.Library.Folder("  ", "x");
-        Settings.Library.Folder spaced = new Settings.Library.Folder(" /games/snes ", "snes9x_libretro");
-        Settings.Library.Folder again = new Settings.Library.Folder("/games/snes", "other");
-        Settings.Library.Folder nullCore = new Settings.Library.Folder("/games/gba", "");
+        Settings.Library.Folder spaced = new Settings.Library.Folder(" " + full("snes") + " ", "snes9x_libretro");
+        Settings.Library.Folder again = new Settings.Library.Folder(full("snes"), "other");
+        Settings.Library.Folder nullCore = new Settings.Library.Folder(full("gba"), "");
+        Settings.Library.Folder relative = new Settings.Library.Folder("games/nes", "");
         nullCore.coreId = null;
         Settings.Library.Folder nullPath = new Settings.Library.Folder();
         nullPath.path = null;
-        s.library.folders = new ArrayList<>(Arrays.asList(blank, null, spaced, again, nullCore, nullPath));
+        s.library.folders = new ArrayList<>(Arrays.asList(blank, null, spaced, again, nullCore, nullPath, relative));
         s.library.retroarchConfigDir = null;
         s.library.retroarchCommand = null;
 
         s.clamped();
 
         assertEquals(
-                List.of("/games/snes", "/games/gba"),
+                List.of(full("snes"), full("gba")),
                 s.library.folders.stream().map(f -> f.path).toList());
         assertEquals("snes9x_libretro", s.library.folders.getFirst().coreId, "the first entry for a path wins");
         assertEquals("", s.library.folders.getLast().coreId);
         assertEquals("", s.library.retroarchConfigDir);
         assertEquals("", s.library.retroarchCommand);
+
+        // SET-11: a RetroArch folder that isn't a full path, which the UI refuses, falls back to the default
+        // (find RetroArch on its own) on read; so does one the OS can't parse.
+        s.library.retroarchConfigDir = "relative/retroarch";
+        s.clamped();
+        assertEquals("", s.library.retroarchConfigDir);
+        s.library.retroarchConfigDir = "\0bad";
+        s.clamped();
+        assertEquals("", s.library.retroarchConfigDir);
+        s.library.retroarchConfigDir = " " + full("retroarch") + " ";
+        s.clamped();
+        assertEquals(full("retroarch"), s.library.retroarchConfigDir);
+        assertFalse(Settings.Library.isFullPath("   "));
 
         s.library = null;
         s.clamped();

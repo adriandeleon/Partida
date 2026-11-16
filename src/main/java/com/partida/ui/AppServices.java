@@ -72,7 +72,11 @@ public final class AppServices {
 
     /** The Doctor's checks (DIAG-07): blocking, off the FX thread. */
     public java.util.List<com.partida.sync.Doctor.Check> doctor() {
-        return com.partida.sync.Doctor.run(store.dir(), syncEngine.git(), gitHub);
+        List<com.partida.sync.Doctor.Check> checks =
+                new java.util.ArrayList<>(com.partida.sync.Doctor.run(store.dir(), syncEngine.git(), gitHub));
+        // RetroArch first: the one outside tool Partida needs to play anything.
+        checks.addFirst(LibraryService.doctorCheck(settings().library, LibraryService.detects()));
+        return List.copyOf(checks);
     }
 
     private Keybindings build(Settings settings) {

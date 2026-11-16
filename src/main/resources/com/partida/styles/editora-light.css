@@ -252,7 +252,7 @@ Text {
   -fx-border-width: 1;
   -fx-background-color: -color-bg-subtle;
   -fx-text-fill: -color-danger-fg;
-  -fx-padding: 0 3 0 3;
+  -fx-padding: 0 3px 0 3px;
 }
 .bb-code .abbr {
   -fx-border-color: -color-fg-default;
@@ -480,7 +480,7 @@ Text {
   -fx-content-display: graphic-only;
 }
 .button.button-circle {
-  -fx-background-radius: 50;
+  -fx-background-radius: 50px;
   -fx-padding: 6px 8px 6px 8px;
   -fx-content-display: graphic-only;
   -fx-effect: none;
@@ -792,28 +792,28 @@ Text {
 
 .default-color5.chart-symbol {
   -fx-background-color: -color-chart-6, white;
-  -fx-background-insets: 0, 2;
+  -fx-background-insets: 0, 2px;
   -fx-background-radius: 5px;
   -fx-padding: 5px;
 }
 
 .default-color6.chart-symbol {
   -fx-background-color: -color-chart-7, white;
-  -fx-background-insets: 0, 2;
+  -fx-background-insets: 0, 2px;
   -fx-background-radius: 0;
 }
 
 .default-color7.chart-symbol {
   -fx-background-color: -color-chart-8, white;
   -fx-background-radius: 0;
-  -fx-background-insets: 0, 2.5;
+  -fx-background-insets: 0, 2.5px;
   -fx-padding: 7px 5px 7px 5px;
   -fx-shape: "M5,0 L10,9 L5,18 L0,9 Z";
 }
 
 .chart-line-symbol {
   -fx-background-color: -color-chart-1, white;
-  -fx-background-insets: 0, 2;
+  -fx-background-insets: 0, 2px;
   -fx-background-radius: 5px;
   -fx-padding: 5px;
 }
@@ -889,7 +889,7 @@ Text {
 
 .chart-area-symbol {
   -fx-background-color: -color-chart-1, white;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
   -fx-background-radius: 4px;
   -fx-padding: 3px;
 }
@@ -1003,7 +1003,7 @@ Text {
 .area-legend-symbol {
   -fx-padding: 6px;
   -fx-background-radius: 6px;
-  -fx-background-insets: 0, 3;
+  -fx-background-insets: 0, 3px;
 }
 
 .bubble-legend-symbol {
@@ -1055,11 +1055,11 @@ Text {
 }
 
 .chart-bar.danger {
-  -fx-background-insets: 1 0 0 0;
+  -fx-background-insets: 1px 0 0 0;
 }
 
 .bar-chart:horizontal .chart-bar {
-  -fx-background-insets: 0 0 0 1;
+  -fx-background-insets: 0 0 0 1px;
 }
 
 .bar-chart:horizontal .chart-bar,
@@ -1106,7 +1106,7 @@ Text {
 .chart-pie {
   -fx-pie-color: -color-chart-1;
   -fx-background-color: radial-gradient(radius 100%, derive(-fx-pie-color, 20%), derive(-fx-pie-color, -10%));
-  -fx-background-insets: 1;
+  -fx-background-insets: 1px;
   -fx-border-color: -color-bg-default;
 }
 
@@ -1245,12 +1245,12 @@ Text {
 }
 .color-palette-region > .color-square.hover-square {
   -fx-background-color: -color-accent-fg, -color-bg-default;
-  -fx-background-insets: -2, -1;
-  -fx-background-radius: 5, 0;
+  -fx-background-insets: -2px, -1px;
+  -fx-background-radius: 5px, 0;
   -fx-scale-x: 1.5;
   -fx-scale-y: 1.5;
   -fx-border-color: -color-accent-fg;
-  -fx-border-insets: -1, -1;
+  -fx-border-insets: -1px, -1px;
 }
 
 .custom-color-dialog {
@@ -1466,7 +1466,7 @@ Text {
 
 .combo-box-popup > .list-view {
   -fx-background-color: -color-border-default, -color-bg-default;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
   -fx-border-radius: 4px, 3px;
   -fx-background-radius: 4px, 3px;
   -fx-padding: 5px 5px 5px 5px;
@@ -1629,7 +1629,7 @@ Text {
 .table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
 .tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell .tree-table-cell:selected {
   -fx-background-color: -color-cell-border, -color-cell-bg-selected;
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
 }
 
 .table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell .table-cell:selected,
@@ -1668,7 +1668,7 @@ Text {
 }
 
 .table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell .text-field-table-cell:focus-within {
-  -fx-background-insets: 0, 1, 2;
+  -fx-background-insets: 0, 1px, 2px;
   -fx-background-color: -color-bg-default, -color-accent-emphasis, -color-bg-default;
 }
 
@@ -1748,11 +1748,11 @@ Text {
 }
 .table-view.bordered > .column-header-background .column-header {
   -fx-background-color: -color-cell-border, -color-header-bg;
-  -fx-background-insets: 0, 0 1 0 0;
+  -fx-background-insets: 0, 0 1px 0 0;
 }
 .table-view > .column-header-background {
   -fx-background-color: -color-cell-border, -color-header-bg;
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
 }
 .table-view > .column-header-background .column-header {
   -fx-background-color: transparent;
@@ -1805,7 +1805,7 @@ Text {
 }
 .table-view .column-resize-line {
   -fx-background-color: -color-accent-emphasis;
-  -fx-padding: 0 1 0 1;
+  -fx-padding: 0 1px 0 1px;
 }
 .table-view .column-drag-header {
   -fx-background-color: -color-accent-muted;
@@ -1832,7 +1832,7 @@ Text {
   -fx-background-insets: 0;
 }
 .table-view.striped.bordered .table-row-cell {
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
 }
 .table-view.striped .table-row-cell:filled:odd {
   -fx-background-color: -color-cell-border, -color-cell-bg-odd;
@@ -1844,7 +1844,7 @@ Text {
 }
 .table-view .table-row-cell {
   -fx-background-color: -color-cell-border, -color-cell-bg;
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
   -fx-padding: 0;
   -fx-cell-size: 3em;
 }
@@ -1975,11 +1975,11 @@ Text {
 }
 .tree-table-view.bordered > .column-header-background .column-header {
   -fx-background-color: -color-cell-border, -color-header-bg;
-  -fx-background-insets: 0, 0 1 0 0;
+  -fx-background-insets: 0, 0 1px 0 0;
 }
 .tree-table-view > .column-header-background {
   -fx-background-color: -color-cell-border, -color-header-bg;
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
 }
 .tree-table-view > .column-header-background .column-header {
   -fx-background-color: transparent;
@@ -2032,7 +2032,7 @@ Text {
 }
 .tree-table-view .column-resize-line {
   -fx-background-color: -color-accent-emphasis;
-  -fx-padding: 0 1 0 1;
+  -fx-padding: 0 1px 0 1px;
 }
 .tree-table-view .column-drag-header {
   -fx-background-color: -color-accent-muted;
@@ -2062,7 +2062,7 @@ Text {
   -fx-background-insets: 0;
 }
 .tree-table-view.striped.bordered .tree-table-row-cell {
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
 }
 .tree-table-view.striped .tree-table-row-cell:filled:odd {
   -fx-background-color: -color-cell-border, -color-cell-bg-odd;
@@ -2074,7 +2074,7 @@ Text {
 }
 .tree-table-view .tree-table-row-cell {
   -fx-background-color: -color-cell-border, -color-cell-bg;
-  -fx-background-insets: 0, 0 0 1 0;
+  -fx-background-insets: 0, 0 0 1px 0;
   -fx-padding: 0;
   -fx-cell-size: 3em;
   -fx-indent: 1em;
@@ -2151,7 +2151,7 @@ Text {
   -color-date-other-month-fg: -color-fg-subtle;
   -color-date-chrono-fg: -color-success-fg;
   -fx-background-color: -color-date-border, -color-date-bg;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
   -fx-background-radius: 4px, 3px;
   -fx-alignment: CENTER;
   -fx-spacing: 0;
@@ -2660,7 +2660,7 @@ Text {
 
 .menu-bar {
   -fx-background-color: -color-border-muted, -color-bg-subtle;
-  -fx-background-insets: 0 0 0 0, 0 0 1 0;
+  -fx-background-insets: 0 0 0 0, 0 0 1px 0;
   -fx-background-radius: 0;
   -fx-padding: 0;
 }
@@ -2783,7 +2783,7 @@ Text {
 
 .context-menu {
   -fx-background-color: -color-border-muted, -color-bg-default;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
   -fx-padding: 5px 5px 5px 5px;
   -fx-background-radius: 4px, 3px;
   -fx-effect: dropshadow(three-pass-box, -color-shadow-default, 6px, 0.3, 0, 2);
@@ -2857,7 +2857,7 @@ Text {
 }
 .menu-button.button-circle,
 .split-menu-button.button-circle {
-  -fx-background-radius: 50;
+  -fx-background-radius: 50px;
   -fx-padding: 6px 8px 6px 8px;
   -fx-content-display: graphic-only;
   -fx-effect: none;
@@ -3118,7 +3118,7 @@ Text {
 .menu-button.no-arrow > .arrow-button > .arrow {
   -fx-shape: none;
   -fx-scale-shape: false;
-  -fx-min-width: -1;
+  -fx-min-width: -1px;
 }
 
 .split-menu-button > .label {
@@ -3243,7 +3243,7 @@ Text {
 }
 .message > .close-button:hover {
   -fx-background-color: -color-message-border, -color-message-button-hover;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
 }
 .message > .close-button:disabled {
   -fx-opacity: 0.4;
@@ -3281,7 +3281,7 @@ Text {
 }
 .modal-box > .close-button:hover {
   -fx-background-color: -color-border-muted, -color-modal-box-close-bg-hover;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
 }
 .modal-box .tile {
   -fx-padding: 0;
@@ -3334,7 +3334,7 @@ Text {
 }
 .notification > .container > .header > .actions > .secondary-menu-button:hover {
   -fx-background-color: -color-border-default, -color-notify-bg-hover;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
 }
 .notification > .container > .header > .actions > .secondary-menu-button:hover > .icon {
   -fx-background-color: -color-notify-fg-hover;
@@ -3351,7 +3351,7 @@ Text {
 }
 .notification > .container > .header > .actions > .close-button:hover {
   -fx-background-color: -color-border-default, -color-notify-bg-hover;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
 }
 .notification > .container > .header > .actions > .close-button:hover > .icon {
   -fx-background-color: -color-notify-fg-hover;
@@ -3367,7 +3367,7 @@ Text {
 }
 .notification.accent > .container {
   -fx-background-color: -color-notify-border, -color-notify-bg, -color-notify-border-intent -color-notify-bg -color-notify-bg -color-notify-bg, -color-notify-bg;
-  -fx-background-insets: 0, 1, 1, 1 1 1 6px;
+  -fx-background-insets: 0, 1px, 1px, 1px 1px 1px 6px;
   -fx-background-radius: 4px;
 }
 .notification.accent > .container > .header > .graphic .font-icon, .notification.accent > .container > .header > .graphic .ikonli-font-icon {
@@ -3379,7 +3379,7 @@ Text {
 }
 .notification.success > .container {
   -fx-background-color: -color-notify-border, -color-notify-bg, -color-notify-border-intent -color-notify-bg -color-notify-bg -color-notify-bg, -color-notify-bg;
-  -fx-background-insets: 0, 1, 1, 1 1 1 6px;
+  -fx-background-insets: 0, 1px, 1px, 1px 1px 1px 6px;
   -fx-background-radius: 4px;
 }
 .notification.success > .container > .header > .graphic .font-icon, .notification.success > .container > .header > .graphic .ikonli-font-icon {
@@ -3391,7 +3391,7 @@ Text {
 }
 .notification.warning > .container {
   -fx-background-color: -color-notify-border, -color-notify-bg, -color-notify-border-intent -color-notify-bg -color-notify-bg -color-notify-bg, -color-notify-bg;
-  -fx-background-insets: 0, 1, 1, 1 1 1 6px;
+  -fx-background-insets: 0, 1px, 1px, 1px 1px 1px 6px;
   -fx-background-radius: 4px;
 }
 .notification.warning > .container > .header > .graphic .font-icon, .notification.warning > .container > .header > .graphic .ikonli-font-icon {
@@ -3403,7 +3403,7 @@ Text {
 }
 .notification.danger > .container {
   -fx-background-color: -color-notify-border, -color-notify-bg, -color-notify-border-intent -color-notify-bg -color-notify-bg -color-notify-bg, -color-notify-bg;
-  -fx-background-insets: 0, 1, 1, 1 1 1 6px;
+  -fx-background-insets: 0, 1px, 1px, 1px 1px 1px 6px;
   -fx-background-radius: 4px;
 }
 .notification.danger > .container > .header > .graphic .font-icon, .notification.danger > .container > .header > .graphic .ikonli-font-icon {
@@ -3413,7 +3413,7 @@ Text {
 
 .pagination {
   -fx-padding: 0;
-  -fx-arrow-button-gap: 4;
+  -fx-arrow-button-gap: 4px;
   -fx-arrows-visible: true;
   -fx-tooltip-visible: false;
   -fx-page-information-visible: true;
@@ -3461,7 +3461,7 @@ Text {
 .pagination.bullet > .pagination-control > .control-box > .bullet-button {
   -fx-background-radius: 0, 10em, 10em;
   -fx-background-color: transparent, -color-border-default, -color-bg-subtle;
-  -fx-background-insets: 0, 5, 6;
+  -fx-background-insets: 0, 5px, 6px;
 }
 .pagination.bullet > .pagination-control > .control-box > .bullet-button:selected {
   -fx-background-color: transparent, -color-accent-emphasis;
@@ -3498,7 +3498,7 @@ Text {
 .progress-bar {
   -color-progress-bar-track: -color-bg-subtle;
   -color-progress-bar-fill: -color-accent-emphasis;
-  -fx-indeterminate-bar-length: 60;
+  -fx-indeterminate-bar-length: 60px;
   -fx-indeterminate-bar-escape: true;
   -fx-indeterminate-bar-flip: true;
   -fx-indeterminate-bar-animation-time: 2;
@@ -3533,7 +3533,7 @@ Text {
 }
 .progress-indicator > .determinate-indicator > .indicator {
   -fx-background-color: -color-border-default, -color-bg-default;
-  -fx-background-insets: 0, 1;
+  -fx-background-insets: 0, 1px;
 }
 .progress-indicator > .determinate-indicator > .progress {
   -fx-background-color: -color-accent-emphasis;
@@ -3965,7 +3965,7 @@ Text {
 }
 .spinner > .decrement-arrow-button {
   -fx-background-color: -color-bg-subtle;
-  -fx-background-insets: -1 0 0 0;
+  -fx-background-insets: -1px 0 0 0;
   -fx-background-radius: 0 0 4px 0;
   -fx-padding: 10px;
 }
@@ -4206,10 +4206,10 @@ Text {
 .tab-line > .root-container > .tabs.selected-tab-closable > .tab:selected .close-button,
 .tab-line > .root-container > .tabs.selected-tab-closable > .tab:pinned .close-button {
   visibility: visible;
-  -fx-min-width: -1;
-  -fx-min-height: -1;
-  -fx-max-width: -1;
-  -fx-max-height: -1;
+  -fx-min-width: -1px;
+  -fx-min-height: -1px;
+  -fx-max-width: -1px;
+  -fx-max-height: -1px;
 }
 .tab-line > .root-container > .tabs.no-tabs-closable > .tab .close-button {
   visibility: hidden;
@@ -4223,17 +4223,17 @@ Text {
 }
 .tab-line.border-top > .root-container > .tabs > .tab {
   -fx-background-color: -color-bg-default, -color-border-default, -color-bg-default;
-  -fx-background-insets: 0, 0, 1 0 0 0;
+  -fx-background-insets: 0, 0, 1px 0 0 0;
 }
 .tab-line.border-top > .root-container > .tabs > .tab:first {
-  -fx-background-insets: 0, 0, 1 0 0 1;
+  -fx-background-insets: 0, 0, 1px 0 0 1px;
 }
 .tab-line.border-top > .root-container > .tabs > .tab:last {
-  -fx-background-insets: 0, 0, 1 1 0 0;
+  -fx-background-insets: 0, 0, 1px 1px 0 0;
 }
 .tab-line.border-top > .root-container > .tabs > .tab:selected {
   -fx-background-color: -color-tab-border-selected, -color-border-default, -color-tab-bg-selected;
-  -fx-background-insets: 0, 3px 0 0 0, 3px 1 0 1;
+  -fx-background-insets: 0, 3px 0 0 0, 3px 1px 0 1px;
 }
 .tab-line.dense > .root-container > .tabs > .tab {
   -fx-padding: 6px 4px 6px 4px;
@@ -4410,7 +4410,7 @@ Text {
 .tab-pane.floating > .tab-header-area > .headers-region > .tab > .tab-container {
   -fx-background-color: -color-border-subtle, -color-bg-inset;
   -fx-background-radius: 4px, 0;
-  -fx-background-insets: 0, 0 1 0 0;
+  -fx-background-insets: 0, 0 1px 0 0;
   -fx-border-radius: 4px;
   -fx-border-width: 1px, 0 3px 0 0;
   -fx-border-color: transparent, transparent;
@@ -4750,7 +4750,7 @@ Text {
   -fx-content-display: graphic-only;
 }
 .toggle-button.button-circle {
-  -fx-background-radius: 50;
+  -fx-background-radius: 50px;
   -fx-padding: 6px 8px 6px 8px;
   -fx-content-display: graphic-only;
   -fx-effect: none;

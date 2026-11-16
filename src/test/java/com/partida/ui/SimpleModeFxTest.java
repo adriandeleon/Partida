@@ -135,6 +135,12 @@ class SimpleModeFxTest {
         assertTrue(simpleRows.size() < fullRows.size(), "shorter");
         assertTrue(fullRows.containsAll(simpleRows), "nothing the full menu lacks");
         assertTrue(simpleRows.contains("view.toggleSimpleMode"), "the way back out");
+        // TBAR-08: a tool window's header keeps its Float, Maximize and Close buttons in Simple mode, so the
+        // shorter menu lists their commands too.
+        assertTrue(
+                simpleRows.containsAll(
+                        List.of("view.floatToolWindow", "view.maximizeToolWindow", "view.closeFocusedToolWindow")),
+                simpleRows.toString());
         assertEquals(
                 AppMenus.menus(true).stream()
                         .flatMap(spec -> spec.ids().stream())

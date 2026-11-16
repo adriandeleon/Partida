@@ -99,7 +99,11 @@ final class DocumentTabs {
             activeListeners.forEach(Runnable::run);
             if (now == welcome) welcomeShown.forEach(Runnable::run); // rebuilt on every show (WELC-05)
         });
-        library.onChanged(this::refreshGames);
+        // The filter boxes' key badges follow the keymap (FIND-13).
+        services.onKeybindingsChanged(() -> views.values().forEach(SystemView::refreshBadge));
+        // A reload refreshes every tab's list once per pulse, however many changes it brings (PERF-06).
+        Redraw games = new Redraw(this::refreshGames);
+        library.onChanged(games::request);
 
         java.util.List<String> last = services.settings().window.documents;
         if (restore && last != null && !last.isEmpty()) {
@@ -291,8 +295,9 @@ final class DocumentTabs {
                 () -> gameMenu);
         Tab tab = new Tab();
         tab.setContent(view.node());
-        view.findBar().editingKeys(() -> services.keybindings().keymap().emacs());
-        view.findBar().runCommandsThrough(services.commands()::run);
+        TextInputKeys.install(
+                view.filter(), () -> services.keybindings().keymap().emacs());
+        view.connect(() -> services.keybindings().label("library.filter"), this::runByTitle);
         applyTextZoom(view);
         views.put(tab, view);
         install(tab);
@@ -444,16 +449,32 @@ final class DocumentTabs {
         tabPane.requestLayout(); // a hidden header area is unmanaged, which asks for no layout of its own
     }
 
+    /**
+     * A filter box's {@code >} query: runs the command whose title it names (FIND-13), or says there is none.
+     * True when a command ran.
+     */
+    boolean runByTitle(String name) {
+        java.util.Map<String, String> titles = new java.util.LinkedHashMap<>();
+        for (com.partida.command.Command command : services.commands().all()) titles.put(command.id(), command.title());
+        java.util.Optional<String> id = GameFilter.commandFor(name, titles);
+        if (id.isEmpty()) {
+            services.echo("systems.filter.noCommand", name);
+            return false;
+        }
+        AppMenus.runOrSay(services, id.get());
+        return true;
+    }
+
     /** What a tab is called: its system's name, or Welcome. */
     String title(Tab tab) {
         SystemView view = views.get(tab);
-        return view == null ? Messages.tr("tabs.welcome") : view.title();
+        return view == null ? Messages.tr("tabs.welcome") : view.shownName();
     }
 
     /** The window title: the system shown and the app (TABS-10). */
     void updateWindowTitle() {
         SystemView view = activeView();
-        setTitle.accept(windowTitle(view == null ? null : view.title()));
+        setTitle.accept(windowTitle(view == null ? null : view.shownName()));
     }
 
     /**
@@ -480,24 +501,27 @@ final class DocumentTabs {
 
     // ---- why a command cannot run now ----
 
+    // The rules are Chrome's, pure and unit-tested (QUAL-05); these read the facts they take.
+
     @Nullable
     String closeUnavailable() {
-        return selected() == null ? Messages.tr("palette.disabled.noTab") : null;
+        return Chrome.closeUnavailable(selected() != null);
     }
 
     @Nullable
     String nothingToClose(String commandId) {
-        if (selected() == null) return Messages.tr("palette.disabled.noTab");
-        return wouldClose(commandId).isEmpty() ? Messages.tr("palette.disabled.nothingToClose") : null;
+        return Chrome.nothingToClose(
+                selected() != null,
+                selected() == null ? 0 : wouldClose(commandId).size());
     }
 
     @Nullable
     String reopenUnavailable() {
-        return closedTabs.size() == 0 ? Messages.tr("palette.disabled.noClosedTab") : null;
+        return Chrome.reopenUnavailable(closedTabs.size());
     }
 
     @Nullable
     String cycleUnavailable() {
-        return tabPane.getTabs().size() < 2 ? Messages.tr("palette.disabled.oneTab") : null;
+        return Chrome.cycleUnavailable(tabPane.getTabs().size());
     }
 }

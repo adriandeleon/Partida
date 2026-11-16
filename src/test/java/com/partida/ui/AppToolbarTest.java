@@ -14,7 +14,7 @@ class AppToolbarTest {
 
     private static boolean[] shown(@Nullable Boolean... items) {
         List<@Nullable Boolean> list = Arrays.asList(items);
-        return AppToolbar.separatorsShown(list);
+        return Chrome.separatorsShown(list);
     }
 
     /** TBAR-05: with everything showing, every gap stays. */

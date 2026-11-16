@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -87,7 +86,7 @@ public final class Picker<T> {
         list.setAccessibleText(prompt);
         query.getStyleClass().add("palette-query");
         HBox.setHgrow(query, Priority.ALWAYS);
-        inputRow = new HBox(8, query);
+        inputRow = UiZoom.hbox(8, query);
         inputRow.setAlignment(Pos.CENTER_LEFT);
         if (!opener.isEmpty()) inputRow.getChildren().addFirst(chip(opener, "opener-chip"));
 
@@ -107,7 +106,7 @@ public final class Picker<T> {
         title.setVisible(false);
         title.setManaged(false);
 
-        card = new VBox(6, title, inputRow, list, description, hint);
+        card = UiZoom.vbox(6, title, inputRow, list, description, hint);
         card.getStyleClass().add("command-palette");
         UiZoom.bind(card.prefWidthProperty(), WIDTH);
         UiZoom.bind(card.maxWidthProperty(), WIDTH);
@@ -133,7 +132,7 @@ public final class Picker<T> {
 
     /** Opens the picker over the window. */
     public void show() {
-        host.show(card, Pos.TOP_CENTER, new Insets(60, 0, 0, 0), onHidden);
+        host.show(card, Pos.TOP_CENTER, UiZoom.insets(60, 0, 0, 0), onHidden);
         query.requestFocus();
     }
 
@@ -160,7 +159,66 @@ public final class Picker<T> {
     public Picker<T> keymap(java.util.function.Supplier<com.partida.command.Keybindings> keys, boolean mac) {
         this.keys = keys;
         this.mac = mac;
+        hint.setText(legend(keys.get(), "")); // the legend's chords are the keymap's, never written out (KBD-13)
         return this;
+    }
+
+    /** Whether {@code event} is the palette's help chord. */
+    static boolean isHelp(KeyEvent event, com.partida.command.@Nullable KeyStroke help) {
+        return help != null && help.equals(com.partida.command.KeyStroke.of(event));
+    }
+
+    /** What {@code event} does in a list overlay: the event read here, the rule {@link PickerKeys#move}'s. */
+    static PickerKeys.Move moveFor(KeyEvent event, com.partida.command.@Nullable Keybindings bindings, boolean mac) {
+        boolean shortcut = mac ? event.isMetaDown() : event.isControlDown();
+        String command = null;
+        if (bindings != null) {
+            com.partida.command.KeyStroke stroke = com.partida.command.KeyStroke.of(event);
+            if (stroke != null) command = bindings.commandFor(List.of(stroke));
+        }
+        return PickerKeys.move(event.getCode().name(), shortcut, command);
+    }
+
+    /**
+     * A picker's key legend in the active keymap: its moves, run and cancel, and the help chord when the picker
+     * has one (PAL-06, PAL-08). The catalog holds the words; every chord comes from {@code keys} (KBD-13).
+     */
+    static String legend(com.partida.command.Keybindings keys, String help) {
+        String moves = java.util.stream.Stream.of("nav.lineDown", "nav.lineUp")
+                .map(keys::label)
+                .filter(l -> !l.isEmpty())
+                .collect(java.util.stream.Collectors.joining(" "));
+        String cancel = keys.label("edit.cancel");
+        String legend = Messages.tr(
+                "palette.legend",
+                moves.isEmpty() ? "↑↓" : "↑↓ / " + moves,
+                cancel.isEmpty() ? "Esc" : "Esc / " + cancel);
+        return help.isEmpty() ? legend : legend + " · " + Messages.tr("palette.legendHelp", help);
+    }
+
+    /**
+     * Items that answered late (QOPEN-03): the picker reads them again while it is open, and keeps the query and
+     * the selected row.
+     */
+    public void reload(List<Item<T>> fresh) {
+        T selected = list.getSelectionModel().getSelectedItem() == null
+                ? null
+                : list.getSelectionModel().getSelectedItem().item().value();
+        items = List.copyOf(fresh);
+        list.getItems().setAll(rank(items, query.getText()));
+        boolean kept = false;
+        for (int i = 0; i < list.getItems().size(); i++) {
+            if (list.getItems().get(i).item().value().equals(selected)) {
+                select(i);
+                kept = true;
+            }
+        }
+        if (!kept && !list.getItems().isEmpty()) select(0);
+    }
+
+    /** The query typed so far. */
+    String queryText() {
+        return query.getText();
     }
 
     /** What the help chord opens for the selected row (PAL-08); the chord is the first the keymap leaves free. */
@@ -254,13 +312,13 @@ public final class Picker<T> {
         select(enabledFrom(0, 1));
     }
 
-    /** The first enabled row from {@code start}, stepping by {@code step}, or -1. */
+    /** The first enabled row from {@code start}, stepping by {@code step}, or -1: {@link PickerKeys}' rule. */
     private int enabledFrom(int start, int step) {
-        List<Ranked<T>> rows = list.getItems();
-        for (int i = start; i >= 0 && i < rows.size(); i += step) {
-            if (rows.get(i).item().unavailable() == null) return i;
-        }
-        return -1;
+        return PickerKeys.enabledFrom(list.getItems().size(), this::enabled, start, step);
+    }
+
+    private boolean enabled(int row) {
+        return list.getItems().get(row).item().unavailable() == null;
     }
 
     private void select(int index) {
@@ -278,10 +336,7 @@ public final class Picker<T> {
     private void move(int delta) {
         int size = list.getItems().size();
         if (size == 0) return;
-        int step = delta > 0 ? 1 : -1;
-        int target = Math.clamp((long) list.getSelectionModel().getSelectedIndex() + delta, 0, size - 1);
-        int found = enabledFrom(target, step);
-        select(found >= 0 ? found : enabledFrom(target, -step));
+        select(PickerKeys.moveTarget(size, list.getSelectionModel().getSelectedIndex(), delta, this::enabled));
     }
 
     private void onKey(KeyEvent e) {
@@ -289,14 +344,14 @@ public final class Picker<T> {
         Consumer<T> help = onHelp;
         if (help != null && bindings != null) {
             if (helpChord == null) helpChord = PickerKeys.helpChord(bindings, mac);
-            if (PickerKeys.isHelp(e, helpChord)) {
+            if (isHelp(e, helpChord)) {
                 Ranked<T> row = list.getSelectionModel().getSelectedItem();
                 if (row != null) help.accept(row.item().value());
                 e.consume();
                 return;
             }
         }
-        switch (PickerKeys.resolve(e, bindings, mac)) {
+        switch (moveFor(e, bindings, mac)) {
             case LINE_DOWN -> move(1);
             case LINE_UP -> move(-1);
             case PAGE_DOWN -> move(VISIBLE_ROWS);
@@ -339,7 +394,7 @@ public final class Picker<T> {
         private final TextFlow title = new TextFlow();
         private final List<Text> runs = new ArrayList<>();
         private final Label rowChip = chip("", "row-chip");
-        private final HBox line = new HBox(8, title, rowChip);
+        private final HBox line = UiZoom.hbox(8, title, rowChip);
         private final Tooltip tip = new Tooltip();
 
         Row() {

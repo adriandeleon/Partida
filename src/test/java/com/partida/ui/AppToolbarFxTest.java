@@ -303,6 +303,89 @@ class AppToolbarFxTest {
         assertEquals(List.of(true, true, true), seen, "Settings shown, inside the bar; the cluster's chevron shown");
     }
 
+    /**
+     * MENU-15: the overflow chevron opens a menu of the overflowed commands, each row showing its chord in the
+     * active keymap, in place of the stock menu of bare icons; a keymap switch rewrites the chords.
+     */
+    @Test
+    void theOverflowMenuListsEachOverflowedCommandWithItsChord() throws Exception {
+        // All in one pulse: the next one lays the window out at its own width again, the chevron hides, and
+        // the menu anchored to it closes with it.
+        List<String> problems = call(() -> {
+            List<String> found = new ArrayList<>();
+            HBox row = toolbar.node();
+            row.resize(150, row.prefHeight(150));
+            row.layout();
+            toolbar.bar().layout();
+            Node chevron = Objects.requireNonNull(toolbar.bar().lookup(".tool-bar-overflow-button"));
+            Event.fireEvent(chevron, press(chevron, MouseButton.PRIMARY));
+            List<String> overflowed =
+                    toolbar.overflowed().stream().filter(Objects::nonNull).toList();
+            CommandMenu menu = toolbar.overflowMenu();
+            if (menu == null || !menu.menu().isShowing()) return List.of("the chevron opened no menu of the app's own");
+            if (!overflowed.contains("palette.show")) found.add("palette.show overflows at 150 px: " + overflowed);
+            List<String> rows =
+                    menu.rows().stream().map(AppMenus.Row::commandId).toList();
+            if (!rows.equals(overflowed)) found.add("rows " + rows + " are not the overflowed " + overflowed);
+            boolean anyChord = false;
+            for (String keymap : List.of("emacs", "cua")) {
+                services.store().update(s -> s.keymap = keymap);
+                menu.refresh();
+                for (AppMenus.Row r : menu.rows()) {
+                    String chord = Objects.requireNonNull(r.chord()).getText();
+                    anyChord |= !chord.isEmpty();
+                    String want = services.keybindings().label(r.commandId());
+                    if (!want.equals(chord)) found.add(keymap + " " + r.commandId() + ": " + chord + " not " + want);
+                }
+            }
+            if (!anyChord) found.add("no row shows a chord");
+            return found;
+        });
+        assertEquals(List.of(), problems);
+    }
+
+    /** MENU-15: at full width nothing overflows, and the chevron's keys open the same menu when it does. */
+    @Test
+    void theOverflowOpensFromTheKeyboardAndNotWhenNothingOverflows() throws Exception {
+        assertEquals(List.of(), call(toolbar::overflowed), "a wide window overflows nothing");
+        List<Object> seen = call(() -> {
+            HBox row = toolbar.node();
+            row.resize(150, row.prefHeight(150));
+            row.layout();
+            toolbar.bar().layout();
+            Node chevron = Objects.requireNonNull(toolbar.bar().lookup(".tool-bar-overflow-button"));
+            Event.fireEvent(
+                    chevron,
+                    new javafx.scene.input.KeyEvent(
+                            javafx.scene.input.KeyEvent.KEY_PRESSED,
+                            "",
+                            "",
+                            javafx.scene.input.KeyCode.TAB,
+                            false,
+                            false,
+                            false,
+                            false));
+            boolean openedOnTab = toolbar.overflowMenu() != null;
+            Event.fireEvent(
+                    chevron,
+                    new javafx.scene.input.KeyEvent(
+                            javafx.scene.input.KeyEvent.KEY_PRESSED,
+                            "",
+                            "",
+                            javafx.scene.input.KeyCode.ENTER,
+                            false,
+                            false,
+                            false,
+                            false));
+            CommandMenu menu = toolbar.overflowMenu();
+            boolean shown = menu != null && menu.menu().isShowing();
+            if (menu != null) menu.menu().hide();
+            Event.fireEvent(chevron, press(chevron, MouseButton.SECONDARY));
+            return List.of(openedOnTab, shown);
+        });
+        assertEquals(List.of(false, true), seen, "Tab opens nothing; Enter opens the menu");
+    }
+
     private static void rightClick(Node node) {
         Bounds b = node.getBoundsInLocal();
         double x = b.getMinX() + 4;

@@ -665,6 +665,16 @@ final class ToolWindowManager {
 
     // ---- layout ----
 
+    /** Whether a focus mode hides the stripes (WIN-10): every one, whatever it holds. */
+    private boolean stripesHidden;
+
+    /** Hides or shows every stripe for a focus mode (WIN-10); the buttons and the user's choices stay. */
+    void setStripesHidden(boolean hidden) {
+        if (stripesHidden == hidden) return;
+        stripesHidden = hidden;
+        layoutStripes();
+    }
+
     /** Puts every shown stripe button on its stripe in order, and shows the stripes that have one. */
     void layoutStripes() {
         for (ToolWindow.Side side : ToolWindow.Side.values())
@@ -684,7 +694,7 @@ final class ToolWindowManager {
         for (ToolWindow.Side side : ToolWindow.Side.values()) {
             Pane stripe = stripe(side);
             boolean empty = stripe.getChildren().isEmpty();
-            boolean shown = ToolWindowVisibility.stripeShown(empty, dragging);
+            boolean shown = !stripesHidden && ToolWindowVisibility.stripeShown(empty, dragging);
             stripe.setVisible(shown);
             stripe.setManaged(shown);
             TabHeaders.toggle(stripe, "tool-stripe-drop-target", dragging && empty);

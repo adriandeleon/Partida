@@ -75,7 +75,9 @@ public final class SettingsWindow {
                             "view.toggleToolbar",
                             "view.toggleTabBar",
                             "view.toggleStatusBar",
-                            "view.toggleSimpleMode"),
+                            "view.toggleSimpleMode",
+                            null,
+                            "view.restoreToolbar"),
             Page.LIBRARY,
                     java.util.Arrays.asList(
                             "library.addFolder",
@@ -100,6 +102,25 @@ public final class SettingsWindow {
             Page.ADVANCED,
                     java.util.Arrays.asList(
                             "config.export", "config.import", null, "config.openFolder", "help.doctor"));
+
+    /**
+     * Each page's section of the user docs' Settings page (DOCS-11): the one map every page's "Help for"
+     * link reads, so a page and its docs never drift apart.
+     */
+    static final Map<Page, String> HELP_SLUGS = Map.of(
+            Page.GENERAL, "general",
+            Page.LIBRARY, "library",
+            Page.APPEARANCE, "appearance",
+            Page.KEYMAP, "keymap",
+            Page.SYNC, "sync",
+            Page.ADVANCED, "advanced");
+
+    /** Where a page's "Help for" link goes: its section of the versioned docs' Settings page. */
+    static String helpUrl(Page page) {
+        return com.partida.AppInfo.docsUrl() + "/settings/#" + HELP_SLUGS.get(page);
+    }
+
+    private final Map<Page, javafx.scene.control.Hyperlink> helpLinks = new EnumMap<>(Page.class);
 
     private final Map<Page, CommandMenu> pageMenus = new EnumMap<>(Page.class);
 
@@ -133,6 +154,15 @@ public final class SettingsWindow {
     private final SettingSwitch tabBar = new SettingSwitch(Messages.tr("settings.tabBar.title"));
     private final SettingSwitch simpleMode = new SettingSwitch(Messages.tr("settings.simpleMode.title"));
     private final SettingSwitch statusBar = new SettingSwitch(Messages.tr("settings.statusBar.title"));
+    /** The toolbar's layout (TBAR-09): its buttons and gaps in order, {@link ToolbarLayout#GAP} for a gap. */
+    private final ListView<String> toolbarList = new ListView<>();
+
+    private final Button toolbarUp = new Button(Messages.tr("settings.toolbarLayout.up"));
+    private final Button toolbarDown = new Button(Messages.tr("settings.toolbarLayout.down"));
+    private final Button toolbarRemove = new Button(Messages.tr("settings.toolbarLayout.remove"));
+    private final javafx.scene.control.MenuButton toolbarAdd =
+            new javafx.scene.control.MenuButton(Messages.tr("settings.toolbarLayout.add"));
+    private final Button toolbarRestore = new Button(Messages.tr("settings.toolbarLayout.restore"));
     private final ComboBox<ThemeChoice> theme = new ComboBox<>();
     private final ComboBox<Integer> uiZoom = new ComboBox<>();
     private final ComboBox<Integer> textZoom = new ComboBox<>();
@@ -201,7 +231,18 @@ public final class SettingsWindow {
             UiZoom.pad(content, 18, 22, 18, 22);
             Label title = new Label(page.title());
             title.getStyleClass().add("settings-page-title");
-            content.getChildren().add(title);
+            // DOCS-11: the page's own docs, "Help for" and its name, from the one map of page to slug.
+            javafx.scene.control.Hyperlink help =
+                    new javafx.scene.control.Hyperlink(Messages.tr("settings.help", page.title()));
+            help.getStyleClass().add("settings-help");
+            help.setAccessibleText(help.getText());
+            help.setOnAction(e -> services.host().openUrl(helpUrl(page)));
+            helpLinks.put(page, help);
+            Region gap = new Region();
+            HBox.setHgrow(gap, Priority.ALWAYS);
+            HBox heading = UiZoom.hbox(12, title, gap, help);
+            heading.setAlignment(Pos.BASELINE_LEFT);
+            content.getChildren().add(heading);
             pages.put(page, content);
         }
         buildGeneral();
@@ -308,6 +349,146 @@ public final class SettingsWindow {
             statusBar.setSelected(s.showStatusBar);
             simpleMode.setSelected(s.simpleMode);
         });
+        buildToolbarLayout();
+    }
+
+    /**
+     * TBAR-09: the toolbar's buttons in a list the user reorders (Move Up and Down, or Alt+Up and Alt+Down),
+     * trims (Remove, or Delete) and adds to, and Restore Default. Each change is saved at once, and the bar
+     * follows it through the settings.
+     */
+    private void buildToolbarLayout() {
+        VBox card = card(Page.GENERAL, Messages.tr("settings.toolbarLayout.heading"));
+        toolbarRestore.setOnAction(e -> services.commands().run("view.restoreToolbar"));
+        row(
+                card,
+                Page.GENERAL,
+                "settings.toolbarLayout",
+                toolbarRestore,
+                "customize customise toolbar buttons order reorder move remove add gap restore default");
+        toolbarList.getStyleClass().add("toolbar-layout-list");
+        toolbarList.setAccessibleText(Messages.tr("settings.toolbarLayout.title"));
+        toolbarList.setCellFactory(v -> new ToolbarCell());
+        UiZoom.bind(toolbarList.prefHeightProperty(), 220);
+        toolbarList.getSelectionModel().selectedIndexProperty().addListener((obs, old, at) -> toolbarButtons());
+        toolbarList.setOnKeyPressed(e -> {
+            if (e.isAltDown() && (e.getCode() == KeyCode.UP || e.getCode() == KeyCode.DOWN)) {
+                moveToolbarEntry(e.getCode() == KeyCode.UP ? -1 : 1);
+                e.consume();
+            } else if (e.getCode() == KeyCode.DELETE || e.getCode() == KeyCode.BACK_SPACE) {
+                removeToolbarEntry();
+                e.consume();
+            }
+        });
+        toolbarUp.setOnAction(e -> moveToolbarEntry(-1));
+        toolbarDown.setOnAction(e -> moveToolbarEntry(1));
+        toolbarRemove.setOnAction(e -> removeToolbarEntry());
+        HBox actions = UiZoom.hbox(6, toolbarUp, toolbarDown, toolbarRemove, toolbarAdd);
+        actions.setAlignment(Pos.CENTER_LEFT);
+        VBox editor = UiZoom.vbox(8, toolbarList, actions);
+        editor.getStyleClass().add("toolbar-layout-editor");
+        card.getChildren().add(editor);
+        loaders.add(this::loadToolbarLayout);
+    }
+
+    /** The layout as the toolbar reads it from the settings, {@code null} a gap. */
+    private List<@Nullable String> toolbarLayout() {
+        return ToolbarLayout.read(services.settings().toolbarLayout, AppToolbar.CLUSTER, AppToolbar.AVAILABLE);
+    }
+
+    private void loadToolbarLayout() {
+        List<@Nullable String> layout = toolbarLayout();
+        List<String> items = new ArrayList<>();
+        for (String id : layout) items.add(id == null ? ToolbarLayout.GAP : id);
+        if (!toolbarList.getItems().equals(items)) {
+            int at = toolbarList.getSelectionModel().getSelectedIndex();
+            toolbarList.getItems().setAll(items);
+            if (at >= 0) toolbarList.getSelectionModel().select(Math.min(at, items.size() - 1));
+        }
+        List<javafx.scene.control.MenuItem> add = new ArrayList<>();
+        for (String id : ToolbarLayout.addable(layout, AppToolbar.AVAILABLE)) {
+            Command command = services.commands().get(id);
+            javafx.scene.control.MenuItem item =
+                    new javafx.scene.control.MenuItem(command == null ? id : command.title(), Icons.commandGlyph(id));
+            item.setOnAction(e -> saveToolbarLayout(ToolbarLayout.added(toolbarLayout(), id), id, Integer.MAX_VALUE));
+            add.add(item);
+        }
+        if (!add.isEmpty()) add.add(new javafx.scene.control.SeparatorMenuItem());
+        javafx.scene.control.MenuItem gap =
+                new javafx.scene.control.MenuItem(Messages.tr("settings.toolbarLayout.gap"));
+        gap.setOnAction(e -> saveToolbarLayout(ToolbarLayout.added(toolbarLayout(), null), null, Integer.MAX_VALUE));
+        add.add(gap);
+        toolbarAdd.getItems().setAll(add);
+        toolbarButtons();
+    }
+
+    /**
+     * Saves {@code layout} and selects {@code follow}'s entry, so the keys go on with it: a button by its
+     * command (tidying the gaps can move it), a gap ({@code null}) by {@code at}, clamped to the list.
+     */
+    private void saveToolbarLayout(List<@Nullable String> layout, @Nullable String follow, int at) {
+        services.store().update(s -> s.toolbarLayout = ToolbarLayout.write(layout, AppToolbar.CLUSTER));
+        int last = toolbarList.getItems().size() - 1;
+        int found = follow == null ? -1 : toolbarList.getItems().indexOf(follow);
+        if (last >= 0) toolbarList.getSelectionModel().select(found >= 0 ? found : Math.max(0, Math.min(at, last)));
+    }
+
+    private void moveToolbarEntry(int delta) {
+        int at = toolbarList.getSelectionModel().getSelectedIndex();
+        if (at < 0) return;
+        List<@Nullable String> layout = toolbarLayout();
+        saveToolbarLayout(ToolbarLayout.moved(layout, at, delta), layout.get(at), at + delta);
+    }
+
+    private void removeToolbarEntry() {
+        int at = toolbarList.getSelectionModel().getSelectedIndex();
+        if (!ToolbarLayout.canRemove(toolbarLayout(), at)) return;
+        saveToolbarLayout(ToolbarLayout.removed(toolbarLayout(), at), null, at);
+    }
+
+    /** Enables the editor's buttons for the selected entry and for the layout as it is. */
+    private void toolbarButtons() {
+        int at = toolbarList.getSelectionModel().getSelectedIndex();
+        int size = toolbarList.getItems().size();
+        toolbarUp.setDisable(at <= 0);
+        toolbarDown.setDisable(at < 0 || at >= size - 1);
+        toolbarRemove.setDisable(!ToolbarLayout.canRemove(toolbarLayout(), at));
+        toolbarRestore.setDisable(services.settings().toolbarLayout.isEmpty());
+    }
+
+    /** Customize Toolbar (TBAR-09): the layout list takes the keys, its first entry selected. */
+    void focusToolbarLayout() {
+        if (toolbarList.getSelectionModel().isEmpty())
+            toolbarList.getSelectionModel().selectFirst();
+        toolbarList.requestFocus();
+    }
+
+    /** A toolbar entry: the command's glyph and title, or a gap's name; its glyphs made once (PERF-09). */
+    private final class ToolbarCell extends ListCell<String> {
+        private final Map<String, Node> glyphs = new java.util.HashMap<>();
+
+        @Override
+        protected void updateItem(@Nullable String id, boolean empty) {
+            super.updateItem(id, empty);
+            getStyleClass().remove("toolbar-layout-gap");
+            if (empty || id == null) {
+                setText(null);
+                setGraphic(null);
+                return;
+            }
+            if (ToolbarLayout.GAP.equals(id)) {
+                setText(Messages.tr("settings.toolbarLayout.gap"));
+                setGraphic(null);
+                getStyleClass().add("toolbar-layout-gap");
+                return;
+            }
+            Command command = services.commands().get(id);
+            setText(command == null ? id : command.title());
+            setGraphic(glyphs.computeIfAbsent(id, k -> {
+                Node glyph = Icons.commandGlyph(k);
+                return glyph == null ? new Region() : glyph;
+            }));
+        }
     }
 
     private void buildLibrary() {
@@ -1140,6 +1321,23 @@ public final class SettingsWindow {
 
     ComboBox<Integer> uiZoomBox() {
         return uiZoom;
+    }
+
+    /** A page's "Help for" link (DOCS-11). */
+    javafx.scene.control.Hyperlink helpLink(Page page) {
+        return java.util.Objects.requireNonNull(helpLinks.get(page));
+    }
+
+    ListView<String> toolbarList() {
+        return toolbarList;
+    }
+
+    javafx.scene.control.MenuButton toolbarAdd() {
+        return toolbarAdd;
+    }
+
+    Button toolbarRestore() {
+        return toolbarRestore;
     }
 
     SettingSwitch simpleModeSwitch() {

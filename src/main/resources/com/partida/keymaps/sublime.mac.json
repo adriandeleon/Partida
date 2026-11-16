@@ -13,6 +13,8 @@
     "tool.systems": "Cmd+K Cmd+B",
     "tool.game": "Cmd+R",
     "tool.retroarch": "Ctrl+BACK_QUOTE",
+    "view.toggleZenMode": "Cmd+Shift+F11",
+    "view.toggleExpertMode": "Cmd+Shift+F12",
     "library.filter": "Cmd+K Cmd+F",
     "find.show": [
       "Cmd+F",

@@ -82,4 +82,30 @@ class ChromeTest {
         assertNull(Chrome.textZoomResetUnavailable(com.partida.config.Settings.MAX_TEXT_ZOOM));
         assertNotNull(settings);
     }
+
+    /** WIN-10: one truth table decides which chrome each mode shows, over the user's own choices. */
+    @Test
+    void eachFocusModeShowsItsChrome() {
+        assertEquals(
+                new Chrome.Shown(true, true, false, true, true),
+                Chrome.shown(Chrome.Focus.NONE, false, true, false, true));
+        assertEquals(
+                new Chrome.Shown(false, false, false, false, true),
+                Chrome.shown(Chrome.Focus.EXPERT, false, true, true, true));
+        assertEquals(
+                new Chrome.Shown(false, false, false, false, false),
+                Chrome.shown(Chrome.Focus.EXPERT, false, true, true, false),
+                "Expert keeps the status bar only where the user has it");
+        assertEquals(
+                new Chrome.Shown(false, false, false, false, false),
+                Chrome.shown(Chrome.Focus.ZEN, false, true, true, true));
+        assertTrue(Chrome.shown(Chrome.Focus.ZEN, true, true, true, true).menus(), "the screen menu bar stays");
+    }
+
+    @Test
+    void aModesCommandTurnsItOnOrOff() {
+        assertEquals(Chrome.Focus.ZEN, Chrome.toggled(Chrome.Focus.NONE, Chrome.Focus.ZEN));
+        assertEquals(Chrome.Focus.NONE, Chrome.toggled(Chrome.Focus.ZEN, Chrome.Focus.ZEN));
+        assertEquals(Chrome.Focus.EXPERT, Chrome.toggled(Chrome.Focus.ZEN, Chrome.Focus.EXPERT));
+    }
 }

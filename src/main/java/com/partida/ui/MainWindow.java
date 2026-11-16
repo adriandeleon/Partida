@@ -244,15 +244,43 @@ public final class MainWindow {
         if (settings.theme != Themes.choice()) Themes.apply(settings.theme);
         if (settings.uiZoom != Themes.zoom()) zoomTo(settings.uiZoom);
         tabs.textZoom(settings.textZoom); // the documents' own zoom (WIN-09)
-        toolbar.node().setVisible(settings.showToolbar);
-        toolbar.node().setManaged(settings.showToolbar);
         // Simple mode: fewer toolbar groups, the toggle lit, and the shorter menu, rebuilt only on a change.
         toolbar.setSimple(settings.simpleMode);
         menus.setSimple(settings.simpleMode);
-        statusBar.setVisible(settings.showStatusBar);
-        statusBar.setManaged(settings.showStatusBar);
-        tabs.setTabBarShown(settings.showTabBar);
+        applyChrome(settings);
     }
+
+    /** Shows the chrome the focus mode and the user's own choices leave: {@link Chrome#shown} (WIN-10). */
+    private void applyChrome(Settings settings) {
+        Chrome.Shown shown =
+                Chrome.shown(focus, systemMenu, settings.showToolbar, settings.showTabBar, settings.showStatusBar);
+        toolbar.node().setVisible(shown.toolbar());
+        toolbar.node().setManaged(shown.toolbar());
+        if (!systemMenu) {
+            menus.bar().setVisible(shown.menus());
+            menus.bar().setManaged(shown.menus());
+        }
+        statusBar.setVisible(shown.statusBar());
+        statusBar.setManaged(shown.statusBar());
+        tabs.setTabBarShown(shown.tabBar());
+        toolWindows.setStripesHidden(!shown.stripes());
+    }
+
+    /**
+     * Zen or Expert mode on, or off when it is the one on (WIN-10). A mode is for this session only: it
+     * hides, it never changes a setting, so leaving it brings the window back as it was.
+     */
+    void toggleFocus(Chrome.Focus pressed) {
+        focus = Chrome.toggled(focus, pressed);
+        applyChrome(services.settings());
+    }
+
+    /** The focus mode on now (WIN-10). */
+    Chrome.Focus focus() {
+        return focus;
+    }
+
+    private Chrome.Focus focus = Chrome.Focus.NONE;
 
     /** Scales the sheets off the FX thread, then swaps them in at once on it (WIN-12, PERF-01). */
     private void zoomTo(int percent) {
@@ -855,6 +883,13 @@ public final class MainWindow {
             settings = window;
         }
         window.show(page);
+    }
+
+    /** Customize Toolbar (TBAR-09): Settings → General with the toolbar's layout list focused. */
+    void customizeToolbar() {
+        openSettings(SettingsWindow.Page.GENERAL);
+        SettingsWindow window = settings;
+        if (window != null) window.focusToolbarLayout();
     }
 
     /** Settings Sync's "Create on GitHub…", from the palette: the Sync page with the name prompt open. */

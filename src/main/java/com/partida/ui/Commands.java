@@ -68,6 +68,26 @@ final class Commands {
             services.store().update(s -> s.simpleMode = !s.simpleMode);
             services.echo(services.settings().simpleMode ? "status.simpleModeOn" : "status.simpleModeOff");
         });
+        // TBAR-09: the toolbar's layout is the user's, edited in Settings → General and restored in one step.
+        r.register("view.customizeToolbar", window::customizeToolbar);
+        r.register(
+                "view.restoreToolbar",
+                () -> {
+                    services.store().update(s -> s.toolbarLayout = new java.util.ArrayList<>());
+                    services.echo("status.toolbarRestored");
+                },
+                () -> services.settings().toolbarLayout.isEmpty()
+                        ? com.partida.i18n.Messages.tr("palette.disabled.toolbarDefault")
+                        : null);
+        // WIN-10: Zen shows no chrome, Expert only the status bar; each its own command, for this session.
+        r.register("view.toggleZenMode", () -> {
+            window.toggleFocus(Chrome.Focus.ZEN);
+            services.echo(window.focus() == Chrome.Focus.ZEN ? "status.zenModeOn" : "status.zenModeOff");
+        });
+        r.register("view.toggleExpertMode", () -> {
+            window.toggleFocus(Chrome.Focus.EXPERT);
+            services.echo(window.focus() == Chrome.Focus.EXPERT ? "status.expertModeOn" : "status.expertModeOff");
+        });
         r.register("view.toggleStatusBar", () -> {
             services.store().update(s -> s.showStatusBar = !s.showStatusBar);
             services.echo(services.settings().showStatusBar ? "status.statusBarOn" : "status.statusBarOff");

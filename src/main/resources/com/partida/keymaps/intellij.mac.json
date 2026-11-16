@@ -14,6 +14,8 @@
     "tool.game": "Cmd+7",
     "tool.retroarch": "Cmd+4",
     "view.closeFocusedToolWindow": "Shift+Esc",
+    "view.toggleZenMode": "Cmd+Shift+F11",
+    "view.toggleExpertMode": "Cmd+Shift+F12",
     "library.filter": "Cmd+K",
     "find.show": "Cmd+F",
     "find.next": "Cmd+G",

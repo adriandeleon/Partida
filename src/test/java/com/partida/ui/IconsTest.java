@@ -61,6 +61,29 @@ class IconsTest {
         assertEquals(Icons.FOLDER, Icons.forCommand(SettingsWindow.Page.ADVANCED.command));
     }
 
+    /**
+     * MENU-14: the library's rows wear their own glyph or none, never another command's. The only glyph one
+     * shares is the same action's (Refresh), and the commands with no fitting glyph draw none.
+     */
+    @Test
+    void theLibrarysRowsBorrowNoGlyph() {
+        Map<String, String> glyphs = Icons.commandGlyphs();
+        for (Map.Entry<String, String> own : glyphs.entrySet()) {
+            if (!own.getKey().startsWith("library.")) continue;
+            String verb = own.getKey().substring(own.getKey().indexOf('.') + 1);
+            for (Map.Entry<String, String> other : glyphs.entrySet()) {
+                if (other.getKey().equals(own.getKey()) || !other.getValue().equals(own.getValue())) continue;
+                String otherVerb = other.getKey().substring(other.getKey().indexOf('.') + 1);
+                assertEquals(verb, otherVerb, own.getKey() + " wears " + other.getKey() + "'s glyph");
+            }
+        }
+        for (String none : java.util.List.of(
+                "library.removeFolder", "library.setRetroArchFolder", "library.setRetroArchCommand")) {
+            assertNull(Icons.forCommand(none), none + " borrows a glyph");
+        }
+        assertEquals(Icons.LIBRARY, Icons.forCommand(SettingsWindow.Page.LIBRARY.command));
+    }
+
     /** A command no menu lists, or no such command, draws none. */
     @Test
     void aCommandWithNoGlyphDrawsNone() {

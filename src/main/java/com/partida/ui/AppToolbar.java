@@ -58,11 +58,15 @@ import org.jspecify.annotations.Nullable;
  *       the tabs under it never move when Simple mode hides groups.
  * </ul>
  *
- * <p><b>Simple mode</b> hides the groups {@link #SIMPLE_HIDES} names and leaves the palette, the toggle
- * and Settings; it hides, it never removes, so turning it off brings back the bar as it was.
+ * <p><b>Simple mode</b> keeps only the buttons {@link #SIMPLE_KEEPS} names, the toggle and Settings; it
+ * hides, it never removes, so turning it off brings back the bar as it was.
  *
- * <p>An app replaces {@link #CLUSTER} and {@link #TAIL} with its own commands; each one needs a glyph in
- * {@link Icons} and a row in {@link AppMenus} ({@code AppToolbarFxTest} checks both).
+ * <p><b>Customizable</b> (TBAR-09): the cluster is the user's, from {@link #AVAILABLE}, in the settings'
+ * {@code toolbarLayout} ({@link ToolbarLayout}), which Settings → General edits: reorder, remove, add, and
+ * restore the default {@link #CLUSTER}. The pinned tail is not in it.
+ *
+ * <p>An app replaces {@link #CLUSTER}, {@link #AVAILABLE} and {@link #TAIL} with its own commands; each one
+ * needs a glyph in {@link Icons} and a row in {@link AppMenus} ({@code AppToolbarFxTest} checks both).
  */
 final class AppToolbar {
 
@@ -91,36 +95,74 @@ final class AppToolbar {
     /** The blank before the tail's pair, Pauta's tail gap (TBAR-16); a gap, never a separator. */
     static final double TAIL_GAP = 40;
 
-    /** The groups Simple mode hides, each named by one of its commands: Theme and Keymap, Sync and the log. */
-    static final List<String> SIMPLE_HIDES = List.of("library.refresh", "settings.theme", "sync.now");
+    /**
+     * Every command the user can put on the bar (TBAR-09): the default cluster's and a few more, each with a
+     * glyph of its own and a row in the full menus (TBAR-08).
+     */
+    static final List<String> AVAILABLE = List.of(
+            "palette.show",
+            "game.play",
+            "game.stop",
+            "library.refresh",
+            "library.addFolder",
+            "library.filter",
+            "settings.theme",
+            "settings.keymap",
+            "sync.now",
+            "view.messageLog",
+            "tool.systems",
+            "tool.game",
+            "tool.retroarch",
+            "view.welcome",
+            "help.documentation");
+
+    /**
+     * The buttons Simple mode keeps, wherever the user put them: the palette and Play and Stop, and any of the
+     * few others with a row in Simple mode's menus (TBAR-08). Every other button hides.
+     */
+    static final java.util.Set<String> SIMPLE_KEEPS = java.util.Set.of(
+            "palette.show",
+            "game.play",
+            "game.stop",
+            "library.filter",
+            "tool.systems",
+            "tool.game",
+            "tool.retroarch",
+            "view.welcome",
+            "help.documentation");
 
     /** The bar's right-click menu: its commands (MENU-05), one menu reused (TBAR-10). */
-    static final List<@Nullable String> MENU =
-            Collections.unmodifiableList(Arrays.<@Nullable String>asList("view.toggleToolbar", SIMPLE_TOGGLE));
+    static final List<@Nullable String> MENU = Collections.unmodifiableList(Arrays.<@Nullable String>asList(
+            "view.toggleToolbar", SIMPLE_TOGGLE, null, "view.customizeToolbar", "view.restoreToolbar"));
 
     private final AppServices services;
     private final ToolBar bar = new ToolBar();
     private final HBox tail = new HBox();
     private final HBox row;
+    /** The buttons on the bar now, the cluster's in order and then the tail's. */
     private final Map<String, Button> buttons = new LinkedHashMap<>();
+    /** Every button made, so a layout change reuses a button rather than making it again. */
+    private final Map<String, Button> made = new LinkedHashMap<>();
+
+    private final OverlayToggles toggles;
+    /** The cluster as the settings have it (TBAR-09), {@code null} a gap. */
+    private List<@Nullable String> layout;
+
+    private boolean simple;
     private final CommandMenu menu;
     private @Nullable CommandMenu overflowMenu;
 
     AppToolbar(AppServices services, OverlayToggles toggles) {
         this.services = services;
-        for (String id : CLUSTER) {
-            if (id == null) {
-                bar.getItems().add(new Separator(Orientation.VERTICAL));
-            } else {
-                bar.getItems().add(button(id, toggles));
-            }
-        }
+        this.toggles = toggles;
+        this.layout = ToolbarLayout.read(services.settings().toolbarLayout, CLUSTER, AVAILABLE);
+        fill();
         Region gap = new Region();
         UiZoom.bind(gap.minWidthProperty(), TAIL_GAP); // follows the UI zoom (WIN-12)
         UiZoom.bind(gap.prefWidthProperty(), TAIL_GAP);
         gap.getStyleClass().add("toolbar-gap");
         tail.getChildren().add(gap);
-        for (String id : TAIL) tail.getChildren().add(button(id, toggles));
+        for (String id : TAIL) tail.getChildren().add(make(id));
         tail.getStyleClass().add("toolbar-tail");
         tail.setAlignment(Pos.CENTER_RIGHT);
         tail.setMinWidth(Region.USE_PREF_SIZE);
@@ -162,12 +204,52 @@ final class AppToolbar {
         });
 
         services.onKeybindingsChanged(this::refresh);
-        // A setting can change what a command can do (Sync Now waits for a repository): read it again.
-        services.store().addListener(s -> refresh());
+        // A setting can change what a command can do (Sync Now waits for a repository): read it again. The
+        // layout too: a change in Settings reaches the bar at once (TBAR-09).
+        services.store().addListener(s -> {
+            List<@Nullable String> saved = ToolbarLayout.read(s.toolbarLayout, CLUSTER, AVAILABLE);
+            if (!saved.equals(layout)) setLayout(saved);
+            refresh();
+        });
         refresh();
     }
 
-    private Button button(String id, OverlayToggles toggles) {
+    /** The cluster's layout now (TBAR-09). */
+    List<@Nullable String> layout() {
+        return new ArrayList<>(layout);
+    }
+
+    /** Lays the cluster out again as {@code layout} has it, reusing its buttons (TBAR-09). */
+    void setLayout(List<@Nullable String> layout) {
+        this.layout = new ArrayList<>(layout);
+        fill();
+        setSimple(simple);
+        refresh();
+    }
+
+    /** Puts the layout's buttons and gaps in the cluster, in order. */
+    private void fill() {
+        buttons.clear();
+        List<Node> items = new ArrayList<>();
+        for (String id : layout) {
+            items.add(id == null ? new Separator(Orientation.VERTICAL) : make(id));
+        }
+        bar.getItems().setAll(items);
+        for (String id : TAIL) {
+            Button pinned = made.get(id);
+            if (pinned != null) buttons.put(id, pinned);
+        }
+    }
+
+    /** The button for {@code id}, made on first use and reused after. */
+    private Button make(String id) {
+        Button reused = made.get(id);
+        if (reused != null) {
+            reused.setVisible(true);
+            reused.setManaged(true);
+            buttons.put(id, reused);
+            return reused;
+        }
         String path = Icons.forCommand(id);
         Node glyph = Icons.toolbarLine(path == null ? "" : path);
         Button button = Icons.toolbarButton(glyph, id, () -> services.commands().run(id));
@@ -176,6 +258,7 @@ final class AppToolbar {
         // closing never clears it.
         if (!SIMPLE_TOGGLE.equals(id)) toggles.track(button, id);
         buttons.put(id, button);
+        made.put(id, button);
         return button;
     }
 
@@ -196,7 +279,7 @@ final class AppToolbar {
     List<@Nullable String> overflowed() {
         List<@Nullable String> ids = new ArrayList<>();
         boolean gap = false;
-        for (String id : CLUSTER) {
+        for (String id : layout) {
             if (id == null) {
                 gap = !ids.isEmpty();
                 continue;
@@ -296,9 +379,17 @@ final class AppToolbar {
      * (TBAR-16), and the row keeps its height (TBAR-19).
      */
     void setSimple(boolean on) {
+        simple = on;
         Button toggle = buttons.get(SIMPLE_TOGGLE);
         if (toggle != null) toggle.pseudoClassStateChanged(OverlayToggles.OPEN, on);
-        for (String id : SIMPLE_HIDES) setGroupVisible(id, !on);
+        for (String id : layout) {
+            Button button = id == null ? null : buttons.get(id);
+            if (button == null) continue;
+            boolean shown = !on || SIMPLE_KEEPS.contains(id);
+            button.setVisible(shown);
+            button.setManaged(shown);
+        }
+        collapseSeparators();
     }
 
     /**

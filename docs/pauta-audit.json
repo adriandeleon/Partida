@@ -1,7 +1,7 @@
 {
   "$schema": "https://pauta-project.dev/6.1.0/audit.schema.json",
   "app": "Partida",
-  "commit": "cbe3895",
+  "commit": "a70ab60",
   "edition": "6.1.0",
   "date": "2026-11-16",
   "scope": [],
@@ -335,8 +335,8 @@
     {
       "id": "DOCS-11",
       "level": "MAY",
-      "status": "fail",
-      "evidence": "MAY: no 'Help for' link on Settings pages and no page-to-slug map (none in ui/SettingsWindow.java or the catalogs)."
+      "status": "pass",
+      "evidence": "Every Settings page heads with a 'Help for <page>' link (settings.help in all six catalogs), built in the page loop of src/main/java/com/partida/ui/SettingsWindow.java:226-244 from the one map HELP_SLUGS (src/main/java/com/partida/ui/SettingsWindow.java:110) through helpUrl, docsUrl()/settings/#<slug>. SettingsWindowFxTest.everyPageLinksItsHelp (src/test/java/com/partida/ui/SettingsWindowFxTest.java:60) fires each link and checks the URL and that no two pages share a slug."
     },
     {
       "id": "DOCS-12",
@@ -816,8 +816,8 @@
     {
       "id": "WIN-10",
       "level": "MAY",
-      "status": "fail",
-      "evidence": "MAY: only Simple mode (view.toggleSimpleMode, src/main/java/com/partida/ui/Commands.java:74-77); no Zen or Expert command and no truth table of chrome per mode."
+      "status": "pass",
+      "evidence": "Each mode is a command: view.toggleZenMode, view.toggleExpertMode (src/main/java/com/partida/ui/Commands.java) and view.toggleSimpleMode, each a View menu row and bound in every keymap. One truth table, Chrome.shown (src/main/java/com/partida/ui/Chrome.java:273), decides menus, toolbar, tab bar, stripes and status bar per mode: Zen none, Expert the status bar only, the screen menu bar staying on macOS; MainWindow.applyChrome applies it (src/main/java/com/partida/ui/MainWindow.java:254) and Simple mode shortens the menus. ChromeTest.eachFocusModeShowsItsChrome (src/test/java/com/partida/ui/ChromeTest.java:88) and ToolbarAndModesFxTest.zenAndExpertHideTheChromeAndGiveItBack (src/test/java/com/partida/ui/ToolbarAndModesFxTest.java:168)."
     },
     {
       "id": "ICON-01",
@@ -1002,8 +1002,8 @@
     {
       "id": "TBAR-09",
       "level": "MAY",
-      "status": "fail",
-      "evidence": "The main toolbar's layout is fixed by AppToolbar.CLUSTER and TAIL (src/main/java/com/partida/ui/AppToolbar.java:64-83, built at :104-116): no reorder, remove or restore, nothing saved in Settings. MAY: no consequence."
+      "status": "pass",
+      "evidence": "The cluster is the settings' toolbarLayout (src/main/java/com/partida/config/Settings.java), read and tidied by the pure ToolbarLayout (src/main/java/com/partida/ui/ToolbarLayout.java) from AppToolbar.AVAILABLE (src/main/java/com/partida/ui/AppToolbar.java:102); the bar relays itself on every settings change, the one store every window reads. Settings → General → Toolbar Buttons (src/main/java/com/partida/ui/SettingsWindow.java:360) reorders (Move Up and Down, Alt+Up and Alt+Down), removes (Remove, Delete), adds, and restores the default; the bar's right-click menu has Customize Toolbar… and Restore Default Toolbar. ToolbarAndModesFxTest.theUserReordersRemovesAndRestoresTheButtons (src/test/java/com/partida/ui/ToolbarAndModesFxTest.java:94) drives a reorder, a removal, an add and a restore; ToolbarLayoutTest covers the rules."
     },
     {
       "id": "TBAR-15",
@@ -1176,8 +1176,8 @@
     {
       "id": "MENU-14",
       "level": "MAY",
-      "status": "fail",
-      "evidence": "Rows wear glyphs from the shared Icons.forCommand lookup (src/main/java/com/partida/ui/AppMenus.java:285), but several borrow another command's: library.removeFolder wears buffer.close's CLOSE, library.setFolderCore and library.setRetroArchCommand app.settings's SLIDERS, library.setRetroArchFolder library.addFolder's FOLDER, library.settings tool.systems's DOCUMENTS (src/main/java/com/partida/ui/Icons.java:287,306,317,323-328), shown in the menu bar (AppMenus.java:118) and the Settings Library page menu (src/main/java/com/partida/ui/SettingsWindow.java:80-90). MAY: no consequence."
+      "status": "pass",
+      "evidence": "Every row's glyph comes from Icons.forCommand, the lookup the toolbar and the palette use, and no library row wears another command's: Add Games Folder has FOLDER_ADD, Filter Games FILTER, Recently Played HISTORY, Set Folder Core CORE, Library settings LIBRARY, and Remove Folder, Set RetroArch Folder and Set RetroArch Command draw none (src/main/java/com/partida/ui/Icons.java:335). IconsTest.theLibrarysRowsBorrowNoGlyph (src/test/java/com/partida/ui/IconsTest.java:69) holds it."
     },
     {
       "id": "MENU-15",

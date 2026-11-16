@@ -242,4 +242,44 @@ final class Chrome {
         }
         return shown;
     }
+
+    /**
+     * The window's focus modes (WIN-10): {@code ZEN} shows no chrome, {@code EXPERT} keeps only the status
+     * bar. Simple mode, the third, is a setting of its own ({@code simpleMode}) and shortens the menus.
+     */
+    enum Focus {
+        NONE,
+        ZEN,
+        EXPERT
+    }
+
+    /** What chrome the window shows: one answer of {@link #shown}'s truth table. */
+    record Shown(boolean menus, boolean toolbar, boolean tabBar, boolean stripes, boolean statusBar) {}
+
+    /**
+     * The one truth table of the window's chrome per mode (WIN-10), over the user's own show and hide
+     * choices, which no mode changes:
+     *
+     * <pre>
+     *            menus   toolbar  tab bar  stripes  status bar
+     *   none     yes     setting  setting  yes      setting
+     *   expert   no      no       no       no       setting
+     *   zen      no      no       no       no       no
+     * </pre>
+     *
+     * A screen menu bar (macOS) is the system's, not the window's: it stays in every mode. In a window that
+     * draws its own title bar the menus go and the title and the window buttons stay.
+     */
+    static Shown shown(Focus focus, boolean systemMenu, boolean toolbar, boolean tabBar, boolean statusBar) {
+        return switch (focus) {
+            case NONE -> new Shown(true, toolbar, tabBar, true, statusBar);
+            case EXPERT -> new Shown(systemMenu, false, false, false, statusBar);
+            case ZEN -> new Shown(systemMenu, false, false, false, false);
+        };
+    }
+
+    /** The mode after its command runs: into {@code pressed}, or out of it when it is the one on. */
+    static Focus toggled(Focus current, Focus pressed) {
+        return current == pressed ? Focus.NONE : pressed;
+    }
 }

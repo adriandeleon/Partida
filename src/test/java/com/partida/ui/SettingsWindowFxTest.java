@@ -55,6 +55,23 @@ class SettingsWindowFxTest {
         FxTestSupport.stop(app);
     }
 
+    /** DOCS-11: every page links its docs, "Help for" and its name, from the one map of page to slug. */
+    @Test
+    void everyPageLinksItsHelp() throws Exception {
+        for (SettingsWindow.Page page : SettingsWindow.Page.values()) {
+            javafx.scene.control.Hyperlink link = call(() -> settings.helpLink(page));
+            assertEquals(com.partida.i18n.Messages.tr("settings.help", page.title()), link.getText());
+            assertNotNull(SettingsWindow.HELP_SLUGS.get(page), page + " has no slug");
+            run(link::fire);
+            assertEquals(SettingsWindow.helpUrl(page), host.opened.getLast());
+            assertTrue(host.opened.getLast().startsWith(com.partida.AppInfo.docsUrl() + "/settings/#"));
+        }
+        assertEquals(
+                SettingsWindow.Page.values().length,
+                new java.util.HashSet<>(SettingsWindow.HELP_SLUGS.values()).size(),
+                "two pages share a slug");
+    }
+
     @Test
     void searchHidesRowsAndOpensTheBestPage() throws Exception {
         assertTrue(call(() -> settings.stage().isShowing()));

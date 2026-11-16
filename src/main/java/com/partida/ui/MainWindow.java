@@ -22,6 +22,7 @@ import javafx.scene.layout.HeaderDragType;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.stage.Window;
 
 import com.partida.AppInfo;
 import com.partida.Os;
@@ -172,10 +173,16 @@ public final class MainWindow {
         for (ToolWindow tw : List.of(systemsWindow, gameWindow, retroarchWindow)) toolWindows.register(tw);
         // The Game window follows the active tab and its selected game (TABS-23); on a tab with no system it is
         // unavailable, which hides its stripe button without touching the user's own show or hide (TABS-20).
-        tabs.onActiveChanged(this::followActiveTab);
-        tabs.onSelectedGameChanged(this::followActiveTab);
-        library.onChanged(this::followActiveTab);
+        // One pass per pulse however many of these fire together: a reload changes the library and then the
+        // selected game (PERF-06).
+        Redraw follow = new Redraw(this::followActiveTab);
+        tabs.onActiveChanged(follow::request);
+        tabs.onSelectedGameChanged(follow::request);
+        library.onChanged(follow::request);
         followActiveTab();
+        // Play and Stop on the toolbar follow what decides whether they can run: the library, the tab and its
+        // selected game (above, through followActiveTab), and a game starting or ending (TBAR-17).
+        library.playingProperty().addListener((obs, was, now) -> follow.request());
         toolWindows.restore();
         layout.setCenter(toolWindows.node());
         layout.setBottom(statusBar);
@@ -258,7 +265,8 @@ public final class MainWindow {
     }
 
     private void followActiveTab() {
-        toolWindows.setAvailable(gameWindow, tabs.activeView() != null);
+        toolbar.refresh(); // Play's and Stop's enabled state (TBAR-17)
+        toolWindows.setAvailable(gameWindow, Chrome.gameWindowAvailable(tabs.activeView() != null));
         LibraryPanels.GamePanel built = game;
         if (built != null) built.show(services.library().state().retroArch(), tabs.selectedGame());
     }
@@ -293,7 +301,7 @@ public final class MainWindow {
             toggles.track(button, id); // the palette's button looks pressed while the palette is up (TBAR-07)
             actions.getChildren().add(button);
         }
-        VBox box = new VBox(12, title, tagline, welcomeHint, actions);
+        VBox box = UiZoom.vbox(12, title, tagline, welcomeHint, actions);
         box.setAlignment(Pos.CENTER);
         box.getStyleClass().add("welcome");
         return box;
@@ -323,7 +331,7 @@ public final class MainWindow {
     }
 
     private int welcomeRefreshes;
-    private final HBox welcomeActions = new HBox(8);
+    private final HBox welcomeActions = UiZoom.hbox(8);
     private final boolean restoreSession;
 
     /** The welcome hint names the palette's chord in the active keymap, so it follows a keymap change. */
@@ -332,13 +340,13 @@ public final class MainWindow {
         welcomeHint.setText(Messages.tr("welcome.hint", chord.isEmpty() ? "—" : chord));
     }
 
-    /** Whether this window draws its own title bar: the pure rule in {@link Chrome#usesHeaderBar}. */
     /** Why the title-bar menus can't be had in this window, or null (OS-01). */
     @Nullable
     String titleBarMenusUnavailable() {
         return Chrome.titleBarMenusUnavailable(systemMenu, extendedSupported);
     }
 
+    /** Whether this window draws its own title bar: the pure rule in {@link Chrome#usesHeaderBar}. */
     static boolean usesHeaderBar(boolean systemMenu, boolean setting, boolean extendedSupported) {
         return Chrome.usesHeaderBar(systemMenu, setting, extendedSupported);
     }
@@ -415,11 +423,10 @@ public final class MainWindow {
 
     // ---- find (FIND-01, FIND-04) ----
 
-    /** The active tab's find bar, or null on the Welcome tab. */
+    /** The active system tab, whose filter box {@code find.show} focuses (FIND-03), or null on the Welcome tab. */
     @Nullable
-    FindBar documentFindBar() {
-        SystemView view = tabs.activeView();
-        return view == null ? null : view.findBar();
+    SystemView activeSystem() {
+        return tabs.activeView();
     }
 
     /** The RetroArch console's find bar, or null before the window was first opened. */
@@ -474,15 +481,23 @@ public final class MainWindow {
         services.echo("status.folderAdded", path);
     }
 
+    /**
+     * Takes a games folder out of the library after asking (CONF-01): the user added it and gave it a core. Its
+     * files stay on disk. False when the user said no.
+     */
+    static boolean removeFolder(AppServices services, @Nullable Window owner, String path) {
+        if (!services.host().confirm(owner, Confirmations.removeFolder(AppInfo.tildeHome(path)))) return false;
+        services.store().update(s -> s.library.folders.removeIf(f -> f.path.equals(path)));
+        services.echo("status.folderRemoved", path);
+        return true;
+    }
+
     /** Remove Games Folder: pick one of Settings → Library's folders; its games leave the library. */
     void removeLibraryFolder() {
         List<Picker.Item<String>> items = services.settings().library.folders.stream()
                 .map(f -> new Picker.Item<>(f.path, AppInfo.tildeHome(f.path), "", "", null))
                 .toList();
-        new Picker<>(overlays, Messages.tr("picker.folder"), "", items, path -> {
-                    services.store().update(s -> s.library.folders.removeIf(f -> f.path.equals(path)));
-                    services.echo("status.folderRemoved", path);
-                })
+        new Picker<>(overlays, Messages.tr("picker.folder"), "", items, path -> removeFolder(services, stage, path))
                 .titled(Messages.tr("command.library.removeFolder")) // QOPEN-02
                 .keymap(services::keybindings, Os.isMac())
                 .show();
@@ -499,7 +514,16 @@ public final class MainWindow {
                 .show();
     }
 
-    private void chooseCoreFor(String path) {
+    /** The core picker last opened, for the tests. */
+    private @Nullable Picker<String> corePicker;
+
+    @Nullable
+    Picker<String> corePicker() {
+        return corePicker;
+    }
+
+    /** The cores a folder can be given, "Detect by file extension" first: the library's, as loaded now. */
+    private List<Picker.Item<String>> coreItems() {
         List<Picker.Item<String>> cores = new java.util.ArrayList<>();
         cores.add(new Picker.Item<>("", Messages.tr("settings.library.core.detect"), "", "", null));
         com.partida.library.RetroArchContext ctx = services.library().state().retroArch();
@@ -508,17 +532,30 @@ public final class MainWindow {
                 cores.add(new Picker.Item<>(core.id(), core.label(), core.id(), "", null));
             }
         }
+        return cores;
+    }
+
+    /**
+     * The core picker for a folder, titled with the command (QOPEN-02), the folder in its prompt. Its cores come
+     * with the library: a load that lands while it is open fills it in, keeping what was typed (QOPEN-03).
+     */
+    private void chooseCoreFor(String path) {
         Settings.Library.Folder folder = services.settings().library.folder(path);
-        Picker<String> picker = new Picker<>(overlays, Messages.tr("picker.core"), "", cores, id -> {
-                    services.store().update(s -> {
-                        Settings.Library.Folder f = s.library.folder(path);
-                        if (f != null) f.coreId = id;
-                    });
-                    services.echo("status.folderCore", AppInfo.tildeHome(path), coreLabel(id));
-                })
-                .titled(AppInfo.tildeHome(path))
+        Picker<String> picker = new Picker<>(
+                        overlays, Messages.tr("picker.coreFor", AppInfo.tildeHome(path)), "", coreItems(), id -> {
+                            services.store().update(s -> {
+                                Settings.Library.Folder f = s.library.folder(path);
+                                if (f != null) f.coreId = id;
+                            });
+                            services.echo("status.folderCore", AppInfo.tildeHome(path), coreLabel(id));
+                        })
+                .titled(Messages.tr("command.library.setFolderCore"))
                 .keymap(services::keybindings, Os.isMac());
         if (folder != null) picker.current(folder.coreId);
+        Runnable reload = () -> picker.reload(coreItems());
+        services.library().onChanged(reload);
+        picker.onHidden(() -> services.library().offChanged(reload));
+        corePicker = picker;
         picker.show();
     }
 
@@ -573,17 +610,7 @@ public final class MainWindow {
     /** The palette's key legend in the active keymap: its moves, run, cancel and help (PAL-06, PAL-08). */
     private String legend(Picker<String> palette) {
         var keys = services.keybindings();
-        String moves = java.util.stream.Stream.of("nav.lineDown", "nav.lineUp")
-                .map(keys::label)
-                .filter(l -> !l.isEmpty())
-                .collect(java.util.stream.Collectors.joining(" "));
-        String cancel = keys.label("edit.cancel");
-        String help = palette.helpLabel(keys);
-        String legend = Messages.tr(
-                "palette.legend",
-                moves.isEmpty() ? "↑↓" : "↑↓ / " + moves,
-                cancel.isEmpty() ? "Esc" : "Esc / " + cancel);
-        return help.isEmpty() ? legend : legend + " · " + Messages.tr("palette.legendHelp", help);
+        return Picker.legend(keys, palette.helpLabel(keys));
     }
 
     void chooseTheme() {
@@ -689,11 +716,7 @@ public final class MainWindow {
      */
     static @Nullable String retroArchFolderProblem(String text) {
         if (text.isBlank()) return null;
-        try {
-            return Path.of(text.strip()).isAbsolute() ? null : Messages.tr("settings.library.retroarchFolder.invalid");
-        } catch (java.nio.file.InvalidPathException e) {
-            return Messages.tr("settings.library.retroarchFolder.invalid");
-        }
+        return Settings.Library.isFullPath(text) ? null : Messages.tr("settings.library.retroarchFolder.invalid");
     }
 
     TextInputDialog promptRetroArchCommand() {
@@ -964,11 +987,6 @@ public final class MainWindow {
         services.echo("status.handOff");
     }
 
-    /**
-     * The one quit path: File → Quit, the window's close button and the system's Quit all come here. It
-     * closes the app's other windows and dialogs first, so no nested event loop is left running, then
-     * saves the window geometry and the settings, then exits (TRAY-04).
-     */
     /**
      * The one quit method (WIN-13): the Quit row, {@code app.quit}, the window's close button and, on macOS,
      * the application menu's and the Dock's Quit (JavaFX turns those into this window's close request) all

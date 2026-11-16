@@ -66,7 +66,9 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
   title with the system's glyph, carrying the pinned state, and is the drag handle); `ClosedTabs` is
   Reopen Closed Tab's list, by system, with the game that was selected; `TabContextMenu` the per-tab
   commands; `Switcher` the tab switcher. Each tab is a system: a `SystemView`, the system's games in a list
-  with the tab's find bar over their titles. A system tab is never unsaved, so a quit asks nothing, and its
+  with a filter box over it that narrows the list as you type (FIND-03: a library is a list, so it is
+  filtered, not searched; `library.filter` and `find.show` focus the box). `GameFilter` holds the box's
+  pure rules (FIND-13): plain words, `key:value` terms made into chips, and a `>` query's command. A system tab is never unsaved, so a quit asks nothing, and its
   tabs are not files, so the Git colors of TABS-08 don't apply. Tabs restored from the session fill in when
   the library first loads.
 - `LibraryService`, one per app in `AppServices`: RetroArch and the library, loaded off the FX thread after
@@ -86,9 +88,9 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
 - `Commands`: every command, in one place. Menus, buttons, the palette and keys all run them by id. The
   text commands (`edit.cut`, `edit.copy`, `edit.paste`, `edit.selectAll`) act on the text that has the
   keyboard; every editor and console has a `CommandMenu` of them in place of JavaFX's stock one.
-- `FindBar`: one find bar in the window, over a text area or a list's rows (`FindBar.Target`): each system
-  tab's, over its games' titles (`find.show`, `C-s` / `Ctrl/Cmd+F`), the RetroArch console's
-  (`retroarch.find`) and the Debug Log's (`debugLog.find`). Each searches off the
+- `FindBar`: one find bar in the window, over a text area (`FindBar.Target`): the RetroArch console's
+  (`retroarch.find`) and the Debug Log's (`debugLog.find`). A system's games have a filter box instead
+  (`SystemView`). Each searches off the
   FX thread and steps through its own commands.
 - `Dialogs.styled`: every dialog goes through it: the stylesheets, one button order with Cancel first on
   every OS, and JavaFX's stock buttons worded from the catalog. `Confirm` asks before anything is lost,

@@ -30,7 +30,7 @@ public final class Launcher {
     public Process launch(Path core, Path content, List<Path> appendConfigs) throws IOException {
         List<String> cmd = buildCommand(core, content, appendConfigs);
         Files.createDirectories(logFile.getParent());
-        ProcessBuilder pb = new ProcessBuilder(cmd)
+        ProcessBuilder pb = Processes.builder(cmd) // the login shell's PATH (CLI-10)
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(logFile.toFile()));
         current = pb.start();
@@ -42,7 +42,7 @@ public final class Launcher {
      * console to show as it runs. Whoever starts it reads that stream, or RetroArch blocks once the pipe fills.
      */
     public Process start(Path core, Path content, List<Path> appendConfigs) throws IOException {
-        current = new ProcessBuilder(buildCommand(core, content, appendConfigs))
+        current = Processes.builder(buildCommand(core, content, appendConfigs)) // the login shell's PATH (CLI-10)
                 .redirectErrorStream(true)
                 .start();
         return current;

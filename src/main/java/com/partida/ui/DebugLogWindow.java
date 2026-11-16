@@ -2,7 +2,6 @@ package com.partida.ui;
 
 import java.nio.file.Path;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -63,11 +62,11 @@ public final class DebugLogWindow {
         where.getStyleClass().add("muted");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox buttons = new HBox(6, refresh, copy, clear, export, report, spacer, where);
+        HBox buttons = UiZoom.hbox(6, refresh, copy, clear, export, report, spacer, where);
         buttons.setAlignment(Pos.CENTER_LEFT);
-        buttons.setPadding(new Insets(8));
+        UiZoom.pad(buttons, 8);
 
-        findBar.setPadding(new Insets(6, 8, 0, 8));
+        UiZoom.pad(findBar, 6, 8, 0, 8);
         BorderPane root = new BorderPane(text, null, null, new javafx.scene.layout.VBox(findBar, buttons), null);
         Scene scene = Themes.style(new Scene(root, 820, 480));
         scene.setOnKeyPressed(e -> {

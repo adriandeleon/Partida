@@ -70,6 +70,11 @@ final class LibraryPanels {
             list.setPlaceholder(placeholder);
             list.setCellFactory(v -> CommandMenu.onRow(
                     new ListCell<>() {
+                        /** Both glyphs made once per cell: a scroll step only picks one (PERF-09). */
+                        private final javafx.scene.Node history = Icons.line(Icons.CLOCK);
+
+                        private final javafx.scene.Node system = Icons.line(Icons.DOCUMENTS);
+
                         @Override
                         protected void updateItem(@Nullable GameCollection collection, boolean empty) {
                             super.updateItem(collection, empty);
@@ -80,15 +85,14 @@ final class LibraryPanels {
                                 return;
                             }
                             int count = collection.games().size();
-                            setText(collection.name() + "   " + count);
-                            setAccessibleText(collection.name() + ", " + Messages.tr("systems.games", count));
-                            setGraphic(Icons.line(
-                                    collection.name().equals(LibraryLoader.RECENTLY_PLAYED)
-                                            ? Icons.CLOCK
-                                            : Icons.DOCUMENTS));
+                            String shown = Chrome.systemName(collection.name());
+                            setText(shown + "   " + count);
+                            setAccessibleText(shown + ", " + Messages.tr("systems.games", count));
+                            setGraphic(collection.name().equals(LibraryLoader.RECENTLY_PLAYED) ? history : system);
                         }
                     },
                     rowMenu));
+            RowContextMenu.install(list); // the Menu key and Shift+F10 open the selected row's menu (MENU-09)
             list.setOnMouseClicked(e -> {
                 if (e.getButton() == MouseButton.PRIMARY && e.getClickCount() == 2) openSelected();
             });
@@ -100,7 +104,8 @@ final class LibraryPanels {
             });
             VBox.setVgrow(list, Priority.ALWAYS);
             node = new VBox(list);
-            library.onChanged(this::refresh);
+            Redraw redraw = new Redraw(this::refresh); // once per pulse (PERF-06)
+            library.onChanged(redraw::request);
             refresh();
         }
 
@@ -156,6 +161,18 @@ final class LibraryPanels {
             Map<String, List<CoreInfo.Firmware>> missing,
             @Nullable Path boxart) {
 
+        /** The largest box art read (PERF-12): past it, the initials show instead of a decoded image. */
+        static final long BOXART_LIMIT = 16L * 1024 * 1024;
+
+        /** Whether a box-art file is small enough to decode; checked off the FX thread, before any read. */
+        static boolean fits(Path file) {
+            try {
+                return java.nio.file.Files.size(file) <= BOXART_LIMIT;
+            } catch (java.io.IOException e) {
+                return false;
+            }
+        }
+
         /** Every core that runs {@code game}, the one it would start with, missing BIOS files and box art. */
         static GameInfo read(RetroArchContext ctx, Game game) {
             List<CoreInfo> cores = new ArrayList<>(ctx.compatibleCores(game));
@@ -165,6 +182,7 @@ final class LibraryPanels {
             for (CoreInfo core : cores) missing.put(core.id(), core.missingFirmware(ctx.systemDir()));
             Path boxart = ctx.thumbnails()
                     .find(game.system(), game.title(), game.fileStem(), Thumbnails.Kind.BOXART)
+                    .filter(GameInfo::fits)
                     .orElse(null);
             return new GameInfo(game, List.copyOf(cores), preferred, missing, boxart);
         }
@@ -224,7 +242,7 @@ final class LibraryPanels {
             play.setMaxWidth(Double.MAX_VALUE);
             play.setGraphic(Icons.line(Icons.RUN));
             play.setOnAction(e -> onPlay.run());
-            details = new VBox(8, artBox, title, system, coreLabel, core, warning, play, file);
+            details = UiZoom.vbox(8, artBox, title, system, coreLabel, core, warning, play, file);
             details.getStyleClass().add("game-panel");
             details.setAlignment(Pos.TOP_LEFT);
             empty.getStyleClass().add("muted");
@@ -355,7 +373,7 @@ final class LibraryPanels {
             console.setPromptText(Messages.tr("retroarch.empty"));
             Label hint = new Label(Messages.tr("retroarch.hint"));
             hint.getStyleClass().add("hint");
-            HBox bar = new HBox(8, hint);
+            HBox bar = UiZoom.hbox(8, hint);
             bar.setAlignment(Pos.CENTER_LEFT);
             bar.getStyleClass().add("output-bar");
             VBox.setVgrow(console, Priority.ALWAYS);

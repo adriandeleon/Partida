@@ -1,6 +1,5 @@
 package com.partida.ui;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -54,7 +53,7 @@ final class Switcher {
         Label hint = new Label(Messages.tr("switcher.hint"));
         hint.getStyleClass().add("hint");
 
-        card = new VBox(6, header, list, path, hint);
+        card = UiZoom.vbox(6, header, list, path, hint);
         card.getStyleClass().addAll("command-palette", "switcher");
         card.setMaxHeight(Region.USE_PREF_SIZE);
         card.addEventFilter(KeyEvent.KEY_PRESSED, this::onKey);
@@ -79,7 +78,7 @@ final class Switcher {
         card.setMinWidth(width);
         card.setPrefWidth(width);
         card.setMaxWidth(width);
-        host.show(card, Pos.TOP_CENTER, new Insets(60, 0, 0, 0), null);
+        host.show(card, Pos.TOP_CENTER, UiZoom.insets(60, 0, 0, 0), null);
         list.requestFocus();
     }
 
@@ -115,37 +114,35 @@ final class Switcher {
         boolean ctrl = e.isControlDown();
         KeyCode code = e.getCode();
         boolean held = ctrl || e.isMetaDown();
-        PickerKeys.Move move = PickerKeys.resolve(e, keys == null ? null : keys.get(), mac);
+        PickerKeys.Move move = Picker.moveFor(e, keys == null ? null : keys.get(), mac);
         int size = list.getItems().size();
-        if (move == PickerKeys.Move.LINE_DOWN || (code == KeyCode.TAB && !e.isShiftDown())) {
-            move(1);
-            armed |= held;
-        } else if (move == PickerKeys.Move.LINE_UP || code == KeyCode.TAB) {
-            move(-1);
-            armed |= held;
-        } else if (move == PickerKeys.Move.PAGE_DOWN || move == PickerKeys.Move.LAST) {
-            list.getSelectionModel()
-                    .select(
-                            move == PickerKeys.Move.LAST
-                                    ? size - 1
-                                    : Math.min(
-                                            size - 1, list.getSelectionModel().getSelectedIndex() + MAX_VISIBLE));
-            list.scrollTo(list.getSelectionModel().getSelectedIndex());
-        } else if (move == PickerKeys.Move.PAGE_UP || move == PickerKeys.Move.FIRST) {
-            list.getSelectionModel()
-                    .select(
-                            move == PickerKeys.Move.FIRST
-                                    ? 0
-                                    : Math.max(0, list.getSelectionModel().getSelectedIndex() - MAX_VISIBLE));
-            list.scrollTo(list.getSelectionModel().getSelectedIndex());
-        } else if (code == KeyCode.ENTER) {
-            commit();
-        } else if (code == KeyCode.BACK_SPACE || code == KeyCode.DELETE || (ctrl && code == KeyCode.D)) {
-            closeSelected();
-        } else {
-            return;
+        int at = list.getSelectionModel().getSelectedIndex();
+        // Where the key leads is PickerKeys' rule (QUAL-05); here it only acts.
+        switch (PickerKeys.switcher(move, code.name(), e.isShiftDown(), ctrl)) {
+            case NEXT -> {
+                move(1);
+                armed |= held;
+            }
+            case PREVIOUS -> {
+                move(-1);
+                armed |= held;
+            }
+            case PAGE_DOWN -> select(PickerKeys.page(at, size, MAX_VISIBLE, true));
+            case LAST -> select(size - 1);
+            case PAGE_UP -> select(PickerKeys.page(at, size, MAX_VISIBLE, false));
+            case FIRST -> select(0);
+            case OPEN -> commit();
+            case CLOSE -> closeSelected();
+            case NONE -> {
+                return;
+            }
         }
         e.consume();
+    }
+
+    private void select(int index) {
+        list.getSelectionModel().select(index);
+        list.scrollTo(list.getSelectionModel().getSelectedIndex());
     }
 
     private void move(int delta) {

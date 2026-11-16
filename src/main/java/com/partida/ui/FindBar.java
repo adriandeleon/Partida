@@ -3,15 +3,12 @@ package com.partida.ui;
 import java.util.List;
 
 import javafx.application.Platform;
-import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
@@ -80,7 +77,7 @@ final class FindBar extends HBox {
 
     /** A bar over any {@link Target}: a text area's text, or a list's rows. */
     FindBar(Target target, String nextId, String previousId) {
-        super(6);
+        UiZoom.bind(spacingProperty(), 6);
         this.target = target;
         this.nextId = nextId;
         this.previousId = previousId;
@@ -111,14 +108,17 @@ final class FindBar extends HBox {
         query.textProperty().addListener((o, was, now) -> searching.request());
         matchCase.selectedProperty().addListener((o, was, now) -> searching.request());
         query.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == KeyCode.ENTER) {
-                searching.flush();
-                run.accept(e.isShiftDown() ? previousId : nextId);
-                e.consume();
-            } else if (e.getCode() == KeyCode.ESCAPE) {
-                close();
-                e.consume();
+            switch (PickerKeys.findBar(e.getCode().name(), e.isShiftDown())) {
+                case NEXT, PREVIOUS -> {
+                    searching.flush();
+                    run.accept(e.isShiftDown() ? previousId : nextId);
+                }
+                case CLOSE -> close();
+                case NONE -> {
+                    return;
+                }
             }
+            e.consume();
         });
         getChildren().addAll(query, matchCase, count, previous, next, close);
         setVisible(false);
@@ -344,97 +344,6 @@ final class FindBar extends HBox {
                     area.requestFocus();
                 }
             };
-        }
-
-        /** {@code list}'s rows, one line each as {@code label} writes them; a match selects its row. */
-        static <T> Target of(ListView<T> list, java.util.function.Function<T, String> label) {
-            return new ListTarget<>(list, label);
-        }
-    }
-
-    /**
-     * A list read as text, a row a line. A match selects its row and scrolls to it; the next step starts after
-     * the match shown, so two matches in one row are each a step.
-     */
-    static final class ListTarget<T> implements Target {
-        private final ListView<T> list;
-        private final java.util.function.Function<T, String> label;
-        private final List<java.util.function.Consumer<String>> listeners = new java.util.ArrayList<>();
-        private String text = "";
-        /** Where each row's line starts in {@link #text}. */
-        private int[] starts = new int[0];
-        /** Where the match shown starts, or -1: a step goes on from it while its row is still selected. */
-        private int matchStart = -1;
-
-        ListTarget(ListView<T> list, java.util.function.Function<T, String> label) {
-            this.list = list;
-            this.label = label;
-            rebuild();
-            list.getItems().addListener((ListChangeListener<T>) c -> {
-                rebuild();
-                listeners.forEach(l -> l.accept(text));
-            });
-        }
-
-        private void rebuild() {
-            List<T> items = list.getItems();
-            StringBuilder all = new StringBuilder();
-            starts = new int[items.size()];
-            for (int i = 0; i < items.size(); i++) {
-                if (i > 0) all.append('\n');
-                starts[i] = all.length();
-                all.append(label.apply(items.get(i)).replace('\n', ' '));
-            }
-            text = all.toString();
-            matchStart = -1;
-        }
-
-        /** The row whose line holds {@code offset}. Pure. */
-        static int rowAt(int[] starts, int offset) {
-            int found = java.util.Arrays.binarySearch(starts, offset);
-            return found >= 0 ? found : Math.max(0, -found - 2);
-        }
-
-        @Override
-        public String text() {
-            return text;
-        }
-
-        @Override
-        public void onTextChanged(java.util.function.Consumer<String> listener) {
-            listeners.add(listener);
-        }
-
-        @Override
-        public int selectionStart() {
-            int row = list.getSelectionModel().getSelectedIndex();
-            if (row < 0 || row >= starts.length) return 0;
-            int end = row + 1 < starts.length ? starts[row + 1] : text.length() + 1;
-            return matchStart >= starts[row] && matchStart < end ? matchStart : starts[row];
-        }
-
-        @Override
-        public String selectedText() {
-            return "";
-        }
-
-        @Override
-        public void select(int start, int end) {
-            if (starts.length == 0) return;
-            int row = rowAt(starts, start);
-            matchStart = start;
-            list.getSelectionModel().select(row);
-            list.scrollTo(row);
-        }
-
-        @Override
-        public void deselect() {
-            matchStart = -1;
-        }
-
-        @Override
-        public void focus() {
-            list.requestFocus();
         }
     }
 }

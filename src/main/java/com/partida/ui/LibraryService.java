@@ -80,6 +80,9 @@ final class LibraryService {
     private final List<Runnable> listeners = new ArrayList<>();
     private final List<Consumer<List<String>>> outputListeners = new CopyOnWriteArrayList<>();
     private final FxBatcher<String> output = new FxBatcher<>(lines -> outputListeners.forEach(l -> l.accept(lines)));
+    /** Stop was asked between Play and RetroArch's process starting. FX thread. */
+    private boolean stopRequested;
+
     private final ReadOnlyBooleanWrapper playing = new ReadOnlyBooleanWrapper(this, "playing");
 
     private State state = State.of(Status.LOADING);
@@ -115,7 +118,7 @@ final class LibraryService {
     private void load(boolean announceNotFound) {
         Settings.Library library = services.settings().library.copy();
         source = fingerprint(library);
-        boolean detect = !"off".equals(System.getProperty(DETECT_PROPERTY));
+        boolean detect = detects();
         state = new State(Status.LOADING, state.retroArch(), state.library(), "");
         notifyListeners();
         loads.submit(() -> load(library, detect), loaded -> loaded(loaded, announceNotFound));
@@ -147,13 +150,69 @@ final class LibraryService {
         notifyListeners();
     }
 
+    /** Whether RetroArch may be sought on its own: off in the tests ({@value #DETECT_PROPERTY} = off). */
+    static boolean detects() {
+        return !"off".equals(System.getProperty(DETECT_PROPERTY));
+    }
+
+    /** Where to get RetroArch: the Doctor's link when it isn't found. */
+    static final String RETROARCH_DOWNLOAD = "https://www.retroarch.com/?page=platforms";
+
+    /**
+     * The Doctor's RetroArch row (DIAG-07): found, with its folder and how many cores; found with no cores, which
+     * plays nothing; not found, with where to get it; or unreadable, with what was wrong. Blocking, off the FX
+     * thread; it reads RetroArch's config and cores but scans no games folder.
+     */
+    static com.partida.sync.Doctor.Check doctorCheck(Settings.Library library, boolean detect) {
+        String name = "RetroArch";
+        try {
+            Optional<RetroArchInstall> install = library.retroarchConfigDir.isBlank() && !detect
+                    ? Optional.empty()
+                    : RetroArchInstall.locate(library.retroarchConfigDir, library.commandWords());
+            if (install.isEmpty()) {
+                return new com.partida.sync.Doctor.Check(
+                        name,
+                        com.partida.sync.Doctor.Status.FAILED,
+                        Messages.tr("doctor.notFound"),
+                        Messages.tr("doctor.retroarch.fix"),
+                        RETROARCH_DOWNLOAD);
+            }
+            RetroArchContext ctx = RetroArchContext.load(install.get());
+            String where = AppInfo.tildeHome(ctx.install().configDir().toString());
+            int cores = ctx.cores().all().size();
+            if (cores == 0) {
+                return new com.partida.sync.Doctor.Check(
+                        name,
+                        com.partida.sync.Doctor.Status.WARNING,
+                        where,
+                        Messages.tr("doctor.retroarch.noCores"),
+                        null);
+            }
+            return new com.partida.sync.Doctor.Check(
+                    name,
+                    com.partida.sync.Doctor.Status.OK,
+                    Messages.tr("settings.library.status.found", where, cores),
+                    null,
+                    null);
+        } catch (IOException | RuntimeException e) {
+            return new com.partida.sync.Doctor.Check(
+                    name,
+                    com.partida.sync.Doctor.Status.FAILED,
+                    String.valueOf(e.getMessage()),
+                    Messages.tr("doctor.retroarch.unreadable"),
+                    null);
+        }
+    }
+
     /** Reads one library: blocking, off the FX thread. Pure apart from the disk. */
     static State load(Settings.Library library, boolean detect) {
-        Optional<RetroArchInstall> install = library.retroarchConfigDir.isBlank() && !detect
-                ? Optional.empty()
-                : RetroArchInstall.locate(library.retroarchConfigDir, library.commandWords());
-        if (install.isEmpty()) return State.of(Status.NOT_FOUND);
         try {
+            // Inside the try: whatever a hand-edited path makes the lookup throw fails this load, never the
+            // loader, so the library can't stay loading (SET-11).
+            Optional<RetroArchInstall> install = library.retroarchConfigDir.isBlank() && !detect
+                    ? Optional.empty()
+                    : RetroArchInstall.locate(library.retroarchConfigDir, library.commandWords());
+            if (install.isEmpty()) return State.of(Status.NOT_FOUND);
             RetroArchContext ctx = RetroArchContext.load(install.get());
             List<LibraryFolder> folders = library.folders.stream()
                     .map(f -> new LibraryFolder(f.path, f.coreId.isBlank() ? null : f.coreId, null))
@@ -184,6 +243,11 @@ final class LibraryService {
     /** Runs {@code listener} on the FX thread whenever the state changes. */
     void onChanged(Runnable listener) {
         listeners.add(listener);
+    }
+
+    /** Stops running {@code listener}: an open picker's, once it closes. */
+    void offChanged(Runnable listener) {
+        listeners.remove(listener);
     }
 
     private void notifyListeners() {
@@ -218,10 +282,7 @@ final class LibraryService {
     /** Why {@code game} can't start now, as a palette reason, or null when it can (the command's unavailable). */
     @Nullable
     String playUnavailable(@Nullable Game game) {
-        if (state.retroArch() == null) return Messages.tr("palette.disabled.noRetroArch");
-        if (game == null) return Messages.tr("palette.disabled.noGame");
-        if (isPlaying()) return Messages.tr("palette.disabled.gameRunning");
-        return null;
+        return Chrome.playUnavailable(state.retroArch() != null, game != null, isPlaying());
     }
 
     /**
@@ -257,7 +318,14 @@ final class LibraryService {
                 Platform.runLater(() -> notStarted(game));
                 return;
             }
-            Platform.runLater(() -> process = started);
+            Platform.runLater(() -> {
+                process = started;
+                // Stop asked while RetroArch was starting: it ends now that there is a process to end.
+                if (stopRequested) {
+                    stopRequested = false;
+                    stop();
+                }
+            });
             output.offer("▶ " + game.title() + " · " + core.label());
             output.offer("$ " + ctx.install().commandLine() + " -L " + core.library() + " " + game.rom());
             services.echo("status.gameStarted", game.title(), core.label());
@@ -268,6 +336,7 @@ final class LibraryService {
 
     private void notStarted(Game game) {
         if (running != game || process != null) return;
+        stopRequested = false;
         running = null;
         playing.set(false);
     }
@@ -286,6 +355,7 @@ final class LibraryService {
     private void finished(Process done, Game game) {
         if (running != game) return;
         process = null;
+        stopRequested = false;
         running = null;
         output.flush();
         playing.set(false);
@@ -301,7 +371,11 @@ final class LibraryService {
      */
     void stop() {
         Process p = process;
-        if (p == null) return;
+        if (p == null) {
+            // Play has begun but RetroArch isn't started yet: stop it as soon as it is.
+            if (isPlaying()) stopRequested = true;
+            return;
+        }
         RetroArchContext ctx = state.retroArch();
         Background.run(() -> {
             if (ctx != null && NetworkCommands.enabledIn(ctx.config())) {
@@ -316,9 +390,12 @@ final class LibraryService {
         });
     }
 
-    /** Why there is no game to stop, or null when one runs. */
+    /**
+     * Why there is no game to stop, or null when one runs or is starting: Stop follows {@code playing}, the
+     * state the toolbar refreshes on (TBAR-17), never the process, which comes a moment later.
+     */
     @Nullable
     String stopUnavailable() {
-        return process == null ? Messages.tr("palette.disabled.noGameRunning") : null;
+        return Chrome.stopUnavailable(isPlaying());
     }
 }

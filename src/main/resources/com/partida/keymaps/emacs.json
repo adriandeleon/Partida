@@ -25,6 +25,7 @@
     "view.resizeHorizontalToolWindowGreater": "C-x S-.",
     "view.resizeHorizontalToolWindowLess": "C-x S-,",
     "game.play": "C-c r",
+    "library.filter": "C-c /",
     "find.show": "C-s",
     "find.previous": "C-r",
     "edit.cancel": "C-g",

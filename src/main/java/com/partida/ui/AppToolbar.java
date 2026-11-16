@@ -9,10 +9,16 @@ import java.util.Map;
 
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Separator;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -38,7 +44,7 @@ import org.jspecify.annotations.Nullable;
  *       {@link #refresh} on every keymap change.
  *   <li>TBAR-04: groups are {@link Separator}s whose line the stylesheet makes transparent.
  *   <li>TBAR-05: {@link #setGroupVisible} and every other visibility change end in one pass over the
- *       separators ({@link #separatorsShown}), so no gap stands on its own.
+ *       separators ({@link Chrome#separatorsShown}), so no gap stands on its own.
  *   <li>TBAR-06: the bar sits on the menu bar's ground with no rule between them ({@code .chrome-band}).
  *   <li>TBAR-07: a button whose overlay is up wears {@code :open} ({@link OverlayToggles}), and so does the
  *       Simple mode toggle while the mode is on ({@link #setSimple}).
@@ -98,6 +104,7 @@ final class AppToolbar {
     private final HBox row;
     private final Map<String, Button> buttons = new LinkedHashMap<>();
     private final CommandMenu menu;
+    private @Nullable CommandMenu overflowMenu;
 
     AppToolbar(AppServices services, OverlayToggles toggles) {
         this.services = services;
@@ -136,6 +143,23 @@ final class AppToolbar {
 
         menu = new CommandMenu(services, MENU);
         row.setOnContextMenuRequested(e -> menu.show(row, e));
+        // MENU-15: the overflow chevron opens a menu of command rows, each with its chord, in place of the
+        // stock one, whose rows are the bare icon buttons. A press or key on the chevron is taken before the
+        // skin's own handler sees it.
+        bar.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> {
+            Node chevron = chevron(e.getTarget());
+            if (chevron == null || e.getButton() != MouseButton.PRIMARY) return;
+            e.consume();
+            showOverflow(chevron);
+        });
+        bar.addEventFilter(KeyEvent.KEY_PRESSED, e -> {
+            Node chevron = chevron(e.getTarget());
+            if (chevron == null) return;
+            if (e.getCode() == KeyCode.ENTER || e.getCode() == KeyCode.SPACE || e.getCode() == KeyCode.DOWN) {
+                e.consume();
+                showOverflow(chevron);
+            }
+        });
 
         services.onKeybindingsChanged(this::refresh);
         // A setting can change what a command can do (Sync Now waits for a repository): read it again.
@@ -153,6 +177,58 @@ final class AppToolbar {
         if (!SIMPLE_TOGGLE.equals(id)) toggles.track(button, id);
         buttons.put(id, button);
         return button;
+    }
+
+    /** The overflow chevron {@code target} is in, or null: the stock skin's {@code .tool-bar-overflow-button}. */
+    private @Nullable Node chevron(@Nullable Object target) {
+        for (Node n = target instanceof Node node ? node : null; n != null && n != bar; n = n.getParent()) {
+            if (n.getStyleClass().contains("tool-bar-overflow-button")) return n;
+        }
+        return null;
+    }
+
+    /**
+     * The cluster's commands whose buttons don't fit: the skin moves an overflowed button out of the bar's row
+     * into a second box that it keeps hidden and unmanaged until its own menu shows, so a shown button whose
+     * box is hidden is one. A group Simple mode hides is not shown, and not listed.
+     * Gaps stay between groups that both have a row.
+     */
+    List<@Nullable String> overflowed() {
+        List<@Nullable String> ids = new ArrayList<>();
+        boolean gap = false;
+        for (String id : CLUSTER) {
+            if (id == null) {
+                gap = !ids.isEmpty();
+                continue;
+            }
+            Button button = buttons.get(id);
+            if (button == null || !button.isVisible() || inRow(button)) continue;
+            if (gap) ids.add(null);
+            gap = false;
+            ids.add(id);
+        }
+        return ids;
+    }
+
+    private boolean inRow(Node button) {
+        Parent box = button.getParent();
+        return box != null && box.getParent() == bar && box.isVisible() && box.isManaged();
+    }
+
+    /** Opens the overflow's menu under the chevron: the overflowed commands, each row with its chord (MENU-15). */
+    void showOverflow(Node chevron) {
+        List<@Nullable String> ids = overflowed();
+        if (ids.isEmpty()) return;
+        CommandMenu shown = new CommandMenu(services, ids);
+        overflowMenu = shown;
+        shown.menu().getStyleClass().add("toolbar-overflow-menu");
+        shown.menu().show(chevron, Side.BOTTOM, 0, 0);
+    }
+
+    /** The overflow menu last opened, or null: for the tests. */
+    @Nullable
+    CommandMenu overflowMenu() {
+        return overflowMenu;
     }
 
     /** The whole bar: the cluster and the tail, in one row. */
@@ -247,37 +323,12 @@ final class AppToolbar {
         List<Node> items = bar.getItems();
         List<@Nullable Boolean> shape = new ArrayList<>();
         for (Node item : items) shape.add(item instanceof Separator ? null : item.isVisible());
-        boolean[] shown = separatorsShown(shape);
+        boolean[] shown = Chrome.separatorsShown(shape);
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof Separator separator) {
                 separator.setVisible(shown[i]);
                 separator.setManaged(shown[i]);
             }
         }
-    }
-
-    /**
-     * Which separators stay, given the bar's items in order: {@code null} for a separator, else whether
-     * that item is visible. A separator stays only with a visible item somewhere before it, back to the
-     * last separator kept, and one somewhere after it. Entries for items echo their own visibility.
-     */
-    static boolean[] separatorsShown(List<@Nullable Boolean> items) {
-        boolean[] shown = new boolean[items.size()];
-        boolean itemSinceKept = false;
-        for (int i = 0; i < items.size(); i++) {
-            Boolean item = items.get(i);
-            if (item != null) {
-                shown[i] = item;
-                itemSinceKept |= item;
-                continue;
-            }
-            boolean itemAfter = false;
-            for (int j = i + 1; j < items.size() && !itemAfter; j++) {
-                itemAfter = Boolean.TRUE.equals(items.get(j));
-            }
-            shown[i] = itemSinceKept && itemAfter;
-            if (shown[i]) itemSinceKept = false;
-        }
-        return shown;
     }
 }

@@ -21,7 +21,11 @@ import org.jspecify.annotations.Nullable;
  */
 public final class LibraryLoader {
 
-    /** The play-history collection's name, as {@link Library#collections()} lists it first. */
+    /**
+     * The play history's id among the systems, as {@link Library#collections()} lists it first: what the session
+     * and Reopen Closed Tab keep. The UI shows it in the user's language ({@code Chrome.systemName}), never as
+     * written here.
+     */
     public static final String RECENTLY_PLAYED = "Recently played";
 
     /** The loaded library, and what couldn't be read (for the Debug Log and the status bar). */
@@ -61,6 +65,10 @@ public final class LibraryLoader {
                 FolderScanner.Result result = FolderScanner.scan(folder, ctx.cores());
                 for (Game g : result.games()) {
                     add(bySystem, g.system().isBlank() ? String.valueOf(root.getFileName()) : g.system(), g);
+                }
+                if (result.capped()) {
+                    warnings.add("Only the first " + FolderScanner.MAX_FILES + " files in " + root
+                            + " were scanned: is it the right folder?");
                 }
                 if (!result.unmatched().isEmpty()) {
                     warnings.add(result.unmatched().size() + " files in " + root

@@ -41,6 +41,15 @@ class LibraryServiceTest {
         assertTrue(!state.detail().isEmpty());
     }
 
+    /** SET-11: whatever a hand-edited folder makes the lookup throw ends the load, never leaves it loading. */
+    @Test
+    void aFolderTheLookupCantTakeFailsTheLoad() {
+        Settings.Library library = new Settings.Library();
+        library.retroarchConfigDir = "\0not a path"; // as a file edited by hand could hold, before clamp()
+        LibraryService.State state = LibraryService.load(library, false);
+        assertNotEquals(LibraryService.Status.LOADING, state.status());
+    }
+
     @Test
     void aFakeInstallIsReadWithItsSystemsAndFolders() throws Exception {
         Path config = FakeLibrary.install(dir);
@@ -75,5 +84,36 @@ class LibraryServiceTest {
         String withFolder = LibraryService.fingerprint(library);
         library.folders.getFirst().coreId = "mgba_libretro";
         assertNotEquals(withFolder, LibraryService.fingerprint(library));
+    }
+
+    /** DIAG-07: the Doctor's RetroArch row: found with its cores, not found with where to get it, or unreadable. */
+    @Test
+    void theDoctorChecksRetroArch() throws Exception {
+        com.partida.sync.Doctor.Check none = LibraryService.doctorCheck(new Settings.Library(), false);
+        assertEquals("RetroArch", none.name());
+        assertEquals(com.partida.sync.Doctor.Status.FAILED, none.status());
+        assertNotNull(none.fix());
+        assertEquals(LibraryService.RETROARCH_DOWNLOAD, none.link());
+
+        Settings.Library found = new Settings.Library();
+        found.retroarchConfigDir = FakeLibrary.install(dir.resolve("found")).toString();
+        com.partida.sync.Doctor.Check ok = LibraryService.doctorCheck(found, false);
+        assertEquals(com.partida.sync.Doctor.Status.OK, ok.status(), ok.detail());
+        assertNull(ok.fix());
+
+        Path broken = Files.createDirectories(dir.resolve("broken"));
+        Files.createDirectories(broken.resolve("retroarch.cfg"));
+        Settings.Library unreadable = new Settings.Library();
+        unreadable.retroarchConfigDir = broken.toString();
+        com.partida.sync.Doctor.Check failed = LibraryService.doctorCheck(unreadable, false);
+        assertEquals(com.partida.sync.Doctor.Status.FAILED, failed.status());
+        assertNotNull(failed.fix());
+
+        Path empty = Files.createDirectories(dir.resolve("empty"));
+        Files.writeString(empty.resolve("retroarch.cfg"), "libretro_directory = \"" + empty.resolve("cores") + "\"\n");
+        Settings.Library noCores = new Settings.Library();
+        noCores.retroarchConfigDir = empty.toString();
+        com.partida.sync.Doctor.Check warning = LibraryService.doctorCheck(noCores, false);
+        assertEquals(com.partida.sync.Doctor.Status.WARNING, warning.status(), warning.detail());
     }
 }

@@ -17,6 +17,7 @@
     "tool.game": "Alt+2",
     "tool.retroarch": "Alt+3",
     "view.closeFocusedToolWindow": "Shift+Esc",
+    "library.filter": "Shortcut+K",
     "find.show": [
       "Shortcut+F",
       "F3"

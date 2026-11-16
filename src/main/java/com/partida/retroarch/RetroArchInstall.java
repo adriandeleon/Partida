@@ -63,8 +63,7 @@ public final class RetroArchInstall {
             return Optional.of(
                     custom(Path.of(configDir.strip()), command.isEmpty() ? List.of("retroarch") : command, home));
         }
-        return detect(
-                home, System.getenv("PATH"), System.getenv("XDG_CONFIG_HOME"), RetroArchInstall::findFlatpakFilesDir);
+        return detect(home, Processes.path(), System.getenv("XDG_CONFIG_HOME"), RetroArchInstall::findFlatpakFilesDir);
     }
 
     /**
@@ -187,7 +186,7 @@ public final class RetroArchInstall {
     /** Host path of the Flatpak's /app, e.g. /var/lib/flatpak/app/org.libretro.RetroArch/.../files. */
     static Optional<Path> findFlatpakFilesDir() {
         try {
-            Process p = new ProcessBuilder("flatpak", "info", "--show-location", FLATPAK_ID)
+            Process p = Processes.builder(List.of("flatpak", "info", "--show-location", FLATPAK_ID))
                     .redirectErrorStream(true)
                     .start();
             String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8).strip();

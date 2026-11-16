@@ -1,8 +1,10 @@
 package com.partida.ui;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.logging.Logger;
 
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 
 import org.junit.jupiter.api.AfterEach;
@@ -149,41 +151,131 @@ class FindBarFxTest {
     }
 
     /**
-     * FIND-01, FIND-02, FIND-04, FIND-06, FIND-07: a system's tab has a find bar of its own in the window, over
-     * its games' titles, opened by find.show, which steps to the next game when run again; the keymaps bind it.
+     * FIND-03: a system's games are the app's main content, a list, so a filter box over it narrows it as it is
+     * typed, in place of a find bar; find.show focuses the box, and while it narrows the list find.next and
+     * find.previous step through the games it keeps, wrapping. FIND-07 and FIND-14: Escape empties the box,
+     * and in an empty box leads back to the list. FIND-15: the box is out of the Tab order.
      */
     @Test
-    void aSystemHasAFindBarThatFindShowOpensAndSteps() throws Exception {
+    void aSystemsGamesAreNarrowedByAFilterBox() throws Exception {
         MainWindow window = app.window();
         SystemView view = openSystem(1);
-        FindBar bar = view.findBar();
-        assertFalse(call(bar::isOpen));
+        TextField filter = view.filter();
+        int all = FakeLibrary.games(1);
+        assertFalse(call(filter::isFocusTraversable), "out of the Tab order");
+        assertTrue(call(() -> filter.getScene() == window.stage().getScene()), "in the window, not a popup");
+        assertNotNull(app.services().commands().get("find.next").unavailableReason(), "an empty box steps nothing");
         assertTrue(call(() -> app.services().commands().run("find.show")));
-        assertTrue(call(bar::isOpen));
-        assertTrue(call(() -> bar.getScene() == window.stage().getScene()), "in the window, not a popup");
-        run(() -> bar.field().setText("Game"));
-        FxTestSupport.waitUntil(() -> !bar.searching());
-        assertEquals("1 of " + FakeLibrary.games(1), call(bar::countText));
-        assertEquals(0, (int) call(view::selectedIndex));
-        // find.show again, with the bar open, selects the next game that matches.
-        run(() -> app.services().commands().run("find.show"));
-        assertEquals(1, (int) call(view::selectedIndex));
-        assertEquals("2 of " + FakeLibrary.games(1), call(bar::countText));
-        run(() -> press(bar.field(), KeyCode.ENTER, true, false, false, false));
-        assertEquals(0, (int) call(view::selectedIndex), "Shift+Enter went back");
-        run(() -> press(bar.field(), KeyCode.ENTER, true, false, false, false));
-        assertEquals(FakeLibrary.games(1) - 1, (int) call(view::selectedIndex), "and wraps to the last");
-        run(() -> bar.field().setText("no such game"));
-        FxTestSupport.waitUntil(() -> !bar.searching());
-        assertEquals(call(() -> com.partida.i18n.Messages.tr("find.none")), call(bar::countText));
-        run(() -> press(bar.field(), KeyCode.ESCAPE, false, false, false, false));
-        assertFalse(call(bar::isOpen));
-        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == view.list()), "focus is back");
-        assertNotNull(app.services().commands().get("find.next").unavailableReason(), "closed bar");
+        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == filter));
 
-        // On the Welcome tab there is nothing to search: find.show says why.
+        run(() -> filter.setText("game 2"));
+        assertEquals(
+                List.of(FakeLibrary.title(1, 2)),
+                call(() -> view.list().getItems().stream()
+                        .map(com.partida.library.Game::title)
+                        .toList()));
+        assertEquals(all, (int) call(view::size), "the system still has every game");
+        run(() -> filter.setText("GAME"));
+        assertEquals(all, (int) call(() -> view.list().getItems().size()), "any case");
+        run(() -> view.list().getSelectionModel().select(0));
+        assertTrue(call(() -> app.services().commands().run("find.next")));
+        assertEquals(1, (int) call(() -> view.list().getSelectionModel().getSelectedIndex()));
+        run(() -> app.services().commands().run("find.previous"));
+        run(() -> app.services().commands().run("find.previous"));
+        assertEquals(all - 1, (int) call(() -> view.list().getSelectionModel().getSelectedIndex()), "wraps");
+        run(() -> filter.setText("no such game"));
+        assertTrue(call(() -> view.list().getItems().isEmpty()));
+        assertEquals(
+                com.partida.i18n.Messages.tr("systems.noMatch"),
+                call(() -> ((javafx.scene.control.Label) view.list().getPlaceholder()).getText()));
+
+        run(() -> press(filter, KeyCode.ESCAPE, false, false, false, false));
+        assertEquals("", call(filter::getText), "the first Escape empties the box");
+        assertEquals(all, (int) call(() -> view.list().getItems().size()));
+        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == filter), "and stays in it");
+        run(() -> press(filter, KeyCode.ESCAPE, false, false, false, false));
+        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == view.list()), "the next leads back");
+
+        // Enter in the box goes to the list, on the game the box kept.
+        run(() -> {
+            filter.requestFocus();
+            filter.setText("game 3");
+        });
+        run(() -> press(filter, KeyCode.ENTER, false, false, false, false));
+        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == view.list()));
+        assertEquals(
+                FakeLibrary.title(1, 3),
+                call(() -> java.util.Objects.requireNonNull(view.selected()).title()));
+        assertEquals(2, (int) call(view::selectedIndex), "its index among all the system's games");
+
+        // On the Welcome tab there is nothing to filter: find.show says why.
         run(() -> window.tabs().tabPane().getSelectionModel().select(0));
         assertNotNull(app.services().commands().get("find.show").unavailableReason());
+    }
+
+    /**
+     * FIND-13: a {@code key:value} term becomes a chip on Space or Enter and Backspace takes it back; {@code >}
+     * runs the command it names; Filter Games focuses the box on its own chord, which the box draws as a badge
+     * read from the keymap; Escape empties the chips with the text.
+     */
+    @Test
+    void theFilterBoxMakesChipsRunsCommandsAndShowsItsChord() throws Exception {
+        MainWindow window = app.window();
+        SystemView view = openSystem(1);
+        TextField filter = view.filter();
+        int all = FakeLibrary.games(1);
+        assertEquals(
+                call(() -> app.services().keybindings().label("library.filter")),
+                call(() -> view.badge().getText()));
+        assertFalse(call(() -> view.badge().getText()).isEmpty(), "Ctrl+K in CUA");
+        run(() -> app.services().store().update(s -> s.keymap = "emacs"));
+        assertEquals("C-c /", call(() -> view.badge().getText()), "the badge follows the keymap");
+        run(() -> app.services().store().update(s -> s.keymap = "cua"));
+
+        assertTrue(call(() -> app.services().commands().run("library.filter")));
+        assertTrue(call(() -> window.stage().getScene().getFocusOwner() == filter));
+
+        run(() -> {
+            filter.setText("ext:zip");
+            filter.positionCaret(7);
+        });
+        run(() -> press(filter, KeyCode.SPACE, false, false, false, false));
+        assertEquals(List.of(new GameFilter.Term("ext", "zip")), call(view::chipTerms));
+        assertEquals("", call(filter::getText));
+        assertTrue(call(() -> view.list().getItems().isEmpty()), "no .zip game");
+        assertTrue(call(view::filtering), "a chip alone filters");
+        run(() -> press(filter, KeyCode.BACK_SPACE, false, false, false, false));
+        assertEquals(List.of(), call(view::chipTerms), "Backspace at the start takes the chip back");
+        assertEquals(all, (int) call(() -> view.list().getItems().size()));
+
+        run(() -> {
+            filter.setText("game ext:bin");
+            filter.positionCaret(12);
+        });
+        run(() -> press(filter, KeyCode.ENTER, false, false, false, false));
+        assertEquals(List.of(new GameFilter.Term("ext", "bin")), call(view::chipTerms));
+        assertEquals("game", call(filter::getText));
+        assertEquals(all, (int) call(() -> view.list().getItems().size()), "every game is a .bin");
+        run(() -> {
+            filter.requestFocus();
+            press(filter, KeyCode.ESCAPE, false, false, false, false);
+        });
+        assertEquals(List.of(), call(view::chipTerms), "Escape empties the chips too");
+        assertEquals("", call(filter::getText));
+
+        boolean shown = app.services().settings().showStatusBar;
+        run(() -> filter.setText("> toggle status"));
+        assertEquals(all, (int) call(() -> view.list().getItems().size()), "a command filters nothing");
+        run(() -> press(filter, KeyCode.ENTER, false, false, false, false));
+        assertEquals(!shown, app.services().settings().showStatusBar, "> ran Toggle Status Bar");
+        assertEquals("", call(filter::getText));
+        run(() -> app.services().commands().run("view.toggleStatusBar"));
+        run(() -> filter.setText("> no such command"));
+        run(() -> press(filter, KeyCode.ENTER, false, false, false, false));
+        assertEquals("> no such command", call(filter::getText), "kept, to fix");
+        assertEquals(
+                com.partida.i18n.Messages.tr("systems.filter.noCommand", "no such command"),
+                call(() -> window.statusBar().echo().getText()));
     }
 
     /** Opens the fake library's system {@code index} in a tab and returns its view. */
@@ -238,39 +330,77 @@ class FindBarFxTest {
     }
 
     /**
-     * FIND-05: a search starts from the game that was selected when the bar opened. FIND-09: in the Emacs keymap
-     * the field's C-a, C-e and C-k act on the field, never on a command bound to the same keys.
+     * FIND-09: in the Emacs keymap the filter box's C-a, C-e and C-k act on the box, never on a command bound to
+     * the same keys.
      */
     @Test
-    void theSearchStartsAtTheSelectionAndTheFieldKeepsItsEditingKeys() throws Exception {
+    void theFilterBoxKeepsItsEditingKeys() throws Exception {
         SystemView view = openSystem(1);
-        run(() -> view.list().getSelectionModel().select(1));
-        run(() -> app.services().commands().run("find.show"));
-        FindBar bar = view.findBar();
-        run(() -> bar.field().setText("Game"));
-        FxTestSupport.waitUntil(() -> !bar.searching());
-        assertEquals(1, (int) call(view::selectedIndex), "from the anchor, not the top");
-        run(() -> bar.field().setText("Ga"));
-        FxTestSupport.waitUntil(() -> !bar.searching());
-        assertEquals(1, (int) call(view::selectedIndex), "refining stays put");
-
+        TextField filter = view.filter();
         run(() -> app.services().store().update(s -> {
             s.keymap = "emacs";
             s.keybindings.put("view.toggleStatusBar", "C-a"); // a command on a field's editing key
         }));
-        run(() -> bar.field().setText("one two"));
-        run(() -> bar.field().positionCaret(4));
-        run(() -> press(bar.field(), KeyCode.A, false, true, false, false));
-        assertEquals(0, (int) call(() -> bar.field().getCaretPosition()), "C-a went to the start of the field");
+        run(() -> {
+            filter.requestFocus();
+            filter.setText("one two");
+            filter.positionCaret(4);
+        });
+        run(() -> press(filter, KeyCode.A, false, true, false, false));
+        assertEquals(0, (int) call(filter::getCaretPosition), "C-a went to the start of the field");
         assertTrue(app.services().settings().showStatusBar, "C-a ran no command");
-        run(() -> press(bar.field(), KeyCode.E, false, true, false, false));
-        assertEquals(7, (int) call(() -> bar.field().getCaretPosition()), "C-e went to the end");
-        run(() -> bar.field().positionCaret(3));
-        run(() -> press(bar.field(), KeyCode.K, false, true, false, false));
-        assertEquals("one", call(() -> bar.field().getText()), "C-k killed the rest");
+        run(() -> press(filter, KeyCode.E, false, true, false, false));
+        assertEquals(7, (int) call(filter::getCaretPosition), "C-e went to the end");
+        run(() -> filter.positionCaret(3));
+        run(() -> press(filter, KeyCode.K, false, true, false, false));
+        assertEquals("one", call(filter::getText), "C-k killed the rest");
         run(() -> app.services().store().update(s -> {
             s.keymap = "cua";
             s.keybindings.remove("view.toggleStatusBar");
         }));
+    }
+
+    /**
+     * FIND-03 on one view, outside a window: Down goes to the list on its first kept game, a step with nothing
+     * selected starts at an end, a step over an emptied list does nothing, and a reload keeps the selected game.
+     */
+    @Test
+    void aFilteredListStepsAndKeepsItsSelection() throws Exception {
+        List<com.partida.library.Game> games = List.of(
+                new com.partida.library.Game("Alpha", Path.of("/r/a.bin"), "S", null),
+                new com.partida.library.Game("Beta", Path.of("/r/b.bin"), "S", null),
+                new com.partida.library.Game("Alphabet", Path.of("/r/c.bin"), "", null));
+        SystemView view = call(() -> new SystemView("S", games, 1, () -> {}, () -> null));
+        assertEquals("Beta", call(() -> view.selected().title()), "the session's selection");
+        assertEquals(3, (int) call(view::size));
+        assertFalse(call(view::filtering));
+
+        run(() -> view.filter().setText("alpha"));
+        assertTrue(call(view::filtering));
+        assertEquals("Alpha", call(() -> view.selected().title()), "Beta went; the first kept is selected");
+        run(() -> view.list().getSelectionModel().clearSelection());
+        run(() -> view.step(false));
+        assertEquals("Alphabet", call(() -> view.selected().title()), "back from nothing: the last");
+        run(() -> view.list().getSelectionModel().clearSelection());
+        run(() -> view.step(true));
+        assertEquals("Alpha", call(() -> view.selected().title()), "on from nothing: the first");
+        run(() -> view.list().getSelectionModel().clearSelection());
+        run(() -> press(view.filter(), KeyCode.DOWN, false, false, false, false));
+        assertEquals("Alpha", call(() -> view.selected().title()), "Down picks the first kept game");
+        run(() -> press(view.filter(), KeyCode.A, false, false, false, false)); // typing is the box's own
+        run(() -> view.step(true));
+        assertEquals("Alphabet", call(() -> view.selected().title()));
+
+        // A reload keeps the selected game when it is still there, and leaves the rest alone.
+        run(() -> view.setGames(List.of(games.get(2), games.get(0))));
+        assertEquals("Alphabet", call(() -> view.selected().title()));
+        assertEquals(0, (int) call(view::selectedIndex));
+        run(() -> view.setGames(List.of(games.get(1))));
+        assertTrue(call(() -> view.list().getItems().isEmpty()), "the filter keeps nothing");
+        run(() -> view.step(true));
+        assertEquals(-1, (int) call(view::selectedIndex));
+        run(() -> view.filter().clear());
+        assertEquals(1, (int) call(() -> view.list().getItems().size()));
+        assertEquals(1, (int) call(() -> new SystemView("T", List.of(), 5, () -> {}, () -> null).size() + 1));
     }
 }

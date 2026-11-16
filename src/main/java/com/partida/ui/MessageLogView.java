@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -57,8 +56,7 @@ public final class MessageLogView {
         filter.textProperty().addListener((obs, old, text) -> filtering.request());
         filter.setOnKeyPressed(e -> {
             filtering.flush();
-            if ((e.getCode() == KeyCode.DOWN || e.getCode() == KeyCode.ENTER)
-                    && !list.getItems().isEmpty()) {
+            if (PickerKeys.intoList(e.getCode().name(), !list.getItems().isEmpty())) {
                 list.requestFocus();
                 list.getSelectionModel().selectFirst();
                 e.consume();
@@ -68,7 +66,7 @@ public final class MessageLogView {
         list.getStyleClass().add("message-log-list");
 
         list.setAccessibleText(Messages.tr("messagelog.title"));
-        list.setPrefHeight(LIST_HEIGHT);
+        UiZoom.bind(list.prefHeightProperty(), LIST_HEIGHT); // follows the zoom (WIN-12)
         list.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         list.setPlaceholder(new Label(Messages.tr("messagelog.empty")));
         // Each row's right-click menu holds its commands; the Menu key and Shift+F10 reach it too.
@@ -93,13 +91,13 @@ public final class MessageLogView {
         hint.getStyleClass().add("hint");
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox footer = new HBox(6, copy, clear, cut, spacer, hint);
+        HBox footer = UiZoom.hbox(6, copy, clear, cut, spacer, hint);
         footer.setAlignment(Pos.CENTER_LEFT);
 
-        card = new VBox(8, title, filter, list, footer);
+        card = UiZoom.vbox(8, title, filter, list, footer);
         card.getStyleClass().add("message-log");
-        card.setPrefWidth(WIDTH);
-        card.setMaxWidth(WIDTH);
+        UiZoom.bind(card.prefWidthProperty(), WIDTH);
+        UiZoom.bind(card.maxWidthProperty(), WIDTH);
         card.setMaxHeight(Region.USE_PREF_SIZE);
     }
 
@@ -109,7 +107,7 @@ public final class MessageLogView {
         onRead.run();
         filter.clear();
         refresh();
-        host.show(card, Pos.BOTTOM_LEFT, new Insets(0, 0, 34, 8), null);
+        host.show(card, Pos.BOTTOM_LEFT, UiZoom.insets(0, 0, 34, 8), null);
         filter.requestFocus();
     }
 
@@ -129,8 +127,7 @@ public final class MessageLogView {
         String query = filter.getText().toLowerCase(Locale.ROOT).strip();
         list.getItems()
                 .setAll(services.messages().entries().stream()
-                        .filter(e -> query.isEmpty()
-                                || e.text().toLowerCase(Locale.ROOT).contains(query))
+                        .filter(e -> query.isEmpty() || e.lowerText().contains(query))
                         .toList());
     }
 
@@ -156,24 +153,36 @@ public final class MessageLogView {
         return filter;
     }
 
+    /** Every severity's style class, made once: a cell takes the old one off before it puts the new one on. */
+    private static final List<String> SEVERITY_CLASSES = java.util.Arrays.stream(MessageLog.Severity.values())
+            .map(s -> s.name().toLowerCase(Locale.ROOT))
+            .toList();
+
+    /** A message's row: its nodes made once per cell and filled on each update, never rebuilt (PERF-09). */
     private static final class EntryCell extends ListCell<MessageLog.Entry> {
+        private final Label time = new Label();
+        private final Label text = new Label();
+        private final HBox row = UiZoom.hbox(10, time, text);
+
+        EntryCell() {
+            time.getStyleClass().add("time");
+            text.setWrapText(true);
+            row.setAlignment(Pos.TOP_LEFT);
+        }
+
         @Override
         protected void updateItem(MessageLog.@Nullable Entry entry, boolean empty) {
             super.updateItem(entry, empty);
+            setText(null);
             if (empty || entry == null) {
                 setGraphic(null);
-                setText(null);
                 return;
             }
-            Label time = new Label(TIME.format(entry.time()));
-            time.getStyleClass().add("time");
-            Label text = new Label(entry.text());
-            text.setWrapText(true);
+            time.setText(TIME.format(entry.time()));
+            text.setText(entry.text());
+            text.getStyleClass().removeAll(SEVERITY_CLASSES);
             text.getStyleClass().add(entry.severity().name().toLowerCase(Locale.ROOT));
-            HBox row = new HBox(10, time, text);
             row.setAccessibleText(time.getText() + " " + entry.text()); // the row reads as its message (ACC-01)
-            row.setAlignment(Pos.TOP_LEFT);
-            setText(null);
             setGraphic(row);
         }
     }

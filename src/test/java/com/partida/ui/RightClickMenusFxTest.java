@@ -30,6 +30,7 @@ import static com.partida.ui.FxTestSupport.run;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -212,6 +213,48 @@ class RightClickMenusFxTest {
         assertEquals(
                 call(() -> systems.list().getSelectionModel().getSelectedItem().name()),
                 call(() -> window.tabs().activeView().title()));
+    }
+
+    /** MENU-09: the Menu key and Shift+F10 open the selected game's menu, and the selected system's. */
+    @Test
+    void theMenuKeyOpensAGamesAndASystemsMenu() throws Exception {
+        MainWindow window = app.window();
+        FakeLibrary.load(services, dir.resolve("library"));
+        var system = FakeLibrary.collection(services, 2);
+        run(() -> window.tabs().open(system));
+        SystemView view =
+                java.util.Objects.requireNonNull(call(() -> window.tabs().activeView()));
+        run(
+                () -> { // laid out, as a shown window has it
+                    window.stage().getScene().getRoot().applyCss();
+                    window.stage().getScene().getRoot().layout();
+                });
+        run(() -> {
+            view.list().requestFocus();
+            view.list().getSelectionModel().select(1);
+            Event.fireEvent(
+                    view.list(), new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, true, null));
+        });
+        List<ContextMenu> open = call(RightClickMenusFxTest::openMenus);
+        assertEquals(1, open.size(), "the keyboard request opened the game's menu");
+        assertSame(call(() -> window.tabs().gameMenu().menu()), open.getFirst());
+        run(() -> open.getFirst().hide());
+
+        assertTrue(call(() -> services.commands().run("tool.systems")));
+        LibraryPanels.Systems systems = java.util.Objects.requireNonNull(call(window::systems));
+        run(
+                () -> { // laid out, as a shown window has it
+                    window.stage().getScene().getRoot().applyCss();
+                    window.stage().getScene().getRoot().layout();
+                });
+        run(() -> {
+            systems.list().requestFocus();
+            systems.list().getSelectionModel().select(0);
+            Event.fireEvent(
+                    systems.list(),
+                    new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, true, null));
+        });
+        assertEquals(1, call(() -> openMenus().size()), "and the system's");
     }
 
     @Test

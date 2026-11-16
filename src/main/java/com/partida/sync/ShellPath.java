@@ -52,15 +52,17 @@ public final class ShellPath {
                     .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
             process.getOutputStream().close();
-            // Read on its own thread, so a shell that keeps its output open can't outlast the timeout.
-            java.util.concurrent.CompletableFuture<byte[]> out =
-                    java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            // Read on its own thread, so a shell that keeps its output open can't outlast the timeout: a virtual
+            // thread, never the common ForkJoinPool, since the read blocks (PERF-05).
+            java.util.concurrent.CompletableFuture<byte[]> out = java.util.concurrent.CompletableFuture.supplyAsync(
+                    () -> {
                         try {
                             return process.getInputStream().readNBytes(64 * 1024);
                         } catch (IOException e) {
                             return new byte[0];
                         }
-                    });
+                    },
+                    task -> Thread.ofVirtual().name("shell-path-read").start(task));
             if (!process.waitFor(5, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 return null;

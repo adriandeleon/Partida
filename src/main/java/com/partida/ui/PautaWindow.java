@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -41,7 +40,7 @@ public final class PautaWindow {
     private final AppServices services;
     private final List<Entry> exceptions;
     private final Dialog<Void> dialog = new Dialog<>();
-    private final VBox list = new VBox(2);
+    private final VBox list = UiZoom.vbox(2);
     private final Button copy = new Button(Messages.tr("pauta.copy"));
 
     public PautaWindow(AppServices services, @Nullable Window owner) {
@@ -61,10 +60,10 @@ public final class PautaWindow {
         Label meaning = new Label(meaning(conformance, exceptions));
         meaning.getStyleClass().add("about-tagline");
         meaning.setWrapText(true);
-        HBox head = new HBox(16, mark(), new VBox(4, edition, new HBox(pill), meaning));
+        HBox head = UiZoom.hbox(16, mark(), UiZoom.vbox(4, edition, new HBox(pill), meaning));
         head.setAlignment(Pos.CENTER_LEFT);
 
-        VBox content = new VBox(14, head);
+        VBox content = UiZoom.vbox(14, head);
         String counts = counts(exceptions);
         if (!counts.isEmpty()) {
             Label countsLabel = new Label(counts);
@@ -87,7 +86,7 @@ public final class PautaWindow {
         });
         content.getChildren().addAll(links, copy);
         content.getStyleClass().add("about-content");
-        content.setPadding(new Insets(6, 8, 2, 8));
+        UiZoom.pad(content, 6, 8, 2, 8);
         UiZoom.bind(content.prefWidthProperty(), 560);
 
         dialog.getDialogPane().setContent(content);
@@ -136,7 +135,7 @@ public final class PautaWindow {
             reason.getChildren().addAll(new Text(" "), link);
         }
         HBox.setHgrow(reason, Priority.ALWAYS);
-        HBox row = new HBox(8, id, level, reason);
+        HBox row = UiZoom.hbox(8, id, level, reason);
         row.setAlignment(Pos.TOP_LEFT);
         row.getStyleClass().add("pauta-row");
         return row;
@@ -155,8 +154,8 @@ public final class PautaWindow {
         java.net.URL url = PautaWindow.class.getResource("/com/partida/icons/pauta-128.png");
         if (url != null) {
             ImageView view = new ImageView(new Image(url.toExternalForm(), 72, 72, true, true, true));
-            view.setFitWidth(72);
-            view.setFitHeight(72);
+            UiZoom.bind(view.fitWidthProperty(), 72);
+            UiZoom.bind(view.fitHeightProperty(), 72);
             return view;
         }
         return new Label();

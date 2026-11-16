@@ -52,7 +52,7 @@ public final class StatusBar extends HBox {
         this.services = services;
         getStyleClass().add("status-bar");
         setAlignment(Pos.CENTER_LEFT);
-        setSpacing(10);
+        UiZoom.bind(spacingProperty(), 10);
 
         echo.getStyleClass().add("echo");
         // A click runs the Message Log command, like its menu row and its keys (WIN-01).

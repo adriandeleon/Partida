@@ -3,7 +3,6 @@ package com.partida.ui;
 import java.util.List;
 
 import javafx.application.Platform;
-import javafx.geometry.Insets;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Hyperlink;
@@ -31,12 +30,12 @@ final class DoctorWindow {
     DoctorWindow(AppServices services, @Nullable Window owner) {
         this.services = services;
         dialog.setTitle(Messages.tr("doctor.title"));
-        rows.setHgap(12);
-        rows.setVgap(8);
+        UiZoom.bind(rows.hgapProperty(), 12);
+        UiZoom.bind(rows.vgapProperty(), 8);
         rows.getStyleClass().add("doctor-rows");
         checking.getStyleClass().add("muted");
-        VBox content = new VBox(10, checking, rows);
-        content.setPadding(new Insets(6, 8, 2, 8));
+        VBox content = UiZoom.vbox(10, checking, rows);
+        UiZoom.pad(content, 6, 8, 2, 8);
         UiZoom.bind(content.prefWidthProperty(), 560);
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
@@ -73,7 +72,7 @@ final class DoctorWindow {
             Label detail = new Label(check.detail());
             detail.getStyleClass().add("muted");
             detail.setWrapText(true);
-            VBox found = new VBox(2, detail);
+            VBox found = UiZoom.vbox(2, detail);
             String fix = check.fix();
             if (fix != null) {
                 Label what = new Label(fix);

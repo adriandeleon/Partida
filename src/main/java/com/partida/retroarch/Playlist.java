@@ -1,7 +1,6 @@
 package com.partida.retroarch;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ public record Playlist(String name, Path file, String defaultCorePath, List<Play
     }
 
     public static Playlist read(Path file) throws IOException {
-        String text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        String text = Inputs.read(file, Inputs.PLAYLIST_LIMIT); // refused past the limit (PERF-12)
         return parse(stripLpl(String.valueOf(file.getFileName())), file, text);
     }
 

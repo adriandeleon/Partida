@@ -38,7 +38,7 @@ public final class Confirm {
         if (!question.choices().isEmpty()) {
             Label message = new Label(question.message());
             message.setWrapText(true);
-            VBox content = new VBox(8, message);
+            VBox content = UiZoom.vbox(8, message);
             List<CheckBox> boxes = new ArrayList<>();
             for (Confirmations.Choice choice : question.choices()) {
                 CheckBox box = new CheckBox(choice.label());

@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FolderScannerTest {
 
@@ -86,5 +88,18 @@ class FolderScannerTest {
         FolderScanner.Result r = FolderScanner.scan(
                 new LibraryFolder(root.toString(), null, "Nintendo - Game Boy Advance (Hacks)"), catalog);
         assertEquals("Nintendo - Game Boy Advance (Hacks)", r.games().getFirst().system());
+    }
+
+    /** PERF-12: a folder with more files than the cap is scanned up to it, and the result says it was cut. */
+    @Test
+    void aFolderPastTheCapIsCutAndSaysSo(@TempDir Path root) throws Exception {
+        for (int i = 0; i < 5; i++) touch(root.resolve("gba/Game " + i + ".gba"));
+        LibraryFolder folder = new LibraryFolder(root.toString(), null, null);
+        FolderScanner.Result cut = FolderScanner.scan(folder, catalog, 3);
+        assertTrue(cut.capped());
+        assertEquals(3, cut.games().size());
+        FolderScanner.Result whole = FolderScanner.scan(folder, catalog);
+        assertFalse(whole.capped());
+        assertEquals(5, whole.games().size());
     }
 }

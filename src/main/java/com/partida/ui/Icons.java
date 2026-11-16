@@ -359,6 +359,7 @@ public final class Icons {
             Map.entry("systems.open", OPEN_FILE),
             Map.entry("retroarch.clear", CLEAR),
             Map.entry("find.show", FIND),
+            Map.entry("library.filter", FIND),
             Map.entry("find.next", FIND_NEXT),
             Map.entry("find.previous", FIND_PREVIOUS),
             Map.entry("retroarch.find", FIND),

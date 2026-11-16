@@ -255,8 +255,8 @@ final class ToolWindowManager {
             UiZoom.bind(size, 10);
         }
         badge.setMouseTransparent(true);
-        badge.setTranslateX(4);
-        badge.setTranslateY(4);
+        UiZoom.bind(badge.translateXProperty(), 4);
+        UiZoom.bind(badge.translateYProperty(), 4);
         StackPane.setAlignment(badge, Pos.BOTTOM_RIGHT);
         badge.visibleProperty().bind(tw.busyProperty());
         icon.getChildren().add(badge);
@@ -876,7 +876,7 @@ final class ToolWindowManager {
         title.setMinWidth(Region.USE_PREF_SIZE); // the spacer gives way first; the name stays whole
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox header = new HBox(4, title, spacer);
+        HBox header = UiZoom.hbox(4, title, spacer);
         header.setAlignment(Pos.CENTER_LEFT);
         header.getStyleClass().add("tool-window-header");
         for (String id : List.of("view.floatToolWindow", "view.maximizeToolWindow", "view.closeFocusedToolWindow")) {

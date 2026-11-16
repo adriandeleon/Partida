@@ -67,6 +67,15 @@ class NamedControlsFxTest {
     @BeforeEach
     void start() throws Exception {
         app = FxTestSupport.start(dir, host);
+        // A loaded library, so the walk reaches what it fills: the Systems list's rows, a system's tab with its
+        // filter and games, the Game window's box art, core and Play, and Settings ▸ Library's folder rows.
+        FakeLibrary.load(app.services(), dir.resolve("library"));
+        Path roms = java.nio.file.Files.createDirectories(dir.resolve("roms"));
+        run(() -> app.services()
+                .store()
+                .update(s -> s.library.folders.add(
+                        new com.partida.config.Settings.Library.Folder(roms.toString(), "fake_libretro"))));
+        FakeLibrary.waitLoaded(app.services());
     }
 
     @AfterEach
@@ -82,10 +91,11 @@ class NamedControlsFxTest {
     @Test
     void everyControlInEveryWindowHasAName() throws Exception {
         MainWindow window = app.window();
+        var system = FakeLibrary.collection(app.services(), 1);
         run(() -> {
-            window.tabs().tabPane().getSelectionModel().select(1);
-            app.services().commands().run("tool.systems");
-            app.services().commands().run("tool.game");
+            window.tabs().open(system);
+            window.toolWindows().openWindow(window.systemsWindow(), false);
+            window.toolWindows().openWindow(window.gameWindow(), false);
             app.services().commands().run("retroarch.find");
             app.services().commands().run("find.show");
             window.openMessageLog();
@@ -95,6 +105,18 @@ class NamedControlsFxTest {
             window.openDebugLog();
             window.openReportProblem();
         });
+        // The Game window reads the selected game off the FX thread: wait until its controls are shown.
+        LibraryPanels.GamePanel game = java.util.Objects.requireNonNull(call(window::game));
+        FxTestSupport.waitUntil(() -> !game.reading() && !game.core().getItems().isEmpty());
+        assertTrue(call(() -> game.play().isVisible()), "the Game window shows Play");
+        assertTrue(
+                call(() -> java.util.Objects.requireNonNull(window.systems())
+                                .list()
+                                .getItems()
+                                .size()
+                        > 1),
+                "the Systems list has rows");
+        assertTrue(call(() -> !window.tabs().activeView().list().getItems().isEmpty()), "the tab has games");
         List<String> unnamed = new ArrayList<>();
         int[] windows = {0};
         run(() -> {
@@ -159,6 +181,16 @@ class NamedControlsFxTest {
             promptScene.getRoot().applyCss();
             walk(promptScene.getRoot(), labelled(promptScene.getRoot()), unnamed, "prompt");
             prompt.close();
+        });
+        // Settings ▸ Library's folder rows, laid out so their cells exist.
+        run(() -> {
+            window.openSettings(SettingsWindow.Page.LIBRARY);
+            Scene scene = window.settingsWindow().stage().getScene();
+            scene.getRoot().applyCss();
+            if (scene.getRoot() instanceof Parent root) root.layout();
+            if (window.settingsWindow().folderList().lookup(".library-folder-row") == null)
+                unnamed.add("Settings LIBRARY: no folder row was laid out to check");
+            walk(scene.getRoot(), labelled(scene.getRoot()), unnamed, "Settings LIBRARY, with a folder");
         });
         assertEquals(List.of(), unnamed, "controls with no name");
     }

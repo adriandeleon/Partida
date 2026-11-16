@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -149,21 +148,47 @@ public final class SettingsWindow {
     private final TextField retroarchCommand = new TextField();
     private final SettingSwitch recentlyPlayed =
             new SettingSwitch(Messages.tr("settings.library.recentlyPlayed.title"));
-    /** One row per games folder: its path, its core and Remove; rebuilt when the folders change. */
-    private final VBox folderRows = new VBox(6);
     /**
-     * The folders the rows show now, so a change to anything else only sets their values; null before the rows
-     * are built, and after the library's cores changed (the rows' pickers list them).
+     * One row per games folder (its path, its core and Remove): a list the user can grow without a limit, so a
+     * virtualized ListView with a fixed cell size (PERF-08), narrowed by the search like the key bindings
+     * (SET-03).
      */
-    private @Nullable List<String> folderPaths;
+    private final ListView<Settings.Library.Folder> folderList = new ListView<>();
 
-    private final Runnable libraryListener = this::loadLibraryStatus;
+    private final javafx.collections.ObservableList<Settings.Library.Folder> folderSource =
+            javafx.collections.FXCollections.observableArrayList();
+    private final javafx.collections.transformation.FilteredList<Settings.Library.Folder> folderFilter =
+            new javafx.collections.transformation.FilteredList<>(folderSource);
+    /** The cores a folder can be given, "" (detect) first: the library's, re-read when it loads. */
+    private List<String> coreIds = List.of("");
+
+    private String query = "";
+    /** Each folder's search entry, by path and core; emptied when the cores' names may change. */
+    private final Map<String, SettingsSearch.Entry> folderEntries = new java.util.HashMap<>();
+
+    private final Label noFolders = new Label(Messages.tr("settings.library.folders.none"));
+    /** What the list says when the search hides every folder: there are folders, none matches. */
+    private final Label noFolderMatch = new Label(Messages.tr("settings.library.folders.noMatch"));
+
+    /**
+     * The library's status and the folders' core pickers, read once per pulse: a library change and the
+     * settings change behind it both ask (PERF-06).
+     */
+    private final Redraw libraryStatus = new Redraw(this::loadLibraryStatus);
+
+    private final Runnable libraryListener = libraryStatus::request;
     private final Consumer<Settings> storeListener = s -> load();
     private final Runnable syncListener = this::loadSyncStatus;
     private final @Nullable String noTitleBar;
 
     public SettingsWindow(AppServices services, @Nullable Window owner) {
-        this(services, owner, Chrome.titleBarMenusUnavailable());
+        this(
+                services,
+                owner,
+                Chrome.titleBarMenusUnavailable(
+                        com.partida.Os.isMac(),
+                        javafx.application.Platform.isSupported(
+                                javafx.application.ConditionalFeature.EXTENDED_WINDOW)));
     }
 
     /** With {@code noTitleBar}, why this window's title bar can't hold the menus, or null when it can (OS-01). */
@@ -171,9 +196,9 @@ public final class SettingsWindow {
         this.services = services;
         this.noTitleBar = noTitleBar;
         for (Page page : Page.values()) {
-            VBox content = new VBox(14);
+            VBox content = UiZoom.vbox(14);
             content.getStyleClass().add("settings-page");
-            content.setPadding(new Insets(18, 22, 18, 22));
+            UiZoom.pad(content, 18, 22, 18, 22);
             Label title = new Label(page.title());
             title.getStyleClass().add("settings-page-title");
             content.getChildren().add(title);
@@ -206,8 +231,8 @@ public final class SettingsWindow {
         scroll.setFitToWidth(true);
         scroll.getStyleClass().add("settings-scroll");
 
-        VBox side = new VBox(8, search, sidebar);
-        side.setPadding(new Insets(10));
+        VBox side = UiZoom.vbox(8, search, sidebar);
+        UiZoom.pad(side, 10);
         UiZoom.bind(side.prefWidthProperty(), 220);
         VBox.setVgrow(sidebar, Priority.ALWAYS);
 
@@ -219,9 +244,9 @@ public final class SettingsWindow {
         close.setOnAction(e -> stage.close());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox bottom = new HBox(10, note, spacer, close);
+        HBox bottom = UiZoom.hbox(10, note, spacer, close);
         bottom.setAlignment(Pos.CENTER_LEFT);
-        bottom.setPadding(new Insets(8, 12, 10, 12));
+        UiZoom.pad(bottom, 8, 12, 10, 12);
         bottom.getStyleClass().add("settings-bottom");
 
         BorderPane root = new BorderPane(scroll, null, null, bottom, side);
@@ -291,7 +316,7 @@ public final class SettingsWindow {
         retroarchStatus.setWrapText(true);
         Button refresh = new Button(Messages.tr("command.library.refresh"));
         refresh.setOnAction(e -> services.commands().run("library.refresh"));
-        HBox statusControl = new HBox(8, retroarchStatus, refresh);
+        HBox statusControl = UiZoom.hbox(8, retroarchStatus, refresh);
         statusControl.setAlignment(Pos.CENTER_RIGHT);
         row(
                 retroarch,
@@ -329,7 +354,26 @@ public final class SettingsWindow {
         Button add = new Button(Messages.tr("command.library.addFolder"));
         add.setOnAction(e -> services.commands().run("library.addFolder"));
         row(folders, Page.LIBRARY, "settings.library.addFolder", add, "games roms folder directory scan core");
-        folders.getChildren().add(folderRows);
+        folderList.getStyleClass().add("library-folder-list");
+        folderList.setAccessibleText(Messages.tr("settings.library.folders.heading"));
+        UiZoom.bind(folderList.fixedCellSizeProperty(), FOLDER_ROW_HEIGHT); // follows the zoom (WIN-12)
+        for (Label line : List.of(noFolders, noFolderMatch)) {
+            line.getStyleClass().add("muted");
+            line.setWrapText(true);
+        }
+        folderList.setPlaceholder(noFolders);
+        folderList.setCellFactory(v -> new FolderCell());
+        folderFilter.setPredicate(f -> true);
+        folderList.setItems(folderFilter);
+        folderList
+                .prefHeightProperty()
+                .bind(javafx.beans.binding.Bindings.max(
+                                1,
+                                javafx.beans.binding.Bindings.min(
+                                        javafx.beans.binding.Bindings.size(folderFilter), FOLDER_ROWS_SHOWN))
+                        .multiply(UiZoom.times(FOLDER_ROW_HEIGHT))
+                        .add(2));
+        folders.getChildren().add(folderList);
         services.library().onChanged(libraryListener);
         loaders.add(() -> {
             Settings.Library library = services.settings().library;
@@ -338,7 +382,7 @@ public final class SettingsWindow {
             retroarchCommand.setText(library.retroarchCommand);
             recentlyPlayed.setSelected(library.showRecentlyPlayed);
             loadFolders();
-            loadLibraryStatus();
+            libraryStatus.request();
         });
     }
 
@@ -361,69 +405,147 @@ public final class SettingsWindow {
                                         ctx.cores().all().size());
                 });
         // The cores a folder can be given come with the library: the rows' pickers follow it.
-        folderPaths = null;
-        loadFolders();
+        List<String> ids = new ArrayList<>();
+        ids.add("");
+        if (ctx != null) ctx.cores().all().forEach(c -> ids.add(c.id()));
+        if (!ids.equals(coreIds)) {
+            coreIds = List.copyOf(ids);
+            folderEntries.clear(); // a core's name comes with the library
+            folderList.refresh();
+        }
     }
 
-    /** One row per games folder; rebuilt only when the folders themselves change. */
+    /** The folders, as Settings has them now; each row reads its own folder when it is shown. */
     private void loadFolders() {
-        List<Settings.Library.Folder> folders = services.settings().library.folders;
-        List<String> paths = folders.stream().map(f -> f.path).toList();
-        if (paths.equals(folderPaths)) {
-            for (int i = 0; i < folders.size() && i < folderRows.getChildren().size(); i++) {
-                if (folderRows.getChildren().get(i) instanceof HBox row
-                        && row.getChildren().get(1) instanceof ComboBox<?> box) {
-                    @SuppressWarnings("unchecked")
-                    ComboBox<String> core = (ComboBox<String>) box;
-                    core.setValue(folders.get(i).coreId);
-                }
-            }
-            return;
+        List<Settings.Library.Folder> folders = services.settings().library.folders.stream()
+                .map(f -> new Settings.Library.Folder(f.path, f.coreId))
+                .toList();
+        if (sameFolders(folders, folderSource)) return;
+        folderEntries.keySet().removeIf(k -> folders.stream().noneMatch(f -> k.equals(f.path + "\t" + f.coreId)));
+        folderSource.setAll(folders);
+        applyFolderSearch();
+    }
+
+    private static boolean sameFolders(List<Settings.Library.Folder> a, List<Settings.Library.Folder> b) {
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++) {
+            if (!a.get(i).path.equals(b.get(i).path) || !a.get(i).coreId.equals(b.get(i).coreId)) return false;
         }
-        folderPaths = paths;
-        folderRows.getChildren().clear();
-        if (folders.isEmpty()) {
-            Label none = new Label(Messages.tr("settings.library.folders.none"));
-            none.getStyleClass().add("muted");
-            none.setWrapText(true);
-            folderRows.getChildren().add(none);
-            return;
-        }
+        return true;
+    }
+
+    /** A core's name, or "Detect by file extension" for none. */
+    private String coreLabel(String id) {
+        if (id.isEmpty()) return Messages.tr("settings.library.core.detect");
         com.partida.library.RetroArchContext ctx = services.library().state().retroArch();
-        for (Settings.Library.Folder folder : folders) {
-            Label path = new Label(AppInfo.tildeHome(folder.path));
-            path.setWrapText(true);
+        return ctx == null
+                ? id
+                : ctx.cores()
+                        .byId(id)
+                        .map(com.partida.retroarch.CoreInfo::label)
+                        .orElse(id);
+    }
+
+    /** What the search reads of a folder's row: its path, its core and its Remove (SET-03). */
+    SettingsSearch.Entry folderEntry(Settings.Library.Folder folder) {
+        return new SettingsSearch.Entry(
+                AppInfo.tildeHome(folder.path) + " " + folder.path,
+                "",
+                coreLabel(folder.coreId) + " " + Messages.tr("settings.library.remove"),
+                Page.LIBRARY.title() + " " + Messages.tr("settings.library.folders.heading"),
+                "games roms folder directory core");
+    }
+
+    /** The best score a folder row has for the search, and narrows the list to the rows that match. */
+    private int applyFolderSearch() {
+        if (query.isBlank()) {
+            folderFilter.setPredicate(f -> true);
+            folderList.setPlaceholder(noFolders);
+            return 0;
+        }
+        SettingsSearch.Query read = SettingsSearch.Query.of(query);
+        int best = 0;
+        java.util.Set<String> matched = new java.util.HashSet<>();
+        for (Settings.Library.Folder folder : folderSource) {
+            // Each folder's entry is made once, when the folders or the cores change, not per search (PERF-09).
+            SettingsSearch.Entry entry =
+                    folderEntries.computeIfAbsent(folder.path + "\t" + folder.coreId, k -> folderEntry(folder));
+            int score = SettingsSearch.score(read, entry);
+            if (score > 0) matched.add(folder.path);
+            best = Math.max(best, score);
+        }
+        folderFilter.setPredicate(f -> matched.contains(f.path));
+        folderList.setPlaceholder(folderSource.isEmpty() ? noFolders : noFolderMatch);
+        return best;
+    }
+
+    static final double FOLDER_ROW_HEIGHT = 40;
+    static final int FOLDER_ROWS_SHOWN = 6;
+
+    /** A games-folder row: its path, the core it is given, and Remove, which asks first (CONF-01). */
+    private final class FolderCell extends ListCell<Settings.Library.Folder> {
+        private final Label path = new Label();
+        private final ComboBox<String> core = new ComboBox<>();
+        private final Button remove = new Button(Messages.tr("settings.library.remove"));
+        private final javafx.scene.control.Tooltip pathTip = new javafx.scene.control.Tooltip();
+        private final HBox row;
+        private boolean updating;
+        private @Nullable List<String> shownCores;
+        private @Nullable String shownCore;
+
+        FolderCell() {
             HBox.setHgrow(path, Priority.ALWAYS);
             path.setMaxWidth(Double.MAX_VALUE);
-            ComboBox<String> core = new ComboBox<>();
-            core.getItems().add("");
-            if (ctx != null) ctx.cores().all().forEach(c -> core.getItems().add(c.id()));
-            if (!core.getItems().contains(folder.coreId)) core.getItems().add(folder.coreId);
-            core.setConverter(converter(id -> id.isEmpty()
-                    ? Messages.tr("settings.library.core.detect")
-                    : ctx == null
-                            ? id
-                            : ctx.cores()
-                                    .byId(id)
-                                    .map(com.partida.retroarch.CoreInfo::label)
-                                    .orElse(id)));
-            core.setValue(folder.coreId);
-            core.setAccessibleText(Messages.tr("settings.library.core.name", AppInfo.tildeHome(folder.path)));
+            path.setMinWidth(0);
+            path.setTooltip(pathTip);
+            core.setConverter(converter(SettingsWindow.this::coreLabel));
             core.valueProperty().addListener((obs, old, picked) -> {
-                if (picked == null) return;
+                Settings.Library.Folder folder = getItem();
+                if (updating || picked == null || folder == null || picked.equals(folder.coreId)) return;
                 services.store().update(s -> {
                     Settings.Library.Folder f = s.library.folder(folder.path);
                     if (f != null) f.coreId = picked;
                 });
             });
-            Button remove = new Button(Messages.tr("settings.library.remove"));
-            remove.setAccessibleText(Messages.tr("settings.library.remove.name", AppInfo.tildeHome(folder.path)));
-            remove.setOnAction(
-                    e -> services.store().update(s -> s.library.folders.removeIf(f -> f.path.equals(folder.path))));
-            HBox row = new HBox(8, path, core, remove);
+            remove.setOnAction(e -> {
+                Settings.Library.Folder folder = getItem();
+                if (folder != null) MainWindow.removeFolder(services, stage, folder.path);
+            });
+            row = UiZoom.hbox(8, path, core, remove);
             row.setAlignment(Pos.CENTER_LEFT);
             row.getStyleClass().add("library-folder-row");
-            folderRows.getChildren().add(row);
+        }
+
+        @Override
+        protected void updateItem(Settings.Library.@Nullable Folder folder, boolean empty) {
+            super.updateItem(folder, empty);
+            setText(null);
+            if (empty || folder == null) {
+                setGraphic(null);
+                setAccessibleText(null);
+                return;
+            }
+            String shown = AppInfo.tildeHome(folder.path);
+            path.setText(shown);
+            pathTip.setText(folder.path);
+            updating = true;
+            try {
+                // The picker's list is built again only when the cores or this row's own core changed (PERF-09).
+                if (shownCores != coreIds || !folder.coreId.equals(shownCore)) {
+                    List<String> items = new ArrayList<>(coreIds);
+                    if (!items.contains(folder.coreId)) items.add(folder.coreId);
+                    core.getItems().setAll(items);
+                    shownCores = coreIds;
+                    shownCore = folder.coreId;
+                }
+                core.setValue(folder.coreId);
+            } finally {
+                updating = false;
+            }
+            core.setAccessibleText(Messages.tr("settings.library.core.name", shown));
+            remove.setAccessibleText(Messages.tr("settings.library.remove.name", shown));
+            setAccessibleText(shown);
+            setGraphic(row);
         }
     }
 
@@ -510,7 +632,7 @@ public final class SettingsWindow {
         VBox bindings = card(Page.KEYMAP, Messages.tr("settings.bindings.heading"));
         bindingList.getStyleClass().add("binding-list");
         bindingList.setAccessibleText(Messages.tr("settings.bindings.heading"));
-        bindingList.setFixedCellSize(BINDING_ROW_HEIGHT);
+        UiZoom.bind(bindingList.fixedCellSizeProperty(), BINDING_ROW_HEIGHT); // follows the zoom (WIN-12)
         CommandMenu rowMenu =
                 new CommandMenu(services, java.util.Arrays.asList("keymap.changeBinding", null, "keymap.resetBinding"));
         bindingList.setCellFactory(v -> CommandMenu.onRow(new BindingCell(), () -> rowMenu));
@@ -532,7 +654,7 @@ public final class SettingsWindow {
                 .prefHeightProperty()
                 .bind(javafx.beans.binding.Bindings.min(
                                 javafx.beans.binding.Bindings.size(bindingFilter), BINDING_ROWS_SHOWN)
-                        .multiply(BINDING_ROW_HEIGHT)
+                        .multiply(UiZoom.times(BINDING_ROW_HEIGHT))
                         .add(2));
         bindings.getChildren().add(bindingList);
         loaders.add(bindingList::refresh);
@@ -543,6 +665,7 @@ public final class SettingsWindow {
 
     /** A key-binding row: the command's title and description, its keys, and Reset. */
     private final class BindingCell extends ListCell<Command> {
+        private final javafx.scene.control.Tooltip conflictTip = new javafx.scene.control.Tooltip();
         private final Label title = new Label();
         private final Label description = new Label();
         private final TextField field = new TextField();
@@ -562,11 +685,11 @@ public final class SettingsWindow {
             field.focusedProperty().addListener((obs, was, focused) -> {
                 if (!focused) commit();
             });
-            VBox text = new VBox(2, title, description);
+            VBox text = UiZoom.vbox(2, title, description);
             HBox.setHgrow(text, Priority.ALWAYS);
-            HBox control = new HBox(6, field, reset);
+            HBox control = UiZoom.hbox(6, field, reset);
             control.setAlignment(Pos.CENTER_RIGHT);
-            row = new HBox(16, text, control);
+            row = UiZoom.hbox(16, text, control);
             row.setAlignment(Pos.CENTER_LEFT);
             row.getStyleClass().add("setting-row");
         }
@@ -594,11 +717,10 @@ public final class SettingsWindow {
                             : services.keybindings().keymap().bindings().getOrDefault(command.id(), ""));
             field.getStyleClass().remove("invalid");
             String other = services.keybindings().conflicts().get(command.id());
-            field.setTooltip(
-                    other == null
-                            ? null
-                            : new javafx.scene.control.Tooltip(
-                                    Messages.tr("settings.bindings.conflict", Messages.tr("command." + other))));
+            if (other != null) {
+                conflictTip.setText(Messages.tr("settings.bindings.conflict", Messages.tr("command." + other)));
+            }
+            field.setTooltip(other == null ? null : conflictTip); // one tooltip per cell, its text set (PERF-09)
             if (other != null) field.getStyleClass().add("invalid");
             setGraphic(row);
         }
@@ -658,7 +780,7 @@ public final class SettingsWindow {
         });
         Button create = new Button(Messages.tr("settings.sync.createGithub"));
         create.setOnAction(e -> services.commands().run("sync.createGitHubRepo"));
-        HBox branchControl = new HBox(6, syncBranch, connect, create);
+        HBox branchControl = UiZoom.hbox(6, syncBranch, connect, create);
         branchControl.setAlignment(Pos.CENTER_RIGHT);
         row(repo, Page.SYNC, "settings.sync.branch", branchControl, "branch connect");
 
@@ -667,7 +789,7 @@ public final class SettingsWindow {
         Button folder = new Button(Messages.tr("settings.sync.openFolder"));
         folder.setOnAction(e -> services.commands().run("sync.openFolder"));
         syncPill.getStyleClass().add("pill");
-        HBox status = new HBox(8, syncPill, now, folder);
+        HBox status = UiZoom.hbox(8, syncPill, now, folder);
         status.setAlignment(Pos.CENTER_RIGHT);
         row(repo, Page.SYNC, "settings.sync.status", status, "status");
 
@@ -679,7 +801,7 @@ public final class SettingsWindow {
         syncInterval.focusedProperty().addListener((obs, was, focused) -> {
             if (!focused) commitInterval();
         });
-        HBox autoControl = new HBox(6, syncInterval, new Label(Messages.tr("settings.sync.minutes")), syncAuto);
+        HBox autoControl = UiZoom.hbox(6, syncInterval, new Label(Messages.tr("settings.sync.minutes")), syncAuto);
         autoControl.setAlignment(Pos.CENTER_RIGHT);
         row(automatic, Page.SYNC, "settings.sync.auto", autoControl, "interval automatic");
         Label notes = new Label(Messages.tr("settings.sync.notes"));
@@ -779,14 +901,14 @@ public final class SettingsWindow {
         folder.getStyleClass().add("muted");
         Button open = new Button(Messages.tr("settings.config.open"));
         open.setOnAction(e -> services.commands().run("config.openFolder"));
-        HBox folderControl = new HBox(8, folder, open);
+        HBox folderControl = UiZoom.hbox(8, folder, open);
         folderControl.setAlignment(Pos.CENTER_RIGHT);
         row(card, Page.ADVANCED, "settings.config", folderControl, "folder directory path");
         Button export = new Button(Messages.tr("command.config.export"));
         export.setOnAction(e -> services.commands().run("config.export"));
         Button importButton = new Button(Messages.tr("command.config.import"));
         importButton.setOnAction(e -> services.commands().run("config.import"));
-        HBox backup = new HBox(8, export, importButton);
+        HBox backup = UiZoom.hbox(8, export, importButton);
         backup.setAlignment(Pos.CENTER_RIGHT);
         row(card, Page.ADVANCED, "settings.backup", backup, "export import zip backup");
         // The Doctor (DIAG-07): the tools and the folder the app depends on, each checked.
@@ -818,7 +940,7 @@ public final class SettingsWindow {
     }
 
     private void addRow(VBox card, Page page, String title, String description, Node control, String keywords) {
-        VBox text = new VBox(2);
+        VBox text = UiZoom.vbox(2);
         if (!title.isEmpty()) {
             Label label = new Label(title);
             label.getStyleClass().add("setting-title");
@@ -836,7 +958,7 @@ public final class SettingsWindow {
             text.getChildren().add(desc);
         }
         HBox.setHgrow(text, Priority.ALWAYS);
-        HBox row = new HBox(16, text, control);
+        HBox row = UiZoom.hbox(16, text, control);
         row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("setting-row");
         if (control instanceof Label) {
@@ -873,9 +995,10 @@ public final class SettingsWindow {
     void applySearch(String query) {
         Page best = null;
         int bestScore = 0;
-        for (Page page : Page.values()) pageHits.put(page, false);
+        SettingsSearch.Query read = SettingsSearch.Query.of(query); // once for every row (PERF-09)
+        for (Page page : PAGES) pageHits.put(page, false);
         for (Row row : rows) {
-            int score = SettingsSearch.score(query, row.entry());
+            int score = SettingsSearch.score(read, row.entry());
             boolean show = score > 0;
             row.node().setVisible(show);
             row.node().setManaged(show);
@@ -888,7 +1011,7 @@ public final class SettingsWindow {
         // The key bindings are a filtered list rather than rows: the search narrows the list.
         java.util.Set<Command> matched = new java.util.HashSet<>();
         for (Map.Entry<Command, SettingsSearch.Entry> binding : bindingEntries.entrySet()) {
-            int score = SettingsSearch.score(query, binding.getValue());
+            int score = SettingsSearch.score(read, binding.getValue());
             if (score > 0) {
                 matched.add(binding.getKey());
                 pageHits.put(Page.KEYMAP, true);
@@ -899,18 +1022,28 @@ public final class SettingsWindow {
             }
         }
         bindingFilter.setPredicate(matched::contains);
+        // So are the games folders: a search finds a folder by its path or its core.
+        this.query = query;
+        int folderScore = applyFolderSearch();
+        if (folderScore > 0) pageHits.put(Page.LIBRARY, true);
+        if (folderScore > bestScore) {
+            bestScore = folderScore;
+            best = Page.LIBRARY;
+        }
         for (VBox page : pages.values()) {
             for (Node child : page.getChildren()) {
                 if (child instanceof VBox card && card.getStyleClass().contains("settings-card")) {
                     boolean any = card.getChildren().stream()
                             .anyMatch(n -> (n.getStyleClass().contains("setting-row") && n.isVisible())
-                                    || (n == bindingList && !bindingFilter.isEmpty()));
+                                    || (n == bindingList && !bindingFilter.isEmpty())
+                                    || (n == folderList && !folderFilter.isEmpty()));
                     card.setVisible(any);
                     card.setManaged(any);
                 }
             }
         }
-        sidebar.refresh();
+        // Each shown row marks itself again; no cell is rebuilt, so no glyph is made again (PERF-09).
+        pageCells.forEach(PageCell::markMatch);
         if (best != null && !query.isBlank()) sidebar.getSelectionModel().select(best);
     }
 
@@ -957,8 +1090,8 @@ public final class SettingsWindow {
         return recentlyPlayed;
     }
 
-    VBox folderRows() {
-        return folderRows;
+    ListView<Settings.Library.Folder> folderList() {
+        return folderList;
     }
 
     Stage stage() {
@@ -1045,8 +1178,29 @@ public final class SettingsWindow {
         return syncPill;
     }
 
+    /** The pages, once: a search runs over them on every pause in typing (PERF-09). */
+    private static final List<Page> PAGES = List.of(Page.values());
+
+    /** The sidebar's cells, so a search restyles them in place. */
+    private final List<PageCell> pageCells = new ArrayList<>();
+
     /** A sidebar row: the page's icon and name, greyed when a search finds nothing on it. */
     private final class PageCell extends ListCell<Page> {
+        /** Each page's glyph, made the first time this cell shows the page and reused after (PERF-09). */
+        private final Map<Page, Node> glyphs = new EnumMap<>(Page.class);
+
+        PageCell() {
+            pageCells.add(this);
+        }
+
+        /** Greys the row when a search finds nothing on its page. */
+        void markMatch() {
+            getStyleClass().remove("no-match");
+            Page page = getItem();
+            if (page != null && !isEmpty() && !search.getText().isBlank() && !pageHits.getOrDefault(page, true))
+                getStyleClass().add("no-match");
+        }
+
         @Override
         protected void updateItem(@Nullable Page page, boolean empty) {
             super.updateItem(page, empty);
@@ -1057,7 +1211,7 @@ public final class SettingsWindow {
                 return;
             }
             setText(page.title());
-            setGraphic(Icons.commandGlyph(page.command));
+            setGraphic(glyphs.computeIfAbsent(page, p -> Icons.commandGlyph(p.command)));
             if (!search.getText().isBlank() && !pageHits.getOrDefault(page, true))
                 getStyleClass().add("no-match");
         }

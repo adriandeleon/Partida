@@ -413,23 +413,36 @@ public final class Settings {
         }
 
         /**
-         * Drops a folder entry with no path and a second entry for the same path, and turns a null string into
-         * blank, so a hand-edited file can't carry either into the app (SET-11).
+         * Drops a folder entry with no path, a path that isn't a full one and a second entry for the same path;
+         * puts the default (blank: find RetroArch on its own) in place of a RetroArch folder that isn't a full
+         * path; and turns a null string into blank. A hand-edited file can't carry any of these into the app, as
+         * the UI can't (SET-11).
          */
         void clamp() {
             List<Folder> kept = new ArrayList<>();
             java.util.Set<String> seen = new java.util.HashSet<>();
             if (folders != null) {
                 for (Folder f : folders) {
-                    if (f == null || f.path == null || f.path.isBlank() || !seen.add(f.path.strip())) continue;
+                    if (f == null || f.path == null || !isFullPath(f.path) || !seen.add(f.path.strip())) continue;
                     f.path = f.path.strip();
                     if (f.coreId == null) f.coreId = "";
                     kept.add(f);
                 }
             }
             folders = kept;
-            if (retroarchConfigDir == null) retroarchConfigDir = "";
+            if (retroarchConfigDir == null || !isFullPath(retroarchConfigDir)) retroarchConfigDir = "";
+            else retroarchConfigDir = retroarchConfigDir.strip();
             if (retroarchCommand == null) retroarchCommand = "";
+        }
+
+        /** Whether {@code text} is a full (absolute) path this OS can parse. Pure: nothing is read from disk. */
+        public static boolean isFullPath(String text) {
+            if (text.isBlank()) return false;
+            try {
+                return java.nio.file.Path.of(text.strip()).isAbsolute();
+            } catch (java.nio.file.InvalidPathException e) {
+                return false;
+            }
         }
 
         public Library copy() {

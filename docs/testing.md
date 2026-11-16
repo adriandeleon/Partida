@@ -73,6 +73,7 @@ the whole build, and below each package's own line floor:
 | `com.partida.i18n` | 0.94 |
 | `com.partida.instance` | 0.95 |
 | `com.partida.report` | 0.84 |
+| `com.partida.retroarch` | 0.89 |
 | `com.partida.sync` | 0.89 |
 | `com.partida.ui` | 0.93 |
 | `com.partida.update` | 0.90 |

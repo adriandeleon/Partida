@@ -1,7 +1,13 @@
 package com.partida.ui;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.partida.config.Settings;
 import org.junit.jupiter.api.Test;
@@ -53,5 +59,34 @@ class UiZoomTest {
         assertEquals(Settings.MAX_UI_ZOOM, s.clamped().uiZoom);
         s.uiZoom = 0;
         assertEquals(Settings.MIN_UI_ZOOM, s.clamped().uiZoom);
+    }
+
+    /**
+     * Every size the zoomed sheets fix is written in px, so the zoom multiplies it (WIN-12): a bare number in a
+     * padding, gap, radius, inset or width is a pixel length JavaFX takes as is, and the zoom would leave it alone.
+     * Only a border's or a stroke's width stays a bare number: a hairline stays one pixel at every zoom.
+     */
+    @Test
+    void theZoomedSheetsWriteEveryLengthInPixels() throws IOException {
+        Pattern declaration = Pattern.compile(
+                "-fx-(?:padding|spacing|hgap|vgap|background-insets|background-radius|border-radius|border-insets"
+                        + "|(?:min|max|pref)-(?:width|height)|graphic-text-gap|arrow-button-gap)\\s*:\\s*([^;{}]+);");
+        Pattern bare = Pattern.compile("(?<![\\w.#%-])-?\\d*\\.?\\d+(?![\\w.%])");
+        List<String> unscaled = new ArrayList<>();
+        for (String sheet : List.of("app.css", "editora-dark.css", "editora-light.css")) {
+            String css;
+            try (InputStream in = Themes.class.getResourceAsStream("/com/partida/styles/" + sheet)) {
+                assertTrue(in != null, sheet);
+                css = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
+            Matcher m = declaration.matcher(css);
+            while (m.find()) {
+                Matcher n = bare.matcher(m.group(1));
+                while (n.find()) {
+                    if (Double.parseDouble(n.group()) != 0) unscaled.add(sheet + ": " + m.group());
+                }
+            }
+        }
+        assertEquals(List.of(), unscaled);
     }
 }

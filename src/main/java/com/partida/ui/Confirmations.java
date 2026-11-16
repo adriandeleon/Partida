@@ -84,6 +84,17 @@ public final class Confirmations {
                 Messages.tr("confirm.quitUnsaved.action"));
     }
 
+    /**
+     * Before a games folder leaves the library (CONF-01): the user added it and picked its core. Its files stay
+     * on disk; only the entry, and the core it was given, go.
+     */
+    public static Question removeFolder(String path) {
+        return new Question(
+                Messages.tr("confirm.removeFolder.title"),
+                Messages.tr("confirm.removeFolder.question", path),
+                Messages.tr("confirm.removeFolder.action"));
+    }
+
     /** Before a binding the user set is removed and the keymap's own applies again. */
     public static Question resetBinding(String commandTitle, String userChord, String keymapChord) {
         return new Question(

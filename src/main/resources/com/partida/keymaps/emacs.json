@@ -25,6 +25,8 @@
     "view.resizeHorizontalToolWindowGreater": "C-x S-.",
     "view.resizeHorizontalToolWindowLess": "C-x S-,",
     "game.play": "C-c r",
+    "view.toggleZenMode": "C-c z",
+    "view.toggleExpertMode": "C-c e",
     "library.filter": "C-c /",
     "find.show": "C-s",
     "find.previous": "C-r",

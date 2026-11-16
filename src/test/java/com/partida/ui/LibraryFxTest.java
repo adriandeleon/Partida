@@ -79,6 +79,19 @@ class LibraryFxTest {
         return call(() -> window.statusBar().echo().getText());
     }
 
+    /**
+     * That {@code text} was echoed. A settings change also reloads the library in the background, and the
+     * reload's own echo may land after it in the status bar, so the Message Log is read once the load is done.
+     */
+    private void assertEchoed(String text) throws Exception {
+        FakeLibrary.waitLoaded(services);
+        run(() -> {});
+        List<String> logged = call(() -> services.messages().entries().stream()
+                .map(MessageLog.Entry::text)
+                .toList());
+        assertTrue(logged.contains(text), text + " not in " + logged);
+    }
+
     private boolean runCommand(String id) throws Exception {
         return call(() -> services.commands().run(id));
     }
@@ -106,10 +119,10 @@ class LibraryFxTest {
         host.folderAnswer = roms;
         assertTrue(runCommand("library.addFolder"));
         assertEquals(roms.toString(), services.settings().library.folders.getFirst().path);
-        assertEquals(Messages.tr("status.folderAdded", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderAdded", roms.toString()));
         assertTrue(runCommand("library.addFolder"));
         assertEquals(1, services.settings().library.folders.size());
-        assertEquals(Messages.tr("status.folderCannotAddTwice", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderCannotAddTwice", roms.toString()));
         FakeLibrary.waitLoaded(services);
 
         assertTrue(runCommand("library.setFolderCore"));
@@ -138,7 +151,7 @@ class LibraryFxTest {
         assertTrue(runCommand("library.removeFolder"));
         pick("my-games");
         assertTrue(services.settings().library.folders.isEmpty());
-        assertEquals(Messages.tr("status.folderRemoved", roms.toString()), echo());
+        assertEchoed(Messages.tr("status.folderRemoved", roms.toString()));
     }
 
     @Test
@@ -160,9 +173,9 @@ class LibraryFxTest {
 
         assertTrue(runCommand("library.toggleRecentlyPlayed"));
         assertFalse(services.settings().library.showRecentlyPlayed);
-        assertEquals(Messages.tr("status.recentlyPlayedOff"), echo());
+        assertEchoed(Messages.tr("status.recentlyPlayedOff"));
         assertTrue(runCommand("library.toggleRecentlyPlayed"));
-        assertEquals(Messages.tr("status.recentlyPlayedOn"), echo());
+        assertEchoed(Messages.tr("status.recentlyPlayedOn"));
 
         assertTrue(runCommand("library.refresh"));
         FakeLibrary.waitLoaded(services);
@@ -189,7 +202,7 @@ class LibraryFxTest {
             settings.retroarchFolder().fireEvent(new javafx.event.ActionEvent());
         });
         assertTrue(call(() -> settings.retroarchFolder().getStyleClass().contains("invalid")));
-        assertEquals(Messages.tr("status.retroarchFolderInvalid"), echo());
+        assertEchoed(Messages.tr("status.retroarchFolderInvalid"));
         assertEquals(config.toString(), services.settings().library.retroarchConfigDir);
         run(() -> {
             settings.retroarchCommand().setText("retroarch -v");

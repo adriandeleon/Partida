@@ -50,10 +50,17 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
   one row: the icon cluster (a `ToolBar`, in groups, overflowing into its chevron) and the pinned tail
   (the Simple mode toggle, then Settings). Buttons are built by `Icons.toolbarButton`, named by
   `Icons.withChord` of the title and the chord, and look pressed (`:open`) while their overlay is up
-  (`OverlayToggles`) or, for the Simple mode toggle, while the mode is on. Simple mode hides the groups
-  `SIMPLE_HIDES` names, the gaps they leave go with them, and the row keeps its height. The class comment
-  maps each Toolbars and tooltips rule to the code that meets it. **Put your app's commands in
-  `CLUSTER`, and the groups a newcomer can do without in `SIMPLE_HIDES`.**
+  (`OverlayToggles`) or, for the Simple mode toggle, while the mode is on. Simple mode keeps only the
+  buttons `SIMPLE_KEEPS` names, the gaps they leave go with them, and the row keeps its height. The cluster
+  is the user's (TBAR-09): `toolbarLayout` in the settings, read and tidied by the pure `ToolbarLayout`
+  (unknown commands dropped, no stray gap), edited in Settings → General (Move Up and Down, Remove, Add,
+  Restore Default) and restored by the `view.restoreToolbar` command. The class comment maps each Toolbars
+  and tooltips rule to the code that meets it. **Put your app's default commands in `CLUSTER`, every
+  command a user may add in `AVAILABLE`, and the ones a newcomer keeps in `SIMPLE_KEEPS`.**
+- Focus modes (WIN-10): `view.toggleZenMode` hides all the chrome and `view.toggleExpertMode` keeps only the
+  status bar. One truth table, `Chrome.shown`, decides what each mode shows over the user's own toolbar,
+  tab bar and status bar choices; `MainWindow.applyChrome` applies it. A mode lasts the session and changes
+  no setting.
 - `MainWindow`: the top band (the title bar, a JavaFX `HeaderBar` holding the menus and the title, where
   the platform supports extended windows and the menus are in the window; a plain menu row otherwise,
   and the screen menu bar on macOS; then the toolbar), the tool windows round the document tabs,

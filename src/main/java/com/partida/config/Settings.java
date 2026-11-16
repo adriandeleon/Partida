@@ -59,6 +59,15 @@ public final class Settings {
      */
     public boolean simpleMode;
 
+    /**
+     * The main toolbar's buttons in order (TBAR-09), command ids with {@code "|"} for a gap between groups;
+     * empty for the app's own layout. The toolbar drops what it does not know when it reads it.
+     */
+    public List<String> toolbarLayout = new ArrayList<>();
+
+    /** At most this many entries are kept: a hand-edited file can't make a bar of a thousand buttons. */
+    public static final int MAX_TOOLBAR_ENTRIES = 64;
+
     /** The UI zoom (WIN-12), in percent: it scales the whole chrome, the menus included. */
     public int uiZoom = DEFAULT_UI_ZOOM;
 
@@ -151,6 +160,12 @@ public final class Settings {
         }
         keybindings = bindings;
         lastUpdateCheck = Math.max(0, lastUpdateCheck);
+        toolbarLayout = toolbarLayout == null
+                ? new ArrayList<>()
+                : toolbarLayout.stream()
+                        .filter(id -> id != null && !id.isBlank())
+                        .limit(MAX_TOOLBAR_ENTRIES)
+                        .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         uiZoom = clampUiZoom(uiZoom);
         textZoom = clampTextZoom(textZoom);
         if (window == null) window = new Window();
@@ -188,6 +203,7 @@ public final class Settings {
         c.showTabBar = showTabBar;
         c.titleBarMenus = titleBarMenus;
         c.simpleMode = simpleMode;
+        c.toolbarLayout = new ArrayList<>(toolbarLayout);
         c.window.x = window.x;
         c.window.y = window.y;
         c.window.width = window.width;

@@ -92,6 +92,9 @@ public final class Icons {
             "M4.5 2.5v11M4.5 9.5c0 -3 7 -2 7 -5M2.8 13.5a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0"
                     + "M2.8 2.5a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0M9.8 3a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0";
 
+    /** Recently Played: a clock whose hand turns back, what was played before (MENU-14). */
+    public static final String HISTORY = "M2.5 8a5.5 5.5 0 1 0 1.6-3.9M2.3 2.2v2.6h2.6M8 5v3l2 1.3";
+
     /** The sync interval: a clock. */
     public static final String CLOCK = "M2 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0M8 4.5V8l2.5 1.5";
 
@@ -147,6 +150,9 @@ public final class Icons {
     /** Open a file: a sheet and an arrow into it. */
     public static final String OPEN_FILE = "M6 1.75h5.5l3 3v9.5H6v-3M11.5 1.75v3h3M1 8h7M5.5 5.5L8 8l-2.5 2.5";
 
+    /** Filter Games: a funnel, what narrows a list rather than searches a text (MENU-14). */
+    public static final String FILTER = "M2 3h12l-4.75 5.5v4.75l-2.5-1.25v-3.5z";
+
     /** Find: a magnifier; next and previous: an arrow down and up beside a short line of text. */
     public static final String FIND = "M2.5 6.5a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M9.4 9.4l4.6 4.6";
 
@@ -170,6 +176,9 @@ public final class Icons {
 
     /** The config folder. */
     public static final String FOLDER = "M1.5 3.5h4.2l1.5 2h7.3v7H1.5z";
+
+    /** Add Games Folder: the folder with a plus on it, so it never reads as the config folder (MENU-14). */
+    public static final String FOLDER_ADD = "M1.5 3.5h4.2l1.5 2h7.3v7H1.5zM8 7v4.5M5.75 9.25h4.5";
 
     /** Export: an arrow leaving a tray. */
     public static final String EXPORT = "M3.5 10.6v2.4h9v-2.4M8 9.3V3M5.8 5.2L8 3l2.2 2.2";
@@ -235,8 +244,30 @@ public final class Icons {
     /** Toggle Tab Bar: a window whose top row is a tab. */
     public static final String TAB_BAR = "M1.75 2.75H14.25V13.25H1.75ZM1.75 6.25H14.25M6.25 2.75V6.25";
 
+    /** Zen mode: a window with no bars at all, its frame alone (WIN-10). */
+    public static final String ZEN_MODE = "M1.75 2.75H14.25V13.25H1.75ZM5.5 8h5";
+
+    /** Expert mode: a window with only its status bar along the bottom (WIN-10). */
+    public static final String EXPERT_MODE = "M1.75 2.75H14.25V13.25H1.75ZM1.75 10.75H14.25M3.75 12h3";
+
+    /** Customize Toolbar: the toolbar's frame with a pen across it (TBAR-09). */
+    public static final String CUSTOMIZE_TOOLBAR =
+            "M1.75 2.75H14.25V8.25M1.75 2.75V13.25H7.5M1.75 6.25H14.25M4.25 4.5h.2M6.75 4.5h.2"
+                    + "M9.5 14l.5-2 4-4 1.5 1.5-4 4z";
+
+    /** Restore Default Toolbar: the toolbar's frame with an arrow turning back (TBAR-09). */
+    public static final String RESTORE_TOOLBAR =
+            "M1.75 2.75H14.25V6.25H1.75ZM4.25 4.5h.2M6.75 4.5h.2M6 11.5a3 3 0 1 0 .9 -2.1M6.6 7.9v1.7h1.7";
+
+    /** A core: a chip, its pins on every side, what a game runs on (Set Folder Core). */
+    public static final String CORE = "M4.5 4.5h7v7h-7zM6.5 2v2.5M9.5 2v2.5M6.5 11.5V14M9.5 11.5V14"
+            + "M2 6.5h2.5M2 9.5h2.5M11.5 6.5H14M11.5 9.5H14";
+
     /** The Welcome tab: a house. */
     public static final String HOME = "M2.5 7.5L8 2.5l5.5 5M4 6.5v7h8v-7M6.75 13.5v-3.5h2.5v3.5";
+
+    /** The library's settings: three books on a shelf, one leaning. */
+    public static final String LIBRARY = "M2 2.5h2.5v11H2zM6 2.5h2.5v11H6zM10 3.4l2.3-.7 2.4 10.4-2.3.7zM1 13.5h14";
 
     /** The Documents tool window: a tree of files. */
     public static final String DOCUMENTS = "M2.5 2.5h4M4 2.5v10h3.5M4 7.5h3.5M8.5 6h5v3h-5zM8.5 11h5v3h-5z";
@@ -299,6 +330,11 @@ public final class Icons {
             Map.entry("view.toggleToolbar", TOOLBAR),
             Map.entry("view.toggleTabBar", TAB_BAR),
             Map.entry("view.toggleSimpleMode", SIMPLE_MODE),
+            Map.entry("view.toggleZenMode", ZEN_MODE),
+            Map.entry("view.toggleExpertMode", EXPERT_MODE),
+            Map.entry("view.customizeToolbar", CUSTOMIZE_TOOLBAR),
+            Map.entry("view.restoreToolbar", RESTORE_TOOLBAR),
+            Map.entry("library.setFolderCore", CORE),
             Map.entry("view.uiZoomIn", ZOOM_IN),
             Map.entry("view.uiZoomOut", ZOOM_OUT),
             Map.entry("view.uiZoomReset", ZOOM_RESET),
@@ -320,13 +356,9 @@ public final class Icons {
             Map.entry("game.play", RUN),
             Map.entry("game.stop", STOP),
             Map.entry("library.refresh", REFRESH),
-            Map.entry("library.settings", DOCUMENTS),
-            Map.entry("library.addFolder", FOLDER),
-            Map.entry("library.removeFolder", CLOSE),
-            Map.entry("library.setFolderCore", SLIDERS),
-            Map.entry("library.setRetroArchFolder", FOLDER),
-            Map.entry("library.setRetroArchCommand", SLIDERS),
-            Map.entry("library.toggleRecentlyPlayed", CLOCK),
+            Map.entry("library.settings", LIBRARY),
+            Map.entry("library.addFolder", FOLDER_ADD),
+            Map.entry("library.toggleRecentlyPlayed", HISTORY),
             Map.entry("app.quit", QUIT),
             Map.entry("help.doctor", PULSE),
             Map.entry("help.keyboardShortcuts", KEYBOARD),
@@ -359,7 +391,7 @@ public final class Icons {
             Map.entry("systems.open", OPEN_FILE),
             Map.entry("retroarch.clear", CLEAR),
             Map.entry("find.show", FIND),
-            Map.entry("library.filter", FIND),
+            Map.entry("library.filter", FILTER),
             Map.entry("find.next", FIND_NEXT),
             Map.entry("find.previous", FIND_PREVIOUS),
             Map.entry("retroarch.find", FIND),

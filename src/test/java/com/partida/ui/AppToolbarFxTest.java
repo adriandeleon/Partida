@@ -270,7 +270,7 @@ class AppToolbarFxTest {
         assertEquals(1, menus.size(), "one menu, moved");
         assertSame(toolbar.menu().menu(), menus.getFirst());
         assertEquals(
-                List.of("view.toggleToolbar", "view.toggleSimpleMode"),
+                List.of("view.toggleToolbar", "view.toggleSimpleMode", "view.customizeToolbar", "view.restoreToolbar"),
                 call(() -> menus.getFirst().getItems().stream()
                         .map(MenuItem::getId)
                         .filter(Objects::nonNull)

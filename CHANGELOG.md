@@ -10,6 +10,16 @@ one-line summary written for users.
 
 ### Added
 
+- **Arrange the toolbar your way.** Settings → General → Toolbar Buttons lists the toolbar's buttons: move
+  them, remove them, add others (the Systems, Game and RetroArch windows, Filter Games, Welcome, the
+  documentation) and gaps between groups, or Restore Default. Customize Toolbar… and Restore Default Toolbar
+  are on the toolbar's right-click menu and in the palette (Pauta TBAR-09).
+- **Zen and Expert modes.** Toggle Zen Mode (`Ctrl+Shift+F11`, `Cmd+Shift+F11` on macOS, `C-c z` in Emacs)
+  hides every bar so only your games show; Toggle Expert Mode (`Ctrl+Shift+F12`, `Cmd+Shift+F12`, `C-c e`)
+  keeps just the status bar. The same command brings everything back, and both are in the View menu (Pauta
+  WIN-10).
+- **Help for each Settings page.** Every page of Settings links to its own part of the user guide (Pauta
+  DOCS-11).
 - **Your RetroArch library, by system.** Partida finds RetroArch on its own (installed natively, as the
   `org.libretro.RetroArch` Flatpak, or in a folder you choose), and lists your games from its playlists, its
   play history and your own games folders. The Systems window lists each system with its game count; a system
@@ -133,6 +143,9 @@ one-line summary written for users.
 
 ### Changed
 
+- **Clearer icons in the menus.** Add Games Folder, Filter Games, Recently Played, Set Folder Core and the Library settings
+  page have icons of their own, and the library commands that had borrowed another command's icon now show
+  none (Pauta MENU-14).
 - **A system's games are narrowed by a filter box,** not searched with a find bar: type in the box over the
   list (Filter Games, `Ctrl+K` / `Cmd+K`, shown in the box; Find focuses it too) and only the games whose
   title has every word stay. `ext:zip`, `core:snes9x` or `system:snes` becomes a chip that narrows by file

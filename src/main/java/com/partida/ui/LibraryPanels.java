@@ -71,7 +71,7 @@ final class LibraryPanels {
             list.setCellFactory(v -> CommandMenu.onRow(
                     new ListCell<>() {
                         /** Both glyphs made once per cell: a scroll step only picks one (PERF-09). */
-                        private final javafx.scene.Node history = Icons.line(Icons.CLOCK);
+                        private final javafx.scene.Node history = Icons.line(Icons.HISTORY);
 
                         private final javafx.scene.Node system = Icons.line(Icons.DOCUMENTS);
 

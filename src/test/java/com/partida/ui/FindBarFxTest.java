@@ -172,7 +172,7 @@ class FindBarFxTest {
         assertEquals(
                 List.of(FakeLibrary.title(1, 2)),
                 call(() -> view.list().getItems().stream()
-                        .map(com.partida.library.Game::title)
+                        .map(com.partida.library.GameTitle::title)
                         .toList()));
         assertEquals(all, (int) call(view::size), "the system still has every game");
         run(() -> filter.setText("GAME"));
@@ -360,6 +360,19 @@ class FindBarFxTest {
         }));
     }
 
+    /** A view's hooks with no window: Play does nothing and starts a game's best ROM. */
+    static SystemView.Hooks hooks() {
+        return new SystemView.Hooks(
+                () -> {},
+                () -> {},
+                t -> t.best().game(),
+                List::of,
+                () -> false,
+                new BoxArt(() -> null),
+                () -> null,
+                () -> null);
+    }
+
     /**
      * FIND-03 on one view, outside a window: Down goes to the list on its first kept game, a step with nothing
      * selected starts at an end, a step over an emptied list does nothing, and a reload keeps the selected game.
@@ -370,7 +383,7 @@ class FindBarFxTest {
                 new com.partida.library.Game("Alpha", Path.of("/r/a.bin"), "S", null),
                 new com.partida.library.Game("Beta", Path.of("/r/b.bin"), "S", null),
                 new com.partida.library.Game("Alphabet", Path.of("/r/c.bin"), "", null));
-        SystemView view = call(() -> new SystemView("S", games, 1, () -> {}, () -> null));
+        SystemView view = call(() -> new SystemView("S", games, 2, hooks()));
         assertEquals("Beta", call(() -> view.selected().title()), "the session's selection");
         assertEquals(3, (int) call(view::size));
         assertFalse(call(view::filtering));
@@ -394,13 +407,13 @@ class FindBarFxTest {
         // A reload keeps the selected game when it is still there, and leaves the rest alone.
         run(() -> view.setGames(List.of(games.get(2), games.get(0))));
         assertEquals("Alphabet", call(() -> view.selected().title()));
-        assertEquals(0, (int) call(view::selectedIndex));
+        assertEquals(1, (int) call(view::selectedIndex), "games in title order: Alpha, then Alphabet");
         run(() -> view.setGames(List.of(games.get(1))));
         assertTrue(call(() -> view.list().getItems().isEmpty()), "the filter keeps nothing");
         run(() -> view.step(true));
         assertEquals(-1, (int) call(view::selectedIndex));
         run(() -> view.filter().clear());
         assertEquals(1, (int) call(() -> view.list().getItems().size()));
-        assertEquals(1, (int) call(() -> new SystemView("T", List.of(), 5, () -> {}, () -> null).size() + 1));
+        assertEquals(1, (int) call(() -> new SystemView("T", List.of(), 5, hooks()).size() + 1));
     }
 }

@@ -57,13 +57,19 @@ final class LibraryPanels {
         private final ListView<GameCollection> list = new ListView<>();
         private final DocumentTabs tabs;
         private final LibraryService library;
+        private final java.util.function.BooleanSupplier showHidden;
         private final Label placeholder = new Label();
         private final VBox node;
 
         /** {@code rowMenu} is each row's right-click menu (MENU-05): {@code systems.open} and its kin. */
-        Systems(DocumentTabs tabs, LibraryService library, Supplier<CommandMenu> rowMenu) {
+        Systems(
+                DocumentTabs tabs,
+                LibraryService library,
+                Supplier<CommandMenu> rowMenu,
+                java.util.function.BooleanSupplier showHidden) {
             this.tabs = tabs;
             this.library = library;
+            this.showHidden = showHidden;
             list.getStyleClass().add("systems-list");
             list.setAccessibleText(Messages.tr("tool.systems"));
             placeholder.setWrapText(true);
@@ -84,7 +90,9 @@ final class LibraryPanels {
                                 setGraphic(null);
                                 return;
                             }
-                            int count = collection.games().size();
+                            LibraryLoader.Counts counts =
+                                    library.state().library().counts(collection.name());
+                            int count = showHidden.getAsBoolean() ? counts.all() : counts.shown();
                             String shown = Chrome.systemName(collection.name());
                             setText(shown + "   " + count);
                             setAccessibleText(shown + ", " + Messages.tr("systems.games", count));
@@ -132,12 +140,17 @@ final class LibraryPanels {
             return node;
         }
 
+        /** Draws each system's count again, its rows kept: Show Hidden ROMs changed what it counts. */
+        void refreshCounts() {
+            list.refresh();
+        }
+
         /** Opens the selected system in a tab and gives its games the keyboard ({@code systems.open}). */
         void openSelected() {
             GameCollection collection = list.getSelectionModel().getSelectedItem();
             if (collection == null) return;
             SystemView view = tabs.view(tabs.open(collection));
-            if (view != null) view.list().requestFocus();
+            if (view != null) view.focusGames();
         }
 
         boolean hasSelection() {

@@ -33,27 +33,56 @@ public final class LibraryLoader {
      *
      * @param history the ROMs in RetroArch's play history, the latest first, read whether or not Recently played
      *     is shown: Play starts the ROM of a game played last ({@link PlayChoice})
+     * @param counts each system's games, by its name: its ROMs grouped ({@link GameTitle}), counted where the
+     *     load runs, off the FX thread
      */
-    public record Library(List<GameCollection> collections, List<String> warnings, List<Path> history) {
+    public record Library(
+            List<GameCollection> collections, List<String> warnings, List<Path> history, Map<String, Counts> counts) {
 
         public Library {
             collections = List.copyOf(collections);
             warnings = List.copyOf(warnings);
             history = List.copyOf(history);
+            counts = Map.copyOf(counts);
+        }
+
+        public Library(List<GameCollection> collections, List<String> warnings, List<Path> history) {
+            this(collections, warnings, history, count(collections));
         }
 
         public Library(List<GameCollection> collections, List<String> warnings) {
             this(collections, warnings, List.of());
         }
 
-        /** Games in the library, the play history left out (it repeats games listed elsewhere). */
+        /** Games in the library, those browsing shows, the play history left out (it repeats the others). */
         public int gameCount() {
             return collections.stream()
                     .filter(c -> !c.name().equals(RECENTLY_PLAYED))
-                    .mapToInt(c -> c.games().size())
+                    .mapToInt(c -> counts(c.name()).shown())
                     .sum();
         }
+
+        /** The games of the system {@code name}; none for a system the library doesn't have. */
+        public Counts counts(String name) {
+            return counts.getOrDefault(name, new Counts(0, 0));
+        }
+
+        private static Map<String, Counts> count(List<GameCollection> collections) {
+            Map<String, Counts> counts = new java.util.HashMap<>();
+            for (GameCollection c : collections) {
+                List<GameTitle> titles = GameTitle.group(c.games());
+                int shown = (int) titles.stream().filter(t -> !t.hidden()).count();
+                counts.put(c.name(), new Counts(shown, titles.size()));
+            }
+            return counts;
+        }
     }
+
+    /**
+     * A system's games: {@code shown}, those browsing shows; {@code all}, with the games of hidden ROMs only
+     * (decision 3).
+     */
+    public record Counts(int shown, int all) {}
 
     private LibraryLoader() {}
 

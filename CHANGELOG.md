@@ -10,6 +10,16 @@ one-line summary written for users.
 
 ### Added
 
+- **One entry per game, with its ROMs under it.** A system's tab lists each game once, however many regional
+  releases, revisions and dumps you have of it, with how many ROMs and which regions beside its name. The
+  panel beside the list shows the game's box art, Play (and which ROM it starts), and every ROM of the game:
+  pick one and press Enter, or use Play This ROM, to start that one instead. Bad dumps, hacks, translations,
+  betas, demos and unlicensed releases are tucked away under their game; Settings → Library → Show hidden
+  ROMs (or Toggle Hidden ROMs) brings them back. The Systems window counts games, not files.
+- **A box-art grid.** Toggle Grid View (View menu) shows a system's games as covers; each system remembers
+  its view. Arrow keys, Home and End move through the tiles, Enter plays.
+- **Type to jump.** Typing a game's first letters in the list or the grid selects the first game that starts
+  with them ("The" is ignored, so The Legend of Zelda is under L).
 - **Preferred regions.** Settings → Library → Preferred regions (or Set Preferred Regions… in the palette)
   ranks regions such as `Europe, USA, World, Japan`. When a game has ROMs from several regions, Play starts
   your first-ranked one, unless you've played another ROM of it before: then that one again. Left blank, the

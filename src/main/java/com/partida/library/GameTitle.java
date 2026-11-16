@@ -122,7 +122,8 @@ public record GameTitle(String key, String title, String system, List<Rom> roms)
     public static final Comparator<GameTitle> BY_TITLE =
             Comparator.comparing((GameTitle t) -> sortKey(t.key())).thenComparing(GameTitle::key);
 
-    static String sortKey(String key) {
+    /** {@code key} with a leading article taken off, for ordering and type-ahead. */
+    public static String sortKey(String key) {
         for (String article : List.of("the ", "a ", "an ")) {
             if (key.startsWith(article) && key.length() > article.length()) return key.substring(article.length());
         }

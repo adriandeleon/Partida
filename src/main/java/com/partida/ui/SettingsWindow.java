@@ -88,6 +88,7 @@ public final class SettingsWindow {
                             "library.setRetroArchCommand",
                             "library.setRegions",
                             "library.toggleRecentlyPlayed",
+                            "library.toggleHiddenRoms",
                             null,
                             "library.refresh"),
             Page.APPEARANCE, java.util.Arrays.asList("settings.theme", "view.toggleTitleBarMenus"),
@@ -177,6 +178,7 @@ public final class SettingsWindow {
     private final Label retroarchStatus = new Label();
     private final TextField retroarchFolder = new TextField();
     private final TextField retroarchCommand = new TextField();
+    private final SettingSwitch hiddenRoms = new SettingSwitch(Messages.tr("settings.library.hiddenRoms.title"));
     /** The region ranking (decision 3), blank for the system country's, which the prompt text shows. */
     private final TextField regions = new TextField();
 
@@ -534,6 +536,13 @@ public final class SettingsWindow {
         recentlyPlayed.setOnAction(
                 e -> services.store().update(s -> s.library.showRecentlyPlayed = recentlyPlayed.isSelected()));
         row(retroarch, Page.LIBRARY, "settings.library.recentlyPlayed", recentlyPlayed, "history recent");
+        hiddenRoms.setOnAction(e -> services.store().update(s -> s.library.showHiddenRoms = hiddenRoms.isSelected()));
+        row(
+                retroarch,
+                Page.LIBRARY,
+                "settings.library.hiddenRoms",
+                hiddenRoms,
+                "bad dump hack beta prototype demo unlicensed pirate translation variant");
         regions.setPromptText(com.partida.library.Regions.format(
                 com.partida.library.Regions.forLocale(java.util.Locale.getDefault())));
         regions.setOnAction(e -> commitRegions());
@@ -578,6 +587,7 @@ public final class SettingsWindow {
             retroarchFolder.getStyleClass().remove("invalid");
             retroarchCommand.setText(library.retroarchCommand);
             regions.setText(com.partida.library.Regions.format(library.regions));
+            hiddenRoms.setSelected(library.showHiddenRoms);
             regions.getStyleClass().remove("invalid");
             recentlyPlayed.setSelected(library.showRecentlyPlayed);
             loadFolders();

@@ -416,6 +416,27 @@ final class Commands {
     private static void registerLibrary(MainWindow window, AppServices services) {
         CommandRegistry r = services.commands();
         r.register("game.play", window::playSelected, window::playUnavailable);
+        // Decision 3: a ROM of the selected game other than the one Play starts, and the browser's two views.
+        r.register("library.playRom", window::playSelectedRom, window::playRomUnavailable);
+        r.register(
+                "library.toggleGrid",
+                () -> {
+                    SystemView view = window.activeSystem();
+                    if (view == null) return;
+                    String system = view.title();
+                    services.store().update(s -> {
+                        if (!s.library.gridSystems.remove(system)) s.library.gridSystems.add(system);
+                    });
+                    services.echo(
+                            services.settings().library.gridSystems.contains(system)
+                                    ? "status.gridOn"
+                                    : "status.gridOff");
+                },
+                () -> window.activeSystem() == null ? com.partida.i18n.Messages.tr("palette.disabled.noSystem") : null);
+        r.register("library.toggleHiddenRoms", () -> {
+            services.store().update(s -> s.library.showHiddenRoms = !s.library.showHiddenRoms);
+            services.echo(services.settings().library.showHiddenRoms ? "status.hiddenRomsOn" : "status.hiddenRomsOff");
+        });
         r.register(
                 "game.stop",
                 () -> services.library().stop(),

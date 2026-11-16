@@ -113,11 +113,21 @@ final class AppMenus {
                     "view.uiZoomOut",
                     "view.uiZoomReset",
                     null,
+                    "library.toggleGrid",
+                    "library.toggleHiddenRoms",
+                    null,
                     "view.toggleZenMode",
                     "view.toggleExpertMode",
                     "view.toggleSimpleMode"),
             // The tabs and the tool windows: every one of their commands has a row (TABS-01).
-            spec("menu.game", "game.play", "game.stop", null, "systems.open", "library.setFolderCore"),
+            spec(
+                    "menu.game",
+                    "game.play",
+                    "library.playRom",
+                    "game.stop",
+                    null,
+                    "systems.open",
+                    "library.setFolderCore"),
             spec(
                     "menu.window",
                     "switcher.show",

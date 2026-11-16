@@ -72,8 +72,12 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
   tabs, the pin boundary, where a dragged tab lands); `TabHeaders` draws each header (the header is the
   title with the system's glyph, carrying the pinned state, and is the drag handle); `ClosedTabs` is
   Reopen Closed Tab's list, by system, with the game that was selected; `TabContextMenu` the per-tab
-  commands; `Switcher` the tab switcher. Each tab is a system: a `SystemView`, the system's games in a list
-  with a filter box over it that narrows the list as you type (FIND-03: a library is a list, so it is
+  commands; `Switcher` the tab switcher. Each tab is a system: a `SystemView`, the system's ROMs grouped into
+  games (`GameTitle`), shown as a list or a box-art grid (a virtual list of tile rows, so only the rows in
+  sight are drawn; the list's selection is the view's in both), beside `GameDetails`, the selected game's box
+  art, Play and its ROMs; `BoxArt` finds art off the FX thread and keeps the decoded images; `BrowseRules`
+  holds the pure rules (how a ROM reads, type-ahead, the grid's columns and keys). A filter box over the games
+  narrows them as you type (FIND-03: a library is a list, so it is
   filtered, not searched; `library.filter` and `find.show` focus the box). `GameFilter` holds the box's
   pure rules (FIND-13): plain words, `key:value` terms made into chips, and a `>` query's command. A system tab is never unsaved, so a quit asks nothing, and its
   tabs are not files, so the Git colors of TABS-08 don't apply. Tabs restored from the session fill in when

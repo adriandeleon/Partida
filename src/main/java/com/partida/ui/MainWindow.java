@@ -130,7 +130,10 @@ public final class MainWindow {
         this.systemsWindow =
                 new ToolWindow("systems", Messages.tr("tool.systems"), ToolWindow.Side.LEFT, Icons.DOCUMENTS, () -> {
                     LibraryPanels.Systems built = new LibraryPanels.Systems(
-                            tabs, library, () -> new CommandMenu(services, java.util.Arrays.asList("systems.open")));
+                            tabs,
+                            library,
+                            () -> new CommandMenu(services, java.util.Arrays.asList("systems.open")),
+                            () -> services.settings().library.showHiddenRoms);
                     systems = built;
                     return built.node();
                 });
@@ -248,6 +251,8 @@ public final class MainWindow {
         toolbar.setSimple(settings.simpleMode);
         menus.setSimple(settings.simpleMode);
         applyChrome(settings);
+        LibraryPanels.Systems built = systems;
+        if (built != null) built.refreshCounts(); // Show Hidden ROMs changes what each system counts
     }
 
     /** Shows the chrome the focus mode and the user's own choices leave: {@link Chrome#shown} (WIN-10). */
@@ -494,6 +499,19 @@ public final class MainWindow {
     @Nullable
     String playUnavailable() {
         return services.library().playUnavailable(selectedGame());
+    }
+
+    /** Play This ROM: the ROM selected in the game's details, with the core it would pick (decision 3). */
+    void playSelectedRom() {
+        DocumentTabs built = tabs;
+        Game rom = built == null ? null : built.selectedRom();
+        if (rom != null) services.library().play(rom, null);
+    }
+
+    @Nullable
+    String playRomUnavailable() {
+        DocumentTabs built = tabs;
+        return services.library().playUnavailable(built == null ? null : built.selectedRom());
     }
 
     /** Add Games Folder: a folder the user picks joins Settings → Library, scanned at once. */

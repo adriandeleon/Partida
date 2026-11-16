@@ -263,6 +263,17 @@ public final class Icons {
     public static final String CORE = "M4.5 4.5h7v7h-7zM6.5 2v2.5M9.5 2v2.5M6.5 11.5V14M9.5 11.5V14"
             + "M2 6.5h2.5M2 9.5h2.5M11.5 6.5H14M11.5 9.5H14";
 
+    /** Toggle Grid View: four tiles. */
+    public static final String GRID =
+            "M2.5 2.5h4.5v4.5h-4.5zM9 2.5h4.5v4.5h-4.5zM2.5 9h4.5v4.5h-4.5zM9 9h4.5v4.5h-4.5z";
+
+    /** Toggle Hidden ROMs: an eye, what is shown. */
+    public static final String EYE =
+            "M1 8c1.8-3 4.2-4.5 7-4.5s5.2 1.5 7 4.5c-1.8 3-4.2 4.5-7 4.5S2.8 11 1 8zM6 8a2 2 0 1 0 4 0a2 2 0 1 0 -4 0";
+
+    /** Play This ROM: a cartridge with a play mark on its label. */
+    public static final String PLAY_ROM = "M3.5 1.5h9v13h-9zM5.5 14.5v-2M10.5 14.5v-2M7 4.5v4l3-2z";
+
     /** The Welcome tab: a house. */
     public static final String HOME = "M2.5 7.5L8 2.5l5.5 5M4 6.5v7h8v-7M6.75 13.5v-3.5h2.5v3.5";
 
@@ -335,6 +346,9 @@ public final class Icons {
             Map.entry("view.customizeToolbar", CUSTOMIZE_TOOLBAR),
             Map.entry("view.restoreToolbar", RESTORE_TOOLBAR),
             Map.entry("library.setFolderCore", CORE),
+            Map.entry("library.toggleGrid", GRID),
+            Map.entry("library.toggleHiddenRoms", EYE),
+            Map.entry("library.playRom", PLAY_ROM),
             Map.entry("view.uiZoomIn", ZOOM_IN),
             Map.entry("view.uiZoomOut", ZOOM_OUT),
             Map.entry("view.uiZoomReset", ZOOM_RESET),

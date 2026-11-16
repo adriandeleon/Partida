@@ -619,8 +619,42 @@
 
 /* The filter box over a system's games (FIND-03, FIND-13): its chips, the field and the key badge, in a row
    flush with the list under it. */
-.system-view > .game-filter-box {
+.system-view .game-filter-box {
     -fx-padding: 4px 8px 4px 8px;
+}
+
+/* The game browser (decision 3): the details column beside the games, the box-art tiles of the grid with the
+   selected one in the selection color, and a ROM a tag hides dimmed. */
+.game-details-pane {
+    -fx-border-color: transparent transparent transparent -color-border-muted;
+}
+.game-initials {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -color-fg-muted;
+}
+.tile-art {
+    -fx-background-color: -color-bg-subtle;
+    -fx-background-radius: 4px;
+}
+.game-tile {
+    -fx-padding: 6px;
+    -fx-background-radius: 6px;
+}
+.game-tile.selected {
+    -fx-background-color: -color-accent-subtle;
+}
+.tile-name {
+    -fx-font-size: 0.9em;
+}
+.game-grid .list-cell,
+.game-grid .list-cell:filled:selected,
+.game-grid .list-cell:filled:hover {
+    -fx-background-color: transparent;
+    -fx-padding: 4px 8px 4px 8px;
+}
+.rom-list .list-cell.hidden-rom .label {
+    -fx-text-fill: -color-fg-muted;
 }
 
 .filter-chip {

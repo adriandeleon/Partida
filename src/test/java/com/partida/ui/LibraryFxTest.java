@@ -416,14 +416,14 @@ class LibraryFxTest {
         run(() -> window.tabs().open(system));
         SystemView view = Objects.requireNonNull(call(() -> window.tabs().activeView()));
         List<Object> seen = call(() -> {
-            javafx.scene.control.ListCell<Game> cell =
+            javafx.scene.control.ListCell<com.partida.library.GameTitle> cell =
                     view.list().getCellFactory().call(view.list());
             cell.updateListView(view.list());
             cell.updateIndex(0);
             Object first = cell.getGraphic();
-            String firstText = cell.getText();
+            String firstText = cell.getAccessibleText();
             cell.updateIndex(1);
-            return List.of(first == cell.getGraphic(), !firstText.equals(cell.getText()));
+            return List.of(first == cell.getGraphic(), !firstText.equals(cell.getAccessibleText()));
         });
         assertEquals(List.of(true, true), seen);
     }

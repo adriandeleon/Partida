@@ -1,7 +1,7 @@
 # 3. Browse by game, with its ROMs under it, in one library browser
 
-- Status: accepted; phases 1 (the name parser and the grouping) and 2 (the ROM Play starts) are built,
-  phases 3 and 4 are planned
+- Status: accepted; phases 1 (the name parser and the grouping), 2 (the ROM Play starts) and 3 (the game
+  view) are built, phase 4 is planned
 - Date: 2026-11-16
 
 ## Context
@@ -31,6 +31,12 @@ became a list of a thousand rows, most of them variants nobody browses for.
 - **One browser**, not a tab per system: systems down the left, the system's games in the middle as a list or a
   box-art grid (remembered per system), and on the right the selected game's box art, a Play button and its
   ROMs, each of which can be played.
+
+Phase 3 builds the game view inside each system's tab, beside the Systems tool window, so the three panes
+are on screen before phase 4 retires the tabs: the games as a list or a box-art grid (`SystemView`; Toggle
+Grid View, kept per system in `library.gridSystems`), type-ahead by title, and the selected game's details
+(`GameDetails`): its box art, Play with the ROM it starts, and its ROMs, the hidden ones dimmed, any of them
+played with Play This ROM. Show hidden ROMs is a setting with its command. The Systems window counts games.
 
 The work goes in four phases: (1) `RomName` and `GameTitle`, pure and tested; (2) the ROM Play picks: the
 last one played, read from RetroArch's history too, else the best; (3) the browser; (4) retiring the system

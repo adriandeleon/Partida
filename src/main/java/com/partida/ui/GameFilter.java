@@ -133,7 +133,7 @@ final class GameFilter {
             Path core = game.core();
             return new Indexed(
                     game,
-                    game.title().toLowerCase(Locale.ROOT),
+                    (game.title().isBlank() ? game.fileStem() : game.title()).toLowerCase(Locale.ROOT),
                     game.system().toLowerCase(Locale.ROOT),
                     game.extension(),
                     core == null ? "" : String.valueOf(core.getFileName()).toLowerCase(Locale.ROOT));

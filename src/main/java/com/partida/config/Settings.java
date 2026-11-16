@@ -440,6 +440,12 @@ public final class Settings {
          */
         public List<String> regions = new ArrayList<>();
 
+        /** Whether the games show the ROMs a tag hides (bad dumps, hacks, betas, …), and the games of only those. */
+        public boolean showHiddenRoms;
+
+        /** The systems shown as a box-art grid rather than a list, by name. */
+        public List<String> gridSystems = new ArrayList<>();
+
         /** One folder of games and the core for all of it, blank to choose by file extension. */
         public static final class Folder {
             public String path = "";
@@ -489,6 +495,13 @@ public final class Settings {
             else retroarchConfigDir = retroarchConfigDir.strip();
             if (retroarchCommand == null) retroarchCommand = "";
             regions = com.partida.library.Regions.known(regions);
+            gridSystems = gridSystems == null
+                    ? new ArrayList<>()
+                    : gridSystems.stream()
+                            .filter(n -> n != null && !n.isBlank())
+                            .distinct()
+                            .limit(1000)
+                            .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         }
 
         /** Whether {@code text} is a full (absolute) path this OS can parse. Pure: nothing is read from disk. */
@@ -508,6 +521,8 @@ public final class Settings {
             c.retroarchCommand = retroarchCommand;
             c.showRecentlyPlayed = showRecentlyPlayed;
             c.regions = new ArrayList<>(regions);
+            c.showHiddenRoms = showHiddenRoms;
+            c.gridSystems = new ArrayList<>(gridSystems);
             return c;
         }
     }

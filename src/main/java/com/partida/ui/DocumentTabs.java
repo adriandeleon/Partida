@@ -44,6 +44,10 @@ final class DocumentTabs {
 
     /** Each game row's right-click menu (MENU-05), one for every tab. */
     private final CommandMenu gameMenu;
+    /** A ROM's right-click menu in a game's details. */
+    private final CommandMenu romMenu;
+    /** The box art every system's grid and details draw, shared so each image is read once. */
+    private final BoxArt boxArt;
 
     private final ClosedTabs closedTabs = new ClosedTabs();
     private final TabHeaders headers;
@@ -70,10 +74,13 @@ final class DocumentTabs {
             boolean restore) {
         this.services = services;
         this.library = library;
+        this.showHiddenRoms = services.settings().library.showHiddenRoms;
         this.setTitle = setTitle;
         this.headers = new TabHeaders(pinned::contains, this::moveBeside);
         this.menu = new CommandMenu(services, TabContextMenu.COMMANDS);
         this.gameMenu = new CommandMenu(services, java.util.Arrays.asList("game.play", null, "find.show"));
+        this.romMenu = new CommandMenu(services, java.util.Arrays.asList("library.playRom"));
+        this.boxArt = new BoxArt(() -> library.state().retroArch());
         tabPane.getStyleClass().add("document-tabs");
         tabPane.setMinSize(0, 0); // the strip scrolls its headers; it never holds a tool window's divider back
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
@@ -104,6 +111,10 @@ final class DocumentTabs {
         // A reload refreshes every tab's list once per pulse, however many changes it brings (PERF-06).
         Redraw games = new Redraw(this::refreshGames);
         library.onChanged(games::request);
+        // The grid or the list, and hidden ROMs shown or not, follow the settings; the ROM Play starts follows
+        // each game started (decision 3).
+        services.store().addListener(s -> applyBrowseSettings());
+        library.playingProperty().addListener((o, was, now) -> views.values().forEach(SystemView::showDetails));
 
         java.util.List<String> last = services.settings().window.documents;
         if (restore && last != null && !last.isEmpty()) {
@@ -140,6 +151,22 @@ final class DocumentTabs {
         return emptyHint;
     }
 
+    /** Each view's grid or list, and its hidden games, as the settings have them now. */
+    private void applyBrowseSettings() {
+        com.partida.config.Settings.Library settings = services.settings().library;
+        if (settings.showHiddenRoms != showHiddenRoms) {
+            showHiddenRoms = settings.showHiddenRoms;
+            views.values().forEach(SystemView::applyFilter);
+            views.keySet().forEach(this::render); // the header's count
+        }
+        for (SystemView view : views.values()) {
+            boolean grid = settings.gridSystems.contains(view.title());
+            if (grid != view.isGrid()) view.setGrid(grid);
+        }
+    }
+
+    private boolean showHiddenRoms;
+
     /** The systems open now, in tab order, by name: what the next launch reopens (WIN-08). */
     List<String> openPaths() {
         List<String> names = new ArrayList<>();
@@ -174,11 +201,12 @@ final class DocumentTabs {
     private int textZoom = com.partida.config.Settings.DEFAULT_TEXT_ZOOM;
 
     private void applyTextZoom(SystemView view) {
-        view.list()
-                .setStyle(
-                        textZoom == com.partida.config.Settings.DEFAULT_TEXT_ZOOM
-                                ? ""
-                                : "-fx-font-size: " + (textZoom / 100.0) + "em;");
+        String style = textZoom == com.partida.config.Settings.DEFAULT_TEXT_ZOOM
+                ? ""
+                : "-fx-font-size: " + (textZoom / 100.0) + "em;";
+        view.list().setStyle(style);
+        view.grid().setStyle(style);
+        view.details().roms().setStyle(style);
     }
 
     /** The ways in, each with its chord in the active keymap (WELC-04). */
@@ -243,11 +271,18 @@ final class DocumentTabs {
         return tab == null ? null : views.get(tab);
     }
 
-    /** The game selected in the active tab, or null. */
+    /** The ROM Play starts for the game selected in the active tab, or null. */
     @Nullable
     Game selectedGame() {
         SystemView view = activeView();
         return view == null ? null : view.selected();
+    }
+
+    /** The ROM selected in the active tab's details, or null: what Play This ROM starts. */
+    @Nullable
+    Game selectedRom() {
+        SystemView view = activeView();
+        return view == null ? null : view.selectedRom();
     }
 
     @Nullable
@@ -291,8 +326,16 @@ final class DocumentTabs {
                 name,
                 collection == null ? List.of() : collection.games(),
                 selectedRow,
-                () -> services.commands().run("game.play"),
-                () -> gameMenu);
+                new SystemView.Hooks(
+                        () -> services.commands().run("game.play"),
+                        () -> services.commands().run("library.playRom"),
+                        library::romToPlay,
+                        library::regions,
+                        () -> services.settings().library.showHiddenRoms,
+                        boxArt,
+                        () -> gameMenu,
+                        () -> romMenu));
+        view.setGrid(services.settings().library.gridSystems.contains(name));
         Tab tab = new Tab();
         tab.setContent(view.node());
         TextInputKeys.install(
@@ -312,6 +355,7 @@ final class DocumentTabs {
 
     /** The library loaded again: every open tab gets its system's games, and its header its count. */
     private void refreshGames() {
+        boxArt.clear();
         for (Map.Entry<Tab, SystemView> e : views.entrySet()) {
             GameCollection collection = library.state().collection(e.getValue().title());
             e.getValue().setGames(collection == null ? List.of() : collection.games());
@@ -431,7 +475,7 @@ final class DocumentTabs {
         if (entry == null) return;
         Tab tab = open(entry.name(), entry.selected());
         SystemView view = views.get(tab);
-        if (view != null) view.list().requestFocus();
+        if (view != null) view.focusGames();
     }
 
     /** Selects the tab {@code delta} steps along the strip, wrapping. */

@@ -7,10 +7,11 @@ this file in the same change ([docs/conventions.md](docs/conventions.md#docs-in-
 
 - **Browse by game, with its ROMs under it** ([decision 3](docs/decisions/0003-browse-by-game-not-by-rom.md)).
   Done: (1) the name parser (`RomName`) and the grouping (`GameTitle`); (2) the ROM Play starts
-  (`PlayChoice`: the one played last, else the best for the region ranking in Settings). Next: (3) one browser
-  of systems, games (a list or a box-art grid) and the selected game's ROMs, Play through
-  `LibraryService.romToPlay`; (4) retire the system tabs and the Game tool window, then the commands, menus,
-  docs and catalogs, and audit Pauta again.
+  (`PlayChoice`: the one played last, else the best for the region ranking in Settings); (3) the game view in
+  each system's tab: games as a list or a box-art grid, type-ahead, and the selected game's details with its
+  ROMs. Next: (4) one browser instead of a tab per system (the Systems list as its left pane), the Game tool
+  window's core choice and BIOS warnings moved into the details, then the commands, menus, docs and catalogs,
+  and audit Pauta again.
 - **A system for a games folder.** A folder can be given a core; let it be given a system name too, for
   box art, when its core covers several (the scanner already takes one).
 - **RetroArch's own settings.** A curated set of `retroarch.cfg` options, written only while RetroArch is

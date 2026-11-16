@@ -209,7 +209,7 @@ class FindBarFxTest {
         assertEquals(2, (int) call(view::selectedIndex), "its index among all the system's games");
 
         // On the Welcome tab there is nothing to filter: find.show says why.
-        run(() -> window.tabs().tabPane().getSelectionModel().select(0));
+        run(() -> window.browser().showEmpty());
         assertNotNull(app.services().commands().get("find.show").unavailableReason());
     }
 
@@ -281,8 +281,8 @@ class FindBarFxTest {
     /** Opens the fake library's system {@code index} in a tab and returns its view. */
     private SystemView openSystem(int index) throws Exception {
         var system = FakeLibrary.collection(app.services(), index);
-        run(() -> app.window().tabs().open(system));
-        SystemView view = call(() -> app.window().tabs().activeView());
+        run(() -> app.window().browser().open(system));
+        SystemView view = call(() -> app.window().browser().activeView());
         assertNotNull(view);
         return view;
     }
@@ -369,6 +369,7 @@ class FindBarFxTest {
                 List::of,
                 () -> false,
                 new BoxArt(() -> null),
+                () -> null,
                 () -> null,
                 () -> null);
     }

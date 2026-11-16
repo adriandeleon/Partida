@@ -19,10 +19,22 @@ import org.jspecify.annotations.Nullable;
 /**
  * The game browser's box art: a game's thumbnail found off the FX thread (it reads the disk, PERF-01), then
  * decoded in the background at the size it is drawn, and kept for the next time it is drawn. A file past
- * {@link LibraryPanels.GameInfo#BOXART_LIMIT} is never read (PERF-12). One per window; FX thread only, except
+ * {@link #LIMIT} is never read (PERF-12). One per window; FX thread only, except
  * the lookups it starts.
  */
 final class BoxArt {
+
+    /** The largest box art read (PERF-12): past it, the initials show instead of a decoded image. */
+    static final long LIMIT = 16L * 1024 * 1024;
+
+    /** Whether a box-art file is small enough to decode; checked off the FX thread, before any read. */
+    static boolean fits(Path file) {
+        try {
+            return java.nio.file.Files.size(file) <= LIMIT;
+        } catch (java.io.IOException e) {
+            return false;
+        }
+    }
 
     /** At most this many decoded images are kept, the least recently drawn dropped first. */
     static final int MAX_IMAGES = 400;
@@ -61,7 +73,7 @@ final class BoxArt {
         Background.run(() -> {
             Optional<Path> found = ctx.thumbnails()
                     .find(game.system(), game.title(), game.fileStem(), Thumbnails.Kind.BOXART)
-                    .filter(LibraryPanels.GameInfo::fits);
+                    .filter(BoxArt::fits);
             Platform.runLater(() -> {
                 files.put(game.rom(), found);
                 done.accept(found.map(file -> image(file, width)).orElse(null));

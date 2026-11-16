@@ -10,9 +10,14 @@ one-line summary written for users.
 
 ### Added
 
-- **One entry per game, with its ROMs under it.** A system's tab lists each game once, however many regional
+- **One browser for your whole library.** Pick a system in the Systems list on the left and its games fill
+  the window, with the selected game's details on the right: no tabs to open or close. Walking the list with
+  the arrow keys shows each system as you go; Enter moves to its games. The system you were looking at comes
+  back on the next start.
+- **One entry per game, with its ROMs under it.** A system lists each game once, however many regional
   releases, revisions and dumps you have of it, with how many ROMs and which regions beside its name. The
-  panel beside the list shows the game's box art, Play (and which ROM it starts), and every ROM of the game:
+  panel beside the list shows the game's box art, the core it starts with (pick another there) and any BIOS
+  file that core is missing, Play (and which ROM it starts), and every ROM of the game:
   pick one and press Enter, or use Play This ROM, to start that one instead. Bad dumps, hacks, translations,
   betas, demos and unlicensed releases are tucked away under their game; Settings → Library → Show hidden
   ROMs (or Toggle Hidden ROMs) brings them back. The Systems window counts games, not files.
@@ -25,8 +30,7 @@ one-line summary written for users.
   your first-ranked one, unless you've played another ROM of it before: then that one again. Left blank, the
   order comes from your country.
 - **Arrange the toolbar your way.** Settings → General → Toolbar Buttons lists the toolbar's buttons: move
-  them, remove them, add others (the Systems, Game and RetroArch windows, Filter Games, Welcome, the
-  documentation) and gaps between groups, or Restore Default. Customize Toolbar… and Restore Default Toolbar
+  them, remove them, add others (the Systems and RetroArch windows, Filter Games, the documentation) and gaps between groups, or Restore Default. Customize Toolbar… and Restore Default Toolbar
   are on the toolbar's right-click menu and in the palette (Pauta TBAR-09).
 - **Zen and Expert modes.** Toggle Zen Mode (`Ctrl+Shift+F11`, `Cmd+Shift+F11` on macOS, `C-c z` in Emacs)
   hides every bar so only your games show; Toggle Expert Mode (`Ctrl+Shift+F12`, `Cmd+Shift+F12`, `C-c e`)
@@ -36,18 +40,16 @@ one-line summary written for users.
   DOCS-11).
 - **Your RetroArch library, by system.** Partida finds RetroArch on its own (installed natively, as the
   `org.libretro.RetroArch` Flatpak, or in a folder you choose), and lists your games from its playlists, its
-  play history and your own games folders. The Systems window lists each system with its game count; a system
-  opens in a tab, with a filter box over its games. The Game window shows the selected game's box art,
-  the core it starts with (pick another there) and any BIOS file that core is missing.
+  play history and your own games folders. The Systems window lists each system with its game count; choosing one
+  shows its games, with a filter box over them.
 - **Play and Stop.** Enter, a double-click, the toolbar or the Game menu starts the selected game in
   RetroArch; the RetroArch window shows what it prints, busy while the game runs. Stop asks RetroArch to quit
   when its network commands are on, so it saves on the way out.
 - **Settings → Library:** add and remove games folders, give a folder the core for all of it (for `.zip`,
   `.chd`, `.cue` and other formats several systems share), point Partida at a RetroArch in a folder of your
   own with its launch command, and show or hide the play history. Each setting has a palette command.
-- **The documents you had open come back.** Quitting remembers the open documents and the selected one, and
-  the next start opens them again; `--no-session` starts with the Welcome page and leaves them for next time
-  (Pauta WIN-08, CLI-04). The window's place and what was open live in `session.json`, apart from your
+- **The system you were browsing comes back.** Quitting remembers it, and the next start shows it again;
+  `--no-session` starts with no system shown and leaves it for next time (Pauta WIN-08, CLI-04). The window's place and what was open live in `session.json`, apart from your
   preferences in `settings.json` (SET-08).
 - **Zoom the documents' text on its own:** Zoom Text In, Zoom Text Out and Actual Text Size, from the
   Command Palette or `Ctrl/Cmd+=`, `-` and `0` (`C-=`, `C--`, `C-0` in Emacs) or Settings → Appearance → Text
@@ -139,15 +141,10 @@ one-line summary written for users.
   keymap; a button looks pressed while what it opened is showing, and Sync Now waits until sync is set up.
   View → Toggle Toolbar, its right-click menu or Settings → General hides it, and the choice is kept.
   Sync Now is in the File menu too.
-- **Tabs and tool windows.** Sample documents open in tabs beside the Welcome page; pin a tab to keep it
-  at the front and out of every bulk close, close others, unmodified or to either side, reopen the last
-  closed file where its caret was, drag tabs to reorder them, and switch with Window → Switch Tab
-  (`C-x C-b` in the Emacs keymap). A tab shows when it is unsaved, pinned or read-only, and its file's Git
-  status, and the window title names the file. Around the tabs, three tool windows (Documents, Outline
-  and Output) dock on the left, right and bottom: a stripe button or `Alt+1`…`Alt+3` (`M-1`… in Emacs)
-  opens each; drag a button to another side, open two on one side, float, maximize or resize one from the
-  keyboard, and they come back as you left them. Every action is in the Window menu and the Command
-  Palette. View → Toggle Tab Bar hides the tab strip.
+- **Tool windows.** The Systems list docks on the left and the RetroArch console at the bottom: a stripe
+  button or `Alt+1` and `Alt+2` (`M-1`, `M-2` in Emacs) opens each; drag a button to another side, open two
+  on one side, float, maximize or resize one from the keyboard, and they come back as you left them. Every
+  action is in the Window menu and the Command Palette. The window title names the system shown.
 - **Simple mode, for a quieter window.** One switch shortens every menu to its essentials and leaves the
   toolbar with the Command Palette, the Simple mode toggle and Settings; every command stays in the palette.
   The toggle sits just before Settings and looks pressed while the mode is on, so the way out is where the
@@ -194,14 +191,12 @@ one-line summary written for users.
 - **Partida's Pauta conformance is Complete:** every MUST and SHOULD of Pauta 6.0.0 a template can meet
   is met; what is left is each app's own website, screenshots and repository settings (`app-only`).
 - **The palette and every picker move with your keymap's keys** (`C-n`, `C-p`, `C-v`, `M-v` in Emacs) and
-  with `Ctrl/Cmd+Home` and `End`; the tab switcher moves the same way. Pickers say what you are choosing and
+  with `Ctrl/Cmd+Home` and `End`. Pickers say what you are choosing and
   open on the current value (Pauta PAL-06, QOPEN-02, QOPEN-04, QOPEN-06, QOPEN-12).
 - **The palette finds a command by the words of its id, not its description,** and a query that spells a
   title puts that command first (Pauta KBD-06).
-- **The Welcome page is in the Help menu** (Help → Welcome Page, `view.welcome`), shows at start when there
-  is no session to restore, is rebuilt each time it is shown, and is no pinned tab: its menu is Close alone.
-  Closing the last tab leaves a hint with the ways in and their keys (Pauta WELC-03, WELC-04, WELC-05,
-  WELC-11).
+- **Before you pick a system, the window says how to start:** the Systems list, Add Games Folder and Settings,
+  each with its key, and buttons for the first things to do (Pauta WELC-02, WELC-05).
 - **A grayed menu row says why** in its tooltip, and choosing it says so in the status bar; rows that clear
   or reset are red (Pauta KBD-04, MENU-12).
 - **A file's Git status shows as its letter** (M, A, U, R, D, C) on its tab and its Documents row, not by
@@ -272,7 +267,7 @@ one-line summary written for users.
 - **Very large files are refused, not read:** a `retroarch.cfg` or core info file over 4 MB, a playlist over
   64 MB, and a games folder past 100,000 files (scanned up to there, with a message) (Pauta PERF-12).
 - **A library change refreshes each view once,** not once per change it brings (Pauta PERF-06).
-- Only `Os` works out which OS Partida runs on (Pauta OS-02), and finding the login shell's PATH no longer
+- **Only `Os` works out which OS Partida runs on** (Pauta OS-02), and finding the login shell's PATH no longer
   blocks a thread of the shared pool (Pauta PERF-05).
 - **git and gh are found from your login shell's PATH** on macOS and Linux, so an app opened from the Finder
   finds Homebrew's tools (Pauta CLI-10).

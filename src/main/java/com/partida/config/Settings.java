@@ -44,9 +44,6 @@ public final class Settings {
 
     public boolean showStatusBar = true;
 
-    /** The strip of document tabs (TABS-12). */
-    public boolean showTabBar = true;
-
     /**
      * The menus and the title in one bar drawn by the app (JavaFX's {@code HeaderBar}), where the
      * platform supports it and the menus are in the window (not macOS). Applies on the next start.
@@ -200,7 +197,6 @@ public final class Settings {
         c.lastUpdateCheck = lastUpdateCheck;
         c.showToolbar = showToolbar;
         c.showStatusBar = showStatusBar;
-        c.showTabBar = showTabBar;
         c.titleBarMenus = titleBarMenus;
         c.simpleMode = simpleMode;
         c.toolbarLayout = new ArrayList<>(toolbarLayout);
@@ -210,7 +206,6 @@ public final class Settings {
         c.window.height = window.height;
         c.window.maximized = window.maximized;
         c.window.toolWindows = window.toolWindows.copy();
-        c.window.documents = window.documents == null ? null : new java.util.ArrayList<>(window.documents);
         c.window.activeDocument = window.activeDocument;
         c.window.lastPlayed = new java.util.LinkedHashMap<>(window.lastPlayed);
         c.sync.repoUrl = sync.repoUrl;
@@ -237,16 +232,10 @@ public final class Settings {
         public ToolWindows toolWindows = new ToolWindows();
 
         /**
-         * The documents open at the last quit, in tab order (WIN-08), or null before the first quit: the next
-         * launch opens them again, unless it was started with {@code --no-session} (CLI-04).
+         * The system the browser showed at the last quit (WIN-08), or null for its empty state: the next launch
+         * shows it again, unless it was started with {@code --no-session} (CLI-04).
          */
-        public java.util.@Nullable List<String> documents;
-
-        /** The document that was selected, or null for the Welcome page. */
         public @Nullable String activeDocument;
-
-        /** At most this many documents are reopened: a hand-edited file can't open a thousand tabs. */
-        public static final int MAX_DOCUMENTS = 100;
 
         /**
          * The ROM Partida last started for each game, by the game's id ({@code library.GameTitle#id}), the latest
@@ -282,16 +271,7 @@ public final class Settings {
             }
             if (toolWindows == null) toolWindows = new ToolWindows();
             toolWindows.clamp();
-            if (documents != null) {
-                documents = documents.stream()
-                        .filter(d -> d != null && !d.isBlank())
-                        .distinct()
-                        .limit(MAX_DOCUMENTS)
-                        .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
-            }
-            if (activeDocument != null && (documents == null || !documents.contains(activeDocument))) {
-                activeDocument = null;
-            }
+            if (activeDocument != null && activeDocument.isBlank()) activeDocument = null;
             java.util.LinkedHashMap<String, String> kept = new java.util.LinkedHashMap<>();
             if (lastPlayed != null) {
                 lastPlayed.forEach((id, rom) -> {
@@ -312,8 +292,8 @@ public final class Settings {
      * hidden or shown, floating, and every size. Machine-local, with the window it belongs to.
      */
     public static final class ToolWindows {
-        /** The windows open, docked or floating, in the order they opened. */
-        public List<String> open = new ArrayList<>();
+        /** The windows open, docked or floating, in the order they opened: the Systems list at first. */
+        public List<String> open = new ArrayList<>(List.of("systems"));
 
         /** A window's side where the user moved it from its home: {@code LEFT}, {@code RIGHT} or {@code BOTTOM}. */
         public Map<String, String> sides = new TreeMap<>();

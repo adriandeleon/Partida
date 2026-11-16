@@ -226,18 +226,18 @@ class SimpleModeFxTest {
         }
     }
 
-    /** TBAR-19: the bar keeps its height, so the tab strip's top edge stays where it was. */
+    /** TBAR-19: the bar keeps its height, so the content's top edge stays where it was. */
     @Test
     void theBarKeepsItsHeight() throws Exception {
         double height = call(() -> toolbar.node().getHeight());
-        double tabsTop = call(() -> window.tabs().tabPane().localToScene(0, 0).getY());
+        double tabsTop = call(() -> window.browser().node().localToScene(0, 0).getY());
         assertTrue(height > 0);
         assertEquals(toolbar.steadyHeight(), height, 0.5, "the bar's height is its steady height");
 
         simple(true);
         assertEquals(height, call(() -> toolbar.node().getHeight()), 0.01);
         assertEquals(
-                tabsTop, call(() -> window.tabs().tabPane().localToScene(0, 0).getY()), 0.01);
+                tabsTop, call(() -> window.browser().node().localToScene(0, 0).getY()), 0.01);
 
         // Even with every group hidden, as an app whose tools are all missing would have it.
         run(() -> {
@@ -248,7 +248,7 @@ class SimpleModeFxTest {
         layout();
         assertEquals(height, call(() -> toolbar.node().getHeight()), 0.01);
         assertEquals(
-                tabsTop, call(() -> window.tabs().tabPane().localToScene(0, 0).getY()), 0.01);
+                tabsTop, call(() -> window.browser().node().localToScene(0, 0).getY()), 0.01);
 
         simple(false);
         run(() -> toolbar.setGroupVisible("palette.show", true));

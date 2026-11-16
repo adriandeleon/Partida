@@ -93,9 +93,8 @@ class NamedControlsFxTest {
         MainWindow window = app.window();
         var system = FakeLibrary.collection(app.services(), 1);
         run(() -> {
-            window.tabs().open(system);
+            window.browser().open(system);
             window.toolWindows().openWindow(window.systemsWindow(), false);
-            window.toolWindows().openWindow(window.gameWindow(), false);
             app.services().commands().run("retroarch.find");
             app.services().commands().run("find.show");
             window.openMessageLog();
@@ -105,10 +104,10 @@ class NamedControlsFxTest {
             window.openDebugLog();
             window.openReportProblem();
         });
-        // The Game window reads the selected game off the FX thread: wait until its controls are shown.
-        LibraryPanels.GamePanel game = java.util.Objects.requireNonNull(call(window::game));
+        // The details read the selected game's cores off the FX thread: wait until its controls are shown.
+        GameDetails game = call(() -> window.browser().activeView().details());
         FxTestSupport.waitUntil(() -> !game.reading() && !game.core().getItems().isEmpty());
-        assertTrue(call(() -> game.play().isVisible()), "the Game window shows Play");
+        assertTrue(call(() -> game.play().isVisible()), "the details show Play");
         assertTrue(
                 call(() -> java.util.Objects.requireNonNull(window.systems())
                                 .list()
@@ -116,7 +115,7 @@ class NamedControlsFxTest {
                                 .size()
                         > 1),
                 "the Systems list has rows");
-        assertTrue(call(() -> !window.tabs().activeView().list().getItems().isEmpty()), "the tab has games");
+        assertTrue(call(() -> !window.browser().activeView().list().getItems().isEmpty()), "the browser has games");
         List<String> unnamed = new ArrayList<>();
         int[] windows = {0};
         run(() -> {
@@ -148,9 +147,6 @@ class NamedControlsFxTest {
             Scene scene = window.stage().getScene();
             scene.getRoot().applyCss();
             walk(scene.getRoot(), labelled(scene.getRoot()), unnamed, "palette");
-            app.services().commands().run("switcher.show");
-            scene.getRoot().applyCss();
-            walk(scene.getRoot(), labelled(scene.getRoot()), unnamed, "switcher");
             window.overlays().hide();
         });
         // The Doctor, with a failed row and its link (DIAG-07).
@@ -169,7 +165,7 @@ class NamedControlsFxTest {
         // A question before something is lost, and a text prompt: dialogs of their own.
         run(() -> {
             javafx.scene.control.Alert question =
-                    Confirm.dialog(Confirmations.quitUnsaved(List.of("notes.md")), window.stage());
+                    Confirm.dialog(Confirmations.resetBinding("About", "Ctrl+Alt+J", "F12"), window.stage());
             question.show();
             Scene scene = question.getDialogPane().getScene();
             scene.getRoot().applyCss();
@@ -214,7 +210,7 @@ class NamedControlsFxTest {
         }
         run(window::openDebugLog);
         List<CommandMenu> menus = List.of(
-                window.tabs().menu(),
+                window.browser().gameMenu(),
                 window.toolbar().menu(),
                 window.messageLog().rowMenu(),
                 call(() -> window.debugLogWindow().menu()));

@@ -28,25 +28,6 @@ class PickerKeysTest {
     }
 
     @Test
-    void theSwitchersKeysStepOpenAndClose() {
-        PickerKeys.Move none = PickerKeys.Move.NONE;
-        assertEquals(PickerKeys.SwitcherKey.NEXT, PickerKeys.switcher(none, "TAB", false, true));
-        assertEquals(PickerKeys.SwitcherKey.PREVIOUS, PickerKeys.switcher(none, "TAB", true, true));
-        assertEquals(PickerKeys.SwitcherKey.NEXT, PickerKeys.switcher(PickerKeys.Move.LINE_DOWN, "N", false, true));
-        assertEquals(PickerKeys.SwitcherKey.PREVIOUS, PickerKeys.switcher(PickerKeys.Move.LINE_UP, "UP", false, false));
-        assertEquals(
-                PickerKeys.SwitcherKey.PAGE_DOWN, PickerKeys.switcher(PickerKeys.Move.PAGE_DOWN, "", false, false));
-        assertEquals(PickerKeys.SwitcherKey.PAGE_UP, PickerKeys.switcher(PickerKeys.Move.PAGE_UP, "", false, false));
-        assertEquals(PickerKeys.SwitcherKey.FIRST, PickerKeys.switcher(PickerKeys.Move.FIRST, "HOME", false, true));
-        assertEquals(PickerKeys.SwitcherKey.LAST, PickerKeys.switcher(PickerKeys.Move.LAST, "END", false, true));
-        assertEquals(PickerKeys.SwitcherKey.OPEN, PickerKeys.switcher(none, "ENTER", false, false));
-        assertEquals(PickerKeys.SwitcherKey.CLOSE, PickerKeys.switcher(none, "BACK_SPACE", false, false));
-        assertEquals(PickerKeys.SwitcherKey.CLOSE, PickerKeys.switcher(none, "DELETE", false, false));
-        assertEquals(PickerKeys.SwitcherKey.CLOSE, PickerKeys.switcher(none, "D", false, true));
-        assertEquals(PickerKeys.SwitcherKey.NONE, PickerKeys.switcher(none, "D", false, false));
-    }
-
-    @Test
     void aFilterFieldLeadsIntoItsListAndAFindBarStepsAndCloses() {
         assertTrue(PickerKeys.intoList("DOWN", true));
         assertTrue(PickerKeys.intoList("ENTER", true));

@@ -86,7 +86,7 @@ class MainWindowFxTest {
         run(() -> query.setText("toggle status"));
         @SuppressWarnings("unchecked")
         ListView<Picker.Ranked<String>> list = call(
-                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".list-view"));
+                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".command-palette .list-view"));
         assertEquals(
                 "view.toggleStatusBar",
                 call(() -> list.getSelectionModel().getSelectedItem().item().value()));
@@ -101,7 +101,7 @@ class MainWindowFxTest {
         run(window::openPalette);
         @SuppressWarnings("unchecked")
         ListView<Picker.Ranked<String>> list = call(
-                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".list-view"));
+                () -> (ListView<Picker.Ranked<String>>) window.overlays().root().lookup(".command-palette .list-view"));
         java.util.Set<String> listed = call(
                 () -> list.getItems().stream().map(r -> r.item().value()).collect(java.util.stream.Collectors.toSet()));
         java.util.Set<String> registered = services.commands().all().stream()
@@ -332,13 +332,12 @@ class MainWindowFxTest {
         run(window::importConfig);
     }
 
-    /** WIN-13: a system's tab holds nothing typed, so quitting with systems open asks nothing. */
+    /** WIN-13: the browser holds nothing typed, so quitting with a system shown asks nothing. */
     @Test
     void quitHasNothingToAskAbout() throws Exception {
         FakeLibrary.load(app.services(), dir.resolve("library"));
         var system = FakeLibrary.collection(app.services(), 0);
-        run(() -> window.tabs().open(system));
-        assertTrue(call(() -> window.tabs().unsavedNames()).isEmpty());
+        run(() -> window.browser().open(system));
         int asked = host.questions.size();
         run(window::quit);
         FxTestSupport.waitUntil(() -> host.exits == 1);

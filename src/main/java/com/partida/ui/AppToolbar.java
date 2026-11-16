@@ -111,9 +111,7 @@ final class AppToolbar {
             "sync.now",
             "view.messageLog",
             "tool.systems",
-            "tool.game",
             "tool.retroarch",
-            "view.welcome",
             "help.documentation");
 
     /**
@@ -126,9 +124,7 @@ final class AppToolbar {
             "game.stop",
             "library.filter",
             "tool.systems",
-            "tool.game",
             "tool.retroarch",
-            "view.welcome",
             "help.documentation");
 
     /** The bar's right-click menu: its commands (MENU-05), one menu reused (TBAR-10). */

@@ -61,21 +61,20 @@ public final class MainWindow {
     private final VBox band = new VBox();
 
     private final Label welcomeHint = new Label();
-    /** The system tabs: the welcome page and a tab per open system (Pauta's Tabs and tool panels). */
-    private final DocumentTabs tabs;
-    /** The tool windows round the tabs, each built on its first open (TABS-14). */
+    /** The empty state's ways in, each with its chord (WELC-02). */
+    private final Label waysIn = new Label();
+    /** The game browser: one system's games beside the selected game's details (decision 3). */
+    private final Browser browser;
+    /** The tool windows round the browser, each built on its first open (TABS-14). */
     private final ToolWindowManager toolWindows;
 
     private final ToolWindow systemsWindow;
-    private final ToolWindow gameWindow;
     private final ToolWindow retroarchWindow;
     private LibraryPanels.@Nullable Systems systems;
-    private LibraryPanels.@Nullable GamePanel game;
     private LibraryPanels.@Nullable Console console;
     /** RetroArch's lines that arrived before its window was first opened, the newest kept (PERF-11). */
     private final java.util.ArrayDeque<String> consoleBacklog = new java.util.ArrayDeque<>();
 
-    private @Nullable Switcher switcher;
     private final @Nullable HeaderBar headerBar;
     private final boolean systemMenu;
     private final boolean extendedSupported;
@@ -123,27 +122,22 @@ public final class MainWindow {
         layout.setTop(band);
         if (headerBar != null) stage.fullScreenProperty().addListener((o, was, full) -> placeHeaderBar(full));
         LibraryService library = services.library();
-        this.tabs = new DocumentTabs(services, library, placeholder(), stage::setTitle, restoreSession);
+        this.browser = new Browser(services, library, placeholder(), stage::setTitle, restoreSession);
         this.restoreSession = restoreSession;
-        tabs.onWelcomeShown(this::refreshWelcome);
-        this.toolWindows = new ToolWindowManager(services, tabs.node());
+        browser.onActiveChanged(() -> {
+            if (browser.activeView() == null) refreshWelcome(); // rebuilt on every show (WELC-05)
+        });
+        this.toolWindows = new ToolWindowManager(services, browser.node());
         this.systemsWindow =
                 new ToolWindow("systems", Messages.tr("tool.systems"), ToolWindow.Side.LEFT, Icons.DOCUMENTS, () -> {
                     LibraryPanels.Systems built = new LibraryPanels.Systems(
-                            tabs,
+                            browser,
                             library,
                             () -> new CommandMenu(services, java.util.Arrays.asList("systems.open")),
                             () -> services.settings().library.showHiddenRoms);
                     systems = built;
                     return built.node();
                 });
-        this.gameWindow = new ToolWindow("game", Messages.tr("tool.game"), ToolWindow.Side.RIGHT, Icons.OUTLINE, () -> {
-            LibraryPanels.GamePanel built =
-                    new LibraryPanels.GamePanel(() -> services.commands().run("game.play"));
-            game = built;
-            built.show(library.state().retroArch(), tabs.selectedGame());
-            return built.node();
-        });
         this.retroarchWindow = new ToolWindow(
                         "retroarch", Messages.tr("tool.retroarch"), ToolWindow.Side.BOTTOM, Icons.OUTPUT, () -> {
                             LibraryPanels.Console built = new LibraryPanels.Console();
@@ -173,18 +167,14 @@ public final class MainWindow {
         // The stripe button is busy while a game runs, whether or not the window was ever opened (TABS-22).
         retroarchWindow.busyProperty().bind(library.playingProperty());
         library.onOutput(this::appendConsole);
-        for (ToolWindow tw : List.of(systemsWindow, gameWindow, retroarchWindow)) toolWindows.register(tw);
-        // The Game window follows the active tab and its selected game (TABS-23); on a tab with no system it is
-        // unavailable, which hides its stripe button without touching the user's own show or hide (TABS-20).
-        // One pass per pulse however many of these fire together: a reload changes the library and then the
-        // selected game (PERF-06).
-        Redraw follow = new Redraw(this::followActiveTab);
-        tabs.onActiveChanged(follow::request);
-        tabs.onSelectedGameChanged(follow::request);
+        for (ToolWindow tw : List.of(systemsWindow, retroarchWindow)) toolWindows.register(tw);
+        // Play and Stop on the toolbar follow what decides whether they can run: the library, the system shown
+        // and its selected game, and a game starting or ending (TBAR-17). One pass per pulse however many of
+        // these fire together: a reload changes the library and then the selected game (PERF-06).
+        Redraw follow = new Redraw(toolbar::refresh);
+        browser.onActiveChanged(follow::request);
+        browser.onSelectedGameChanged(follow::request);
         library.onChanged(follow::request);
-        followActiveTab();
-        // Play and Stop on the toolbar follow what decides whether they can run: the library, the tab and its
-        // selected game (above, through followActiveTab), and a game starting or ending (TBAR-17).
         library.playingProperty().addListener((obs, was, now) -> follow.request());
         toolWindows.restore();
         layout.setCenter(toolWindows.node());
@@ -194,7 +184,7 @@ public final class MainWindow {
         new KeyDispatcher(services, overlays).install(scene);
         stage.setScene(scene);
         Themes.titleButtons(stage);
-        tabs.updateWindowTitle(); // the file, the project and the app (TABS-10)
+        browser.updateWindowTitle(); // the system shown and the app (TABS-10)
         for (int size : new int[] {16, 32, 64, 128, 256}) {
             var icon = MainWindow.class.getResource("/com/partida/icons/app-" + size + ".png");
             if (icon != null) stage.getIcons().add(new Image(icon.toExternalForm()));
@@ -246,7 +236,7 @@ public final class MainWindow {
     private void apply(Settings settings) {
         if (settings.theme != Themes.choice()) Themes.apply(settings.theme);
         if (settings.uiZoom != Themes.zoom()) zoomTo(settings.uiZoom);
-        tabs.textZoom(settings.textZoom); // the documents' own zoom (WIN-09)
+        browser.textZoom(settings.textZoom); // the documents' own zoom (WIN-09)
         // Simple mode: fewer toolbar groups, the toggle lit, and the shorter menu, rebuilt only on a change.
         toolbar.setSimple(settings.simpleMode);
         menus.setSimple(settings.simpleMode);
@@ -257,8 +247,7 @@ public final class MainWindow {
 
     /** Shows the chrome the focus mode and the user's own choices leave: {@link Chrome#shown} (WIN-10). */
     private void applyChrome(Settings settings) {
-        Chrome.Shown shown =
-                Chrome.shown(focus, systemMenu, settings.showToolbar, settings.showTabBar, settings.showStatusBar);
+        Chrome.Shown shown = Chrome.shown(focus, systemMenu, settings.showToolbar, settings.showStatusBar);
         toolbar.node().setVisible(shown.toolbar());
         toolbar.node().setManaged(shown.toolbar());
         if (!systemMenu) {
@@ -267,7 +256,6 @@ public final class MainWindow {
         }
         statusBar.setVisible(shown.statusBar());
         statusBar.setManaged(shown.statusBar());
-        tabs.setTabBarShown(shown.tabBar());
         toolWindows.setStripesHidden(!shown.stripes());
     }
 
@@ -297,13 +285,6 @@ public final class MainWindow {
         });
     }
 
-    private void followActiveTab() {
-        toolbar.refresh(); // Play's and Stop's enabled state (TBAR-17)
-        toolWindows.setAvailable(gameWindow, Chrome.gameWindowAvailable(tabs.activeView() != null));
-        LibraryPanels.GamePanel built = game;
-        if (built != null) built.show(services.library().state().retroArch(), tabs.selectedGame());
-    }
-
     /** RetroArch's output: into the console once it is built, else held until it is (the newest kept). */
     private void appendConsole(List<String> lines) {
         LibraryPanels.Console built = console;
@@ -315,7 +296,10 @@ public final class MainWindow {
         while (consoleBacklog.size() > LibraryPanels.Console.MAX_LINES) consoleBacklog.removeFirst();
     }
 
-    /** The Welcome tab's page; the app's own content goes in tabs beside it. */
+    /**
+     * The browser's empty state, shown until a system is chosen (WELC-02): the app's name, its ways in each with
+     * its chord, and buttons for the first things to do.
+     */
     private VBox placeholder() {
         Label title = new Label(AppInfo.NAME);
         title.getStyleClass().add("welcome-title");
@@ -334,7 +318,8 @@ public final class MainWindow {
             toggles.track(button, id); // the palette's button looks pressed while the palette is up (TBAR-07)
             actions.getChildren().add(button);
         }
-        VBox box = UiZoom.vbox(12, title, tagline, welcomeHint, actions);
+        waysIn.getStyleClass().add("muted");
+        VBox box = UiZoom.vbox(12, title, tagline, welcomeHint, waysIn, actions);
         box.setAlignment(Pos.CENTER);
         box.getStyleClass().add("welcome");
         return box;
@@ -367,10 +352,25 @@ public final class MainWindow {
     private final HBox welcomeActions = UiZoom.hbox(8);
     private final boolean restoreSession;
 
-    /** The welcome hint names the palette's chord in the active keymap, so it follows a keymap change. */
+    /**
+     * The welcome hint names the palette's chord in the active keymap, and the ways in theirs, so they follow a
+     * keymap change (WELC-02).
+     */
     private void refreshWelcomeHint() {
         String chord = services.keybindings().label("palette.show");
         welcomeHint.setText(Messages.tr("welcome.hint", chord.isEmpty() ? "—" : chord));
+        StringBuilder text = new StringBuilder(Messages.tr("browser.empty"));
+        for (String id : List.of("tool.systems", "library.addFolder", "app.settings")) {
+            String key = services.keybindings().label(id);
+            text.append("\n").append(Messages.tr("command." + id));
+            if (!key.isEmpty()) text.append("   ").append(key);
+        }
+        waysIn.setText(text.toString());
+    }
+
+    /** The empty state's ways in: the tests read them. */
+    Label waysIn() {
+        return waysIn;
     }
 
     /** Why the title-bar menus can't be had in this window, or null (OS-01). */
@@ -417,23 +417,6 @@ public final class MainWindow {
 
     // ---- what the commands do ----
 
-    /** Runs {@code action} on the selected tab, if there is one. */
-    void onSelectedTab(java.util.function.Consumer<javafx.scene.control.Tab> action) {
-        javafx.scene.control.Tab tab = tabs.selected();
-        if (tab != null) action.accept(tab);
-    }
-
-    /** The tab switcher (TABS-09), built on first use. */
-    void showSwitcher() {
-        Switcher built = switcher;
-        if (built == null) {
-            built = new Switcher(tabs, overlays);
-            built.keymap(services::keybindings, Os.isMac()); // the pickers' keys (QOPEN-12)
-            switcher = built;
-        }
-        built.show();
-    }
-
     /** Runs {@code action} on the tool window a command acts on, if there is one. */
     void onToolWindow(@Nullable ToolWindow tw, java.util.function.Consumer<ToolWindow> action) {
         if (tw != null) action.accept(tw);
@@ -456,10 +439,11 @@ public final class MainWindow {
 
     // ---- find (FIND-01, FIND-04) ----
 
-    /** The active system tab, whose filter box {@code find.show} focuses (FIND-03), or null on the Welcome tab. */
+    /** The system shown, whose filter box {@code find.show} focuses (FIND-03), or null on the empty state. */
     @Nullable
     SystemView activeSystem() {
-        return tabs.activeView();
+        Browser built = browser;
+        return built == null ? null : built.activeView();
     }
 
     /** The RetroArch console's find bar, or null before the window was first opened. */
@@ -479,21 +463,21 @@ public final class MainWindow {
     // ---- the library ----
 
     /**
-     * The game selected in the active tab, or null. The menus and the toolbar ask the commands whether they can
-     * run while this window is still being built, before the tabs exist: then there is none.
+     * The game selected in the system shown, or null. The menus and the toolbar ask the commands whether they
+     * can run while this window is still being built, before the browser exists: then there is none.
      */
     @Nullable
     Game selectedGame() {
-        DocumentTabs built = tabs;
+        Browser built = browser;
         return built == null ? null : built.selectedGame();
     }
 
-    /** Play: the game selected in the active tab, with the core the Game window shows for it. */
+    /** Play: the game selected in the system shown, with the core its details show for it. */
     void playSelected() {
         Game selected = selectedGame();
         if (selected == null) return;
-        LibraryPanels.GamePanel built = game;
-        services.library().play(selected, built == null ? null : built.selectedCore(selected));
+        SystemView view = activeSystem();
+        services.library().play(selected, view == null ? null : view.details().selectedCore(selected));
     }
 
     @Nullable
@@ -503,14 +487,14 @@ public final class MainWindow {
 
     /** Play This ROM: the ROM selected in the game's details, with the core it would pick (decision 3). */
     void playSelectedRom() {
-        DocumentTabs built = tabs;
+        Browser built = browser;
         Game rom = built == null ? null : built.selectedRom();
         if (rom != null) services.library().play(rom, null);
     }
 
     @Nullable
     String playRomUnavailable() {
-        DocumentTabs built = tabs;
+        Browser built = browser;
         return services.library().playUnavailable(built == null ? null : built.selectedRom());
     }
 
@@ -1066,8 +1050,6 @@ public final class MainWindow {
      * makes the save a close makes.
      */
     void quit() {
-        List<String> unsaved = tabs.unsavedNames();
-        if (!unsaved.isEmpty() && !services.host().confirm(stage, Confirmations.quitUnsaved(unsaved))) return;
         imports.incrementAndGet(); // an import still in flight is never applied
         toolWindows.saveForQuit(); // before the floating windows close with the rest
         for (javafx.stage.Window other : List.copyOf(javafx.stage.Window.getWindows())) {
@@ -1084,16 +1066,10 @@ public final class MainWindow {
 
     /** Remembers size, position and maximized state for the next launch. */
     void saveWindowState() {
-        // What was open, for the next launch (WIN-08); a run started with --no-session leaves the last
-        // session's list as it was (CLI-04).
-        java.util.List<String> open = tabs.openPaths();
-        String active = tabs.activePath();
-        if (restoreSession) {
-            services.store().update(s -> {
-                s.window.documents = open;
-                s.window.activeDocument = active;
-            });
-        }
+        // The system shown, for the next launch (WIN-08); a run started with --no-session leaves the last
+        // session's as it was (CLI-04).
+        String active = browser.activePath();
+        if (restoreSession) services.store().update(s -> s.window.activeDocument = active);
         boolean maximized = stage.isMaximized();
         double x = stage.getX();
         double y = stage.getY();
@@ -1137,8 +1113,8 @@ public final class MainWindow {
         return band;
     }
 
-    DocumentTabs tabs() {
-        return tabs;
+    Browser browser() {
+        return browser;
     }
 
     ToolWindowManager toolWindows() {
@@ -1149,25 +1125,12 @@ public final class MainWindow {
         return systemsWindow;
     }
 
-    ToolWindow gameWindow() {
-        return gameWindow;
-    }
-
     ToolWindow retroarchWindow() {
         return retroarchWindow;
     }
 
     LibraryPanels.@Nullable Console console() {
         return console;
-    }
-
-    LibraryPanels.@Nullable GamePanel game() {
-        return game;
-    }
-
-    @Nullable
-    Switcher switcher() {
-        return switcher;
     }
 
     OverlayToggles toggles() {

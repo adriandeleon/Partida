@@ -1,7 +1,7 @@
 # 2. The tab strip sits over the documents, not in the title bar
 
-- Status: accepted; its rule, TABS-11, was retired in Pauta 6.0.0 with nothing in its place, so the
-  layout stands with no deviation to record
+- Status: superseded by [decision 3](0003-browse-by-game-not-by-rom.md), which retired the tab strip; its
+  rule, TABS-11, was retired in Pauta 6.0.0 with nothing in its place
 - Date: 2026-11-10
 
 ## Context

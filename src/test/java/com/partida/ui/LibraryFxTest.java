@@ -347,17 +347,17 @@ class LibraryFxTest {
         assertTrue(call(() -> settings.folderList().getFixedCellSize() > 0), "a fixed cell size");
     }
 
-    /** PERF-12: box art past the limit isn't read; the Game window shows the initials instead. */
+    /** PERF-12: box art past the limit isn't read; the details show the initials instead. */
     @Test
     void boxArtPastTheLimitIsNotRead() throws Exception {
         Path small = Files.writeString(dir.resolve("small.png"), "x");
-        assertTrue(LibraryPanels.GameInfo.fits(small));
+        assertTrue(BoxArt.fits(small));
         Path big = dir.resolve("big.png");
         try (var file = new java.io.RandomAccessFile(big.toFile(), "rw")) {
-            file.setLength(LibraryPanels.GameInfo.BOXART_LIMIT + 1); // sparse: no real 16 MB written
+            file.setLength(BoxArt.LIMIT + 1); // sparse: no real 16 MB written
         }
-        assertFalse(LibraryPanels.GameInfo.fits(big));
-        assertFalse(LibraryPanels.GameInfo.fits(dir.resolve("missing.png")));
+        assertFalse(BoxArt.fits(big));
+        assertFalse(BoxArt.fits(dir.resolve("missing.png")));
     }
 
     /**
@@ -398,14 +398,14 @@ class LibraryFxTest {
                 Objects.requireNonNull(call(() -> window.toolbar().button("game.play")));
         javafx.scene.control.Button stop =
                 Objects.requireNonNull(call(() -> window.toolbar().button("game.stop")));
-        run(() -> window.tabs().tabPane().getSelectionModel().select(0)); // Welcome: no game
+        run(() -> window.browser().showEmpty()); // no system shown: no game
         waitUntil(() -> fx(play::isDisabled));
         assertTrue(call(stop::isDisabled), "nothing running");
         var system = FakeLibrary.collection(services, 1);
-        run(() -> window.tabs().open(system));
+        run(() -> window.browser().open(system));
         waitUntil(() -> fx(() -> !play.isDisabled()));
         assertTrue(call(stop::isDisabled));
-        run(() -> window.tabs().tabPane().getSelectionModel().select(0));
+        run(() -> window.browser().showEmpty());
         waitUntil(() -> fx(play::isDisabled));
     }
 
@@ -413,8 +413,8 @@ class LibraryFxTest {
     @Test
     void aRowKeepsItsGlyphFromGameToGame() throws Exception {
         var system = FakeLibrary.collection(services, 2);
-        run(() -> window.tabs().open(system));
-        SystemView view = Objects.requireNonNull(call(() -> window.tabs().activeView()));
+        run(() -> window.browser().open(system));
+        SystemView view = Objects.requireNonNull(call(() -> window.browser().activeView()));
         List<Object> seen = call(() -> {
             javafx.scene.control.ListCell<com.partida.library.GameTitle> cell =
                     view.list().getCellFactory().call(view.list());
@@ -447,7 +447,7 @@ class LibraryFxTest {
     }
 
     @Test
-    void theGameWindowSaysWhatIsMissing() throws Exception {
+    void theDetailsSayWhatIsMissing() throws Exception {
         // A second core for the same games that needs a BIOS file the system folder lacks.
         Files.writeString(config.resolve("cores").resolve("zed_libretro" + CoreCatalog.libraryExtension()), "");
         Files.writeString(
@@ -457,10 +457,10 @@ class LibraryFxTest {
         assertTrue(runCommand("library.refresh"));
         FakeLibrary.waitLoaded(services);
         var system = FakeLibrary.collection(services, 0);
-        run(() -> window.tabs().open(system));
-        assertTrue(runCommand("tool.game"));
-        LibraryPanels.GamePanel game = Objects.requireNonNull(window.game());
-        waitUntil(() -> !game.reading() && !game.core().getItems().isEmpty());
+        run(() -> window.browser().open(system));
+        SystemView view = Objects.requireNonNull(call(() -> window.browser().activeView()));
+        GameDetails game = view.details();
+        waitUntil(() -> fx(() -> !game.reading() && !game.core().getItems().isEmpty()));
         assertEquals(2, call(() -> game.core().getItems().size()));
         assertEquals(FakeLibrary.CORE, call(() -> game.core().getValue().label()));
         assertEquals("", call(() -> game.warning().getText()));
@@ -474,10 +474,9 @@ class LibraryFxTest {
                 Messages.tr("game.noCore", "bin"), call(() -> game.warning().getText()));
         assertNull(call(() -> game.selectedCore(new Game("Other", dir.resolve("other.bin"), "", null))));
 
-        // On the Welcome tab there is no game: the window empties, and Play says why.
-        run(() -> window.tabs().showWelcome());
+        // With no system shown there is no game, and Play says why.
+        run(() -> window.browser().showEmpty());
         assertNotNull(services.commands().get("game.play").unavailableReason());
-        assertFalse(call(() -> game.title().getParent().isVisible()), "no game's details on Welcome");
     }
 
     // ---- Play and Stop ----
@@ -550,12 +549,12 @@ class LibraryFxTest {
 
     @Test
     void theSystemsWindowListsTheLoadedLibrary() throws Exception {
-        // The Systems window built after a load lists what was loaded, and the console its backlog.
-        assertTrue(runCommand("tool.systems"));
+        // The Systems window, open from the first run, lists what was loaded.
+        assertTrue(window.toolWindows().isOpen(window.systemsWindow()));
         LibraryPanels.Systems systems = Objects.requireNonNull(window.systems());
         assertEquals(
                 FakeLibrary.SYSTEMS.size(), call(() -> systems.list().getItems().size()));
         assertNotNull(services.commands().get("game.stop").unavailableReason());
-        assertTrue(call(() -> List.copyOf(window.toolWindows().all())).size() == 3);
+        assertEquals(2, call(() -> List.copyOf(window.toolWindows().all())).size(), "Systems and RetroArch");
     }
 }

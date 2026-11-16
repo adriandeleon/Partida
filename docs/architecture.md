@@ -58,43 +58,39 @@ The tests start the app through the same `Startup.prepare` and `Startup.start`, 
   and tooltips rule to the code that meets it. **Put your app's default commands in `CLUSTER`, every
   command a user may add in `AVAILABLE`, and the ones a newcomer keeps in `SIMPLE_KEEPS`.**
 - Focus modes (WIN-10): `view.toggleZenMode` hides all the chrome and `view.toggleExpertMode` keeps only the
-  status bar. One truth table, `Chrome.shown`, decides what each mode shows over the user's own toolbar,
-  tab bar and status bar choices; `MainWindow.applyChrome` applies it. A mode lasts the session and changes
+  status bar. One truth table, `Chrome.shown`, decides what each mode shows over the user's own toolbar
+  and status bar choices; `MainWindow.applyChrome` applies it. A mode lasts the session and changes
   no setting.
 - `MainWindow`: the top band (the title bar, a JavaFX `HeaderBar` holding the menus and the title, where
   the platform supports extended windows and the menus are in the window; a plain menu row otherwise,
-  and the screen menu bar on macOS; then the toolbar), the tool windows round the document tabs,
+  and the screen menu bar on macOS; then the toolbar), the tool windows round the browser,
   `StatusBar`, and an `OverlayHost` (the root `StackPane`) that carries the in-scene overlays. The
-  Welcome tab's page is `placeholder()`: the palette, Add Games Folder, Settings, Documentation and What's
-  New. It also runs the library's commands (`playSelected`, the games-folder pickers, the RetroArch prompts).
-- The tabs (Pauta's Tabs and tool panels, after Editora): `DocumentTabs` owns the `TabPane`, the pinned
-  group, the closed list and the window title; `TabStrip` is the pure arithmetic (bulk closes skip pinned
-  tabs, the pin boundary, where a dragged tab lands); `TabHeaders` draws each header (the header is the
-  title with the system's glyph, carrying the pinned state, and is the drag handle); `ClosedTabs` is
-  Reopen Closed Tab's list, by system, with the game that was selected; `TabContextMenu` the per-tab
-  commands; `Switcher` the tab switcher. Each tab is a system: a `SystemView`, the system's ROMs grouped into
+  browser's empty state is `placeholder()` (WELC-02): the ways in with their chords, and the palette, Add
+  Games Folder, Settings, Documentation and What's New. It also runs the library's commands (`playSelected`, the games-folder pickers, the RetroArch prompts).
+- The browser (decision 3): `Browser` is the window's content, one system at a time, chosen in the Systems
+  tool window; it keeps the last few systems' views (their filter and selection), the window title and the
+  system to show again at the next start, and shows the empty state before any system is chosen. There are
+  no tabs, so Pauta's Tabs rules don't apply. A system is a `SystemView`, the system's ROMs grouped into
   games (`GameTitle`), shown as a list or a box-art grid (a virtual list of tile rows, so only the rows in
   sight are drawn; the list's selection is the view's in both), beside `GameDetails`, the selected game's box
-  art, Play and its ROMs; `BoxArt` finds art off the FX thread and keeps the decoded images; `BrowseRules`
+  art, its core and missing BIOS files (read off the FX thread), Play and its ROMs; `BoxArt` finds art off the FX thread and keeps the decoded images; `BrowseRules`
   holds the pure rules (how a ROM reads, type-ahead, the grid's columns and keys). A filter box over the games
   narrows them as you type (FIND-03: a library is a list, so it is
   filtered, not searched; `library.filter` and `find.show` focus the box). `GameFilter` holds the box's
-  pure rules (FIND-13): plain words, `key:value` terms made into chips, and a `>` query's command. A system tab is never unsaved, so a quit asks nothing, and its
-  tabs are not files, so the Git colors of TABS-08 don't apply. Tabs restored from the session fill in when
-  the library first loads.
+  pure rules (FIND-13): plain words, `key:value` terms made into chips, and a `>` query's command. The browser holds nothing typed, so a quit asks nothing. A
+  system restored from the session fills in when the library first loads.
 - `LibraryService`, one per app in `AppServices`: RetroArch and the library, loaded off the FX thread after
   the first frame and again when Settings → Library changes (only the latest load lands), and the game
   running now: Play chooses the core and starts RetroArch off the FX thread, its output reaches the RetroArch
   window in batches, and Stop sends RetroArch's own `QUIT` when network commands are on. The tests set
   `partida.retroarch=off`, so none reads the developer's RetroArch; they point the library at `FakeLibrary`.
 - The tool windows: `ToolWindowManager` lays out a stripe on each of three sides and the open windows
-  (at most two a side) between the stripes and the tabs, keeps the arrangement in `settings.json`
+  (at most two a side) between the stripes and the browser, keeps the arrangement in `settings.json`
   (`window.toolWindows`), and lines the side stripes' first icon up with the content's first line (a game
   list's first row). A `ToolWindow` builds its content on first open; `ToolWindowVisibility` and
-  `ToolWindowDock` are its pure decisions. The three windows' content is `LibraryPanels`: Systems (left,
-  the systems and their game counts), Game (right, the selected game's box art, core, missing BIOS files and
-  Play; it follows the active tab) and RetroArch (bottom, what RetroArch prints while a game runs, busy
-  meanwhile).
+  `ToolWindowDock` are its pure decisions. The two windows' content is `LibraryPanels`: Systems (left,
+  open from the first run: the systems and their game counts; walking it shows each system in the browser)
+  and RetroArch (bottom, what RetroArch prints while a game runs, busy meanwhile).
   The class comments map each rule to the code that meets it.
 - `Commands`: every command, in one place. Menus, buttons, the palette and keys all run them by id. The
   text commands (`edit.cut`, `edit.copy`, `edit.paste`, `edit.selectAll`) act on the text that has the

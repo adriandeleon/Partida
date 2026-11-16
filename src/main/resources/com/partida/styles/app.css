@@ -431,80 +431,6 @@
     -fx-show-delay: 400ms; /* every tooltip, whoever made it (TBAR-14) */
 }
 
-/* ---- document tabs (Tabs and tool panels) ----
-   The header is the title (TABS-02): .tab-header holds the pin, the file glyph and .tab-title. Order matters
-   below: the Git colors follow read-only, so a read-only file still shows its status, and the unsaved rule is
-   more specific, so an unsaved tab is amber whatever its status (TABS-08). */
-.document-tabs > .tab-header-area {
-    -fx-padding: 3px 6px 0 6px;
-}
-.tab .tab-title {
-    -fx-text-fill: -color-fg-muted;
-}
-.tab:selected .tab-title {
-    -fx-text-fill: -color-fg-default;
-}
-.tab-header.pinned .tab-title {
-    -fx-font-weight: bold;
-}
-.tab-header.read-only .tab-title {
-    -fx-text-fill: -color-fg-muted;
-    -fx-font-style: italic;
-}
-.tab.git-status-modified .tab-title,
-.documents-list .git-status-modified {
-    -fx-text-fill: -state-accent;
-}
-.tab.git-status-added .tab-title,
-.documents-list .git-status-added {
-    -fx-text-fill: -state-green;
-}
-.tab.git-status-untracked .tab-title,
-.documents-list .git-status-untracked {
-    -fx-text-fill: -state-olive;
-}
-.tab.git-status-renamed .tab-title,
-.documents-list .git-status-renamed {
-    -fx-text-fill: -state-violet;
-}
-.tab.git-status-deleted .tab-title,
-.documents-list .git-status-deleted {
-    -fx-text-fill: -color-fg-muted;
-}
-.tab.git-status-conflict .tab-title,
-.documents-list .git-status-conflict {
-    -fx-text-fill: -state-red;
-}
-/* The Git status's letter after a tab's name (ACC-05): a little smaller, in the status's color. */
-.tab-header .git-letter {
-    -fx-font-size: 11px;
-    -fx-font-weight: bold;
-    -fx-padding: 0 0 0 2px;
-}
-/* Unsaved (TABS-03): a "• " prefix, amber italic, over any Git color. */
-.tab .tab-header.dirty .tab-title {
-    -fx-text-fill: -state-amber;
-    -fx-font-style: italic;
-}
-/* Dragging a tab (TABS-07): the dragged header dims, an accent line marks the edge where it will land. */
-.tab-header.tab-dragging {
-    -fx-opacity: 0.4;
-}
-.tab-header.tab-drop-before {
-    -fx-border-color: -color-accent-emphasis;
-    -fx-border-width: 0 0 0 2;
-}
-.tab-header.tab-drop-after {
-    -fx-border-color: -color-accent-emphasis;
-    -fx-border-width: 0 2 0 0;
-}
-/* Toggle Tab Bar (TABS-12): the strip folds away, the documents stay. */
-.tab-pane.no-tab-header > .tab-header-area {
-    -fx-pref-height: 0;
-    -fx-min-height: 0;
-    -fx-max-height: 0;
-    visibility: hidden;
-}
 .document-text {
     -fx-background-insets: 0;
     -fx-background-radius: 0;
@@ -512,13 +438,6 @@
 }
 .document-text .content {
     -fx-padding: 6px 12px 6px 12px;
-}
-.switcher-header {
-    -fx-font-weight: bold;
-}
-.switcher-path {
-    -fx-text-fill: -color-fg-muted;
-    -fx-font-size: 11.5px;
 }
 
 /* ---- tool windows (Tabs and tool panels, Tool panels) ----
@@ -641,7 +560,7 @@
     -fx-padding: 6px;
     -fx-background-radius: 6px;
 }
-.game-tile.selected {
+.game-tile:selected {
     -fx-background-color: -color-accent-subtle;
 }
 .tile-name {

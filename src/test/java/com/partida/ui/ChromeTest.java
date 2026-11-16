@@ -45,23 +45,13 @@ class ChromeTest {
         assertEquals(Messages.tr("palette.disabled.debugLogClosed"), Chrome.debugLogRefreshUnavailable(false));
     }
 
-    /** QUAL-05: the text and tab commands' gates, decided from plain facts. */
+    /** QUAL-05: the text commands' gates, decided from plain facts. */
     @Test
-    void theTextAndTabGatesAreDecidedFromFacts() {
+    void theTextGatesAreDecidedFromFacts() {
         assertEquals(Messages.tr("palette.disabled.noText"), Chrome.editUnavailable(false, false, false));
         assertNull(Chrome.editUnavailable(true, false, false), "Copy reads a read-only text");
         assertEquals(Messages.tr("palette.disabled.readOnlyText"), Chrome.editUnavailable(true, false, true));
         assertNull(Chrome.editUnavailable(true, true, true));
-
-        assertEquals(Messages.tr("palette.disabled.noTab"), Chrome.closeUnavailable(false));
-        assertNull(Chrome.closeUnavailable(true));
-        assertEquals(Messages.tr("palette.disabled.noTab"), Chrome.nothingToClose(false, 3));
-        assertEquals(Messages.tr("palette.disabled.nothingToClose"), Chrome.nothingToClose(true, 0));
-        assertNull(Chrome.nothingToClose(true, 2));
-        assertEquals(Messages.tr("palette.disabled.noClosedTab"), Chrome.reopenUnavailable(0));
-        assertNull(Chrome.reopenUnavailable(1));
-        assertEquals(Messages.tr("palette.disabled.oneTab"), Chrome.cycleUnavailable(1));
-        assertNull(Chrome.cycleUnavailable(2));
     }
 
     /** QUAL-05: the text zoom's three commands each say why they can't run, at an end or at the default. */
@@ -86,20 +76,14 @@ class ChromeTest {
     /** WIN-10: one truth table decides which chrome each mode shows, over the user's own choices. */
     @Test
     void eachFocusModeShowsItsChrome() {
+        assertEquals(new Chrome.Shown(true, false, true, true), Chrome.shown(Chrome.Focus.NONE, false, false, true));
+        assertEquals(new Chrome.Shown(false, false, false, true), Chrome.shown(Chrome.Focus.EXPERT, false, true, true));
         assertEquals(
-                new Chrome.Shown(true, true, false, true, true),
-                Chrome.shown(Chrome.Focus.NONE, false, true, false, true));
-        assertEquals(
-                new Chrome.Shown(false, false, false, false, true),
-                Chrome.shown(Chrome.Focus.EXPERT, false, true, true, true));
-        assertEquals(
-                new Chrome.Shown(false, false, false, false, false),
-                Chrome.shown(Chrome.Focus.EXPERT, false, true, true, false),
+                new Chrome.Shown(false, false, false, false),
+                Chrome.shown(Chrome.Focus.EXPERT, false, true, false),
                 "Expert keeps the status bar only where the user has it");
-        assertEquals(
-                new Chrome.Shown(false, false, false, false, false),
-                Chrome.shown(Chrome.Focus.ZEN, false, true, true, true));
-        assertTrue(Chrome.shown(Chrome.Focus.ZEN, true, true, true, true).menus(), "the screen menu bar stays");
+        assertEquals(new Chrome.Shown(false, false, false, false), Chrome.shown(Chrome.Focus.ZEN, false, true, true));
+        assertTrue(Chrome.shown(Chrome.Focus.ZEN, true, true, true).menus(), "the screen menu bar stays");
     }
 
     @Test

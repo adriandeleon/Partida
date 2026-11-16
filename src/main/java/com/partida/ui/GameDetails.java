@@ -1,9 +1,16 @@
 package com.partida.ui;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -11,6 +18,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -18,12 +26,15 @@ import javafx.scene.layout.VBox;
 import com.partida.i18n.Messages;
 import com.partida.library.Game;
 import com.partida.library.GameTitle;
+import com.partida.library.RetroArchContext;
+import com.partida.retroarch.CoreInfo;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The selected game in the browser (decision 3): its box art, its name and regions, Play with the ROM it
- * starts, and every ROM of the game, the hidden ones dimmed. Enter or a double-click on a ROM plays that ROM
- * ({@code library.playRom}); its right-click menu holds that command (MENU-05).
+ * The selected game in the browser (decision 3): its box art, its name and regions, the core Play starts it
+ * with and any BIOS file that core is missing, Play with the ROM it starts, and every ROM of the game, the
+ * hidden ones dimmed. Enter or a double-click on a ROM plays that ROM ({@code library.playRom}); its
+ * right-click menu holds that command (MENU-05). The cores are read off the FX thread (PERF-01).
  */
 final class GameDetails {
 
@@ -33,6 +44,8 @@ final class GameDetails {
     private final Label initials = new Label();
     private final Label title = new Label();
     private final Label meta = new Label();
+    private final ComboBox<CoreInfo> core = new ComboBox<>();
+    private final Label warning = new Label();
     private final Button play = new Button(Messages.tr("command.game.play"));
     private final Label starts = new Label();
     private final Label romsHeading = new Label();
@@ -41,11 +54,21 @@ final class GameDetails {
     private final VBox details;
     private final StackPane node;
     private final BoxArt boxArt;
+    private final Supplier<@Nullable RetroArchContext> retroArch;
+    private final LatestOnly reads = new LatestOnly(Background::run, Platform::runLater);
     private @Nullable GameTitle shown;
     private @Nullable Game chosen;
+    /** The cores read for the ROM Play starts, or null while none is read. */
+    private @Nullable Cores cores;
 
-    GameDetails(Runnable onPlay, Runnable onPlayRom, Supplier<CommandMenu> romMenu, BoxArt boxArt) {
+    GameDetails(
+            Runnable onPlay,
+            Runnable onPlayRom,
+            Supplier<CommandMenu> romMenu,
+            BoxArt boxArt,
+            Supplier<@Nullable RetroArchContext> retroArch) {
         this.boxArt = boxArt;
+        this.retroArch = retroArch;
         art.setPreserveRatio(true);
         UiZoom.bind(art.fitWidthProperty(), ART_WIDTH);
         UiZoom.bind(art.fitHeightProperty(), ART_WIDTH * 1.4);
@@ -56,6 +79,29 @@ final class GameDetails {
         title.setWrapText(true);
         meta.getStyleClass().add("muted");
         meta.setWrapText(true);
+        Label coreLabel = new Label(Messages.tr("game.core"));
+        coreLabel.setLabelFor(core);
+        core.setAccessibleText(Messages.tr("game.core"));
+        core.setMaxWidth(Double.MAX_VALUE);
+        core.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(@Nullable CoreInfo c) {
+                return c == null ? "" : c.label();
+            }
+
+            @Override
+            public @Nullable CoreInfo fromString(String s) {
+                return null;
+            }
+        });
+        core.valueProperty().addListener((o, was, now) -> showWarning());
+        HBox coreRow = UiZoom.hbox(8, coreLabel, core);
+        coreRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(core, Priority.ALWAYS);
+        warning.getStyleClass().add("game-warning");
+        warning.setWrapText(true);
+        warning.managedProperty().bind(warning.textProperty().isNotEmpty());
+        warning.visibleProperty().bind(warning.textProperty().isNotEmpty());
         play.setMaxWidth(Double.MAX_VALUE);
         play.setGraphic(Icons.line(Icons.RUN));
         play.setOnAction(e -> onPlay.run());
@@ -76,7 +122,7 @@ final class GameDetails {
             }
         });
         VBox.setVgrow(roms, Priority.ALWAYS);
-        details = UiZoom.vbox(8, artBox, title, meta, play, starts, romsHeading, roms);
+        details = UiZoom.vbox(8, artBox, title, meta, coreRow, warning, play, starts, romsHeading, roms);
         details.getStyleClass().add("game-details");
         details.setAlignment(Pos.TOP_LEFT);
         UiZoom.pad(details, 12);
@@ -98,6 +144,8 @@ final class GameDetails {
         if (game == null) {
             roms.getItems().clear();
             art.setImage(null);
+            reads.cancel();
+            cores = null;
             return;
         }
         title.setText(game.title());
@@ -114,6 +162,7 @@ final class GameDetails {
         if (roms.getSelectionModel().isEmpty()
                 || !game.roms().contains(roms.getSelectionModel().getSelectedItem()))
             roms.getSelectionModel().select(startRom);
+        readCores(startRom.game());
         initials.setText(BrowseRules.initials(game.title()));
         art.setImage(null);
         initials.setVisible(true);
@@ -122,6 +171,97 @@ final class GameDetails {
             if (shown != game) return; // another game is shown by now
             setArt(image);
         });
+    }
+
+    /** The cores that run the ROM Play starts, read off the FX thread; one already read is kept. */
+    private void readCores(Game rom) {
+        Cores current = cores;
+        if (current != null && current.game().equals(rom)) return;
+        RetroArchContext ctx = retroArch.get();
+        cores = null;
+        core.getItems().clear();
+        warning.setText("");
+        if (ctx == null) {
+            reads.cancel();
+            return;
+        }
+        reads.submit(() -> Cores.read(ctx, rom), this::applyCores);
+    }
+
+    private void applyCores(Cores read) {
+        if (!read.game().equals(chosenRom())) return; // another ROM is shown by now
+        cores = read;
+        core.getItems().setAll(read.cores());
+        core.setValue(
+                read.preferred() != null
+                        ? read.preferred()
+                        : read.cores().isEmpty() ? null : read.cores().getFirst());
+        showWarning();
+    }
+
+    /** The ROM Play starts for the game shown, or null. */
+    private @Nullable Game chosenRom() {
+        GameTitle game = shown;
+        if (game == null) return null;
+        return chosen == null ? game.best().game() : romOf(game, chosen).game();
+    }
+
+    private void showWarning() {
+        Cores read = cores;
+        if (read == null) {
+            warning.setText("");
+            return;
+        }
+        CoreInfo picked = core.getValue();
+        if (picked == null) {
+            warning.setText(Messages.tr("game.noCore", read.game().extension()));
+            return;
+        }
+        List<CoreInfo.Firmware> missing = read.missing().getOrDefault(picked.id(), List.of());
+        warning.setText(
+                missing.isEmpty()
+                        ? ""
+                        : Messages.tr(
+                                "game.missingBios",
+                                missing.stream().map(CoreInfo.Firmware::path).collect(Collectors.joining(", "))));
+    }
+
+    /** The core chosen for {@code rom}, or null when it isn't the ROM Play starts or its cores aren't read. */
+    @Nullable
+    CoreInfo selectedCore(@Nullable Game rom) {
+        Cores read = cores;
+        return read != null && read.game().equals(rom) ? core.getValue() : null;
+    }
+
+    /** Whether a read of the cores is still running: the tests wait on it. */
+    boolean reading() {
+        return reads.pending();
+    }
+
+    ComboBox<CoreInfo> core() {
+        return core;
+    }
+
+    Label warning() {
+        return warning;
+    }
+
+    /** The cores that run a ROM, the one it would start with, and each core's missing BIOS files. */
+    record Cores(
+            Game game,
+            List<CoreInfo> cores,
+            @Nullable CoreInfo preferred,
+            Map<String, List<CoreInfo.Firmware>> missing) {
+
+        /** Read from {@code ctx}: off the FX thread, since it reads core info and the system folder. */
+        static Cores read(RetroArchContext ctx, Game game) {
+            List<CoreInfo> cores = new ArrayList<>(ctx.compatibleCores(game));
+            CoreInfo preferred = ctx.preferredCore(game).orElse(null);
+            if (preferred != null && !cores.contains(preferred)) cores.addFirst(preferred);
+            Map<String, List<CoreInfo.Firmware>> missing = new LinkedHashMap<>();
+            for (CoreInfo c : cores) missing.put(c.id(), c.missingFirmware(ctx.systemDir()));
+            return new Cores(game, List.copyOf(cores), preferred, missing);
+        }
     }
 
     private void setArt(@Nullable Image image) {

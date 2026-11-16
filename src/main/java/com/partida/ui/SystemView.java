@@ -33,7 +33,7 @@ import com.partida.library.GameTitle;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A tab's content: one system's games (decision 3), a row or a box-art tile each, every ROM of a game under
+ * The browser's content ({@link Browser}): one system's games (decision 3), a row or a box-art tile each, every ROM of a game under
  * one entry, beside the selected game's details ({@link GameDetails}). A ROM a tag hides (a bad dump, a hack, a
  * beta) stays under its game; a game of hidden ROMs only is left out unless Show Hidden ROMs is on.
  *
@@ -54,6 +54,7 @@ final class SystemView {
             Supplier<List<String>> regions,
             BooleanSupplier showHidden,
             BoxArt boxArt,
+            Supplier<com.partida.library.@Nullable RetroArchContext> retroArch,
             Supplier<CommandMenu> rowMenu,
             Supplier<CommandMenu> romMenu) {}
 
@@ -136,9 +137,20 @@ final class SystemView {
         grid.setPlaceholder(gridEmpty);
         grid.addEventFilter(KeyEvent.KEY_PRESSED, this::onGridKey);
         grid.addEventHandler(KeyEvent.KEY_TYPED, this::typeAhead);
-        grid.widthProperty().addListener((obs, was, now) -> layoutGrid());
-        UiZoom.factor().addListener((obs, was, now) -> layoutGrid());
-        shown.addListener((javafx.collections.ListChangeListener<GameTitle>) c -> layoutGrid());
+        // A width or zoom change cuts the rows again only when the columns change (PERF-09); new games always do.
+        grid.widthProperty().addListener((obs, was, now) -> layoutGrid(false));
+        UiZoom.factor().addListener((obs, was, now) -> layoutGrid(false));
+        shown.addListener((javafx.collections.ListChangeListener<GameTitle>) c -> layoutGrid(true));
+        // The Menu key and Shift+F10 open the selected game's menu on its tile (MENU-05, MENU-09).
+        grid.addEventHandler(javafx.scene.input.ContextMenuEvent.CONTEXT_MENU_REQUESTED, e -> {
+            if (!e.isKeyboardTrigger() || e.isConsumed()) return;
+            Node tile = selectedTile();
+            if (tile == null) return;
+            javafx.geometry.Bounds at = tile.localToScreen(tile.getBoundsInLocal());
+            if (at == null) return;
+            hooks.rowMenu().get().menu().show(tile, at.getMinX() + 8, at.getMaxY());
+            e.consume();
+        });
 
         filter.getStyleClass().add("game-filter");
         filter.setPromptText(Messages.tr("systems.filter"));
@@ -156,7 +168,7 @@ final class SystemView {
         box.setAlignment(Pos.CENTER_LEFT);
         showChips();
 
-        details = new GameDetails(hooks.play(), hooks.playRom(), hooks.romMenu(), hooks.boxArt());
+        details = new GameDetails(hooks.play(), hooks.playRom(), hooks.romMenu(), hooks.boxArt(), hooks.retroArch());
         list.getSelectionModel().selectedItemProperty().addListener((obs, was, now) -> {
             showDetails();
             if (gridMode) grid.refresh();
@@ -385,14 +397,18 @@ final class SystemView {
         e.consume();
     }
 
-    /** The grid's rows again, for its width now: as many tiles across as fit. */
-    private void layoutGrid() {
+    /**
+     * The grid's rows again, for its width now: as many tiles across as fit. Unless {@code always}, only when
+     * the number across changed, so a window being resized doesn't cut every game into rows on each frame.
+     */
+    private void layoutGrid(boolean always) {
         double tile = TILE_WIDTH * UiZoom.factor().get();
         double gap = TILE_GAP * UiZoom.factor().get();
         double width = grid.getWidth() - 18 * UiZoom.factor().get(); // the scroll bar's room
         int fit = BrowseRules.columns(width, tile, gap);
+        boolean changed = fit != columns;
         columns = fit;
-        if (!gridMode) return;
+        if (!gridMode || (!always && !changed && !grid.getItems().isEmpty())) return;
         grid.getItems().setAll(BrowseRules.rows(shown, fit));
         reveal();
     }
@@ -405,7 +421,7 @@ final class SystemView {
         list.setManaged(!on);
         grid.setVisible(on);
         grid.setManaged(on);
-        if (on) layoutGrid();
+        if (on) layoutGrid(true);
         else grid.getItems().clear();
         reveal();
         if (focused) focusGames();
@@ -455,7 +471,7 @@ final class SystemView {
                 hooks.showHidden().getAsBoolean());
     }
 
-    /** The system's name: the tab's title and its identity, for the session and Reopen Closed Tab. */
+    /** The system's name: the view's identity, for the session and the grid setting. */
     String title() {
         return name;
     }
@@ -485,7 +501,7 @@ final class SystemView {
         return filter;
     }
 
-    /** What the tab shows: the filter box over the games, beside the selected game's details. */
+    /** What the browser shows: the filter box over the games, beside the selected game's details. */
     VBox node() {
         return node;
     }
@@ -570,6 +586,7 @@ final class SystemView {
             setText(null);
             if (empty || row == null) {
                 setGraphic(null);
+                setAccessibleText(null);
                 return;
             }
             while (made.size() < row.size()) made.add(new Tile());
@@ -577,6 +594,9 @@ final class SystemView {
                     .setAll(made.subList(0, row.size()).stream().map(Tile::node).toList());
             for (int i = 0; i < row.size(); i++) made.get(i).show(row.get(i));
             setGraphic(tiles);
+            // The row read out as its games (ACC-01); each tile is read on its own as a button.
+            setAccessibleText(
+                    String.join(", ", row.stream().map(GameTitle::title).toList()));
         }
     }
 
@@ -603,7 +623,21 @@ final class SystemView {
             name.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
             UiZoom.bind(name.prefWidthProperty(), TILE_WIDTH);
             UiZoom.bind(name.maxWidthProperty(), TILE_WIDTH);
-            node = UiZoom.vbox(4, cover, name);
+            // A button to a screen reader (ACC-02): its press plays the game, as a double-click does.
+            node = new VBox(cover, name) {
+                @Override
+                public void executeAccessibleAction(javafx.scene.AccessibleAction action, Object... parameters) {
+                    GameTitle game = title;
+                    if (action == javafx.scene.AccessibleAction.FIRE && game != null) {
+                        list.getSelectionModel().select(game);
+                        hooks.play().run();
+                    } else {
+                        super.executeAccessibleAction(action, parameters);
+                    }
+                }
+            };
+            UiZoom.bind(node.spacingProperty(), 4);
+            node.setAccessibleRole(javafx.scene.AccessibleRole.BUTTON);
             node.getStyleClass().add("game-tile");
             node.setAlignment(Pos.TOP_CENTER);
             node.setOnMouseClicked(e -> {
@@ -613,18 +647,20 @@ final class SystemView {
                 grid.requestFocus();
                 if (e.getClickCount() == 2) hooks.play().run();
             });
+            // A right-click selects the game and opens its menu, the list row's (MENU-05, MENU-10).
+            node.setOnContextMenuRequested(e -> {
+                GameTitle clicked = title;
+                if (clicked == null) return;
+                list.getSelectionModel().select(clicked);
+                hooks.rowMenu().get().show(node, e);
+            });
         }
 
         void show(GameTitle game) {
             boolean same = game == title;
             title = game;
-            boolean selected = game == selectedTitle();
-            if (selected) {
-                if (!node.getStyleClass().contains("selected"))
-                    node.getStyleClass().add("selected");
-            } else {
-                node.getStyleClass().remove("selected");
-            }
+            // A pseudo-class, so a move changes no style class list on any tile (PERF-10).
+            node.pseudoClassStateChanged(SELECTED, game == selectedTitle());
             node.setAccessibleText(
                     BrowseRules.accessible(game, hooks.showHidden().getAsBoolean()));
             if (same) return;
@@ -643,6 +679,16 @@ final class SystemView {
         VBox node() {
             return node;
         }
+    }
+
+    private static final javafx.css.PseudoClass SELECTED = javafx.css.PseudoClass.getPseudoClass("selected");
+
+    /** The selected game's tile, when its row is in sight. */
+    private @Nullable Node selectedTile() {
+        for (Node n : grid.lookupAll(".game-tile")) {
+            if (n.getPseudoClassStates().contains(SELECTED)) return n;
+        }
+        return null;
     }
 
     /** The tiles of the rows in sight, for the tests. */

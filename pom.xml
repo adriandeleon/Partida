@@ -393,6 +393,17 @@
                                 </rule>
                                 <rule>
                                     <element>PACKAGE</element>
+                                    <includes><include>com.partida.library</include></includes>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.95</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                                <rule>
+                                    <element>PACKAGE</element>
                                     <includes><include>com.partida.report</include></includes>
                                     <limits>
                                         <limit>

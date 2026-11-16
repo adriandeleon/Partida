@@ -182,10 +182,10 @@ class RightClickMenusFxTest {
         MainWindow window = app.window();
         FakeLibrary.load(services, dir.resolve("library"));
         var system = FakeLibrary.collection(services, 2);
-        run(() -> window.tabs().open(system));
-        SystemView view = call(() -> window.tabs().activeView());
+        run(() -> window.browser().open(system));
+        SystemView view = call(() -> window.browser().activeView());
         assertNotNull(view);
-        CommandMenu gameMenu = call(() -> window.tabs().gameMenu());
+        CommandMenu gameMenu = call(() -> window.browser().gameMenu());
         run(gameMenu::menu);
         assertEquals(
                 List.of("game.play", "find.show"),
@@ -212,7 +212,7 @@ class RightClickMenusFxTest {
         assertTrue(call(() -> services.commands().run("systems.open")));
         assertEquals(
                 call(() -> systems.list().getSelectionModel().getSelectedItem().name()),
-                call(() -> window.tabs().activeView().title()));
+                call(() -> window.browser().activeView().title()));
     }
 
     /** MENU-09: the Menu key and Shift+F10 open the selected game's menu, and the selected system's. */
@@ -221,9 +221,9 @@ class RightClickMenusFxTest {
         MainWindow window = app.window();
         FakeLibrary.load(services, dir.resolve("library"));
         var system = FakeLibrary.collection(services, 2);
-        run(() -> window.tabs().open(system));
+        run(() -> window.browser().open(system));
         SystemView view =
-                java.util.Objects.requireNonNull(call(() -> window.tabs().activeView()));
+                java.util.Objects.requireNonNull(call(() -> window.browser().activeView()));
         run(
                 () -> { // laid out, as a shown window has it
                     window.stage().getScene().getRoot().applyCss();
@@ -237,10 +237,31 @@ class RightClickMenusFxTest {
         });
         List<ContextMenu> open = call(RightClickMenusFxTest::openMenus);
         assertEquals(1, open.size(), "the keyboard request opened the game's menu");
-        assertSame(call(() -> window.tabs().gameMenu().menu()), open.getFirst());
+        assertSame(call(() -> window.browser().gameMenu().menu()), open.getFirst());
         run(() -> open.getFirst().hide());
 
-        assertTrue(call(() -> services.commands().run("tool.systems")));
+        // The box-art grid: the Menu key opens the selected game's menu on its tile, a right-click a tile's.
+        run(() -> view.setGrid(true));
+        run(() -> {
+            window.stage().getScene().getRoot().applyCss();
+            window.stage().getScene().getRoot().layout();
+            view.grid().requestFocus();
+            Event.fireEvent(
+                    view.grid(), new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, true, null));
+        });
+        List<ContextMenu> onTile = call(RightClickMenusFxTest::openMenus);
+        assertEquals(1, onTile.size(), "the keyboard request opened the selected tile's menu");
+        assertSame(call(() -> window.browser().gameMenu().menu()), onTile.getFirst());
+        run(() -> onTile.getFirst().hide());
+        javafx.scene.Node first = call(() -> view.tiles().getFirst());
+        run(() -> Event.fireEvent(
+                first, new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED, 5, 5, 5, 5, false, null)));
+        assertEquals(0, (int) call(view::selectedIndex), "a right-click selects the tile's game first");
+        assertEquals(1, call(RightClickMenusFxTest::openMenus).size());
+        run(() -> openMenus().forEach(ContextMenu::hide));
+        run(() -> view.setGrid(false));
+
+        // The Systems window is open from the first run.
         LibraryPanels.Systems systems = java.util.Objects.requireNonNull(call(window::systems));
         run(
                 () -> { // laid out, as a shown window has it
@@ -406,20 +427,20 @@ class RightClickMenusFxTest {
     /** KBD-04: a row whose command can't run stays in the menu, grayed, its reason in a tooltip and said aloud. */
     @Test
     void anUnavailableRowStaysAndSaysWhy() throws Exception {
-        CommandMenu tabs = app.window().tabs().menu();
+        CommandMenu tabs = app.window().browser().gameMenu();
         run(() -> {
             tabs.menu();
             tabs.refresh();
         });
-        // On the first tab nothing is left of it: Close Tabs to the Left can't run.
-        run(() -> app.window().tabs().tabPane().getSelectionModel().select(0));
+        // With no system shown no game is selected: Play can't run.
+        run(() -> app.window().browser().showEmpty());
         run(tabs::refresh);
         javafx.scene.control.CustomMenuItem reopen =
                 (javafx.scene.control.CustomMenuItem) call(() -> tabs.items().stream()
-                        .filter(i -> "buffer.closeLeft".equals(i.getId()))
+                        .filter(i -> "game.play".equals(i.getId()))
                         .findFirst()
                         .orElseThrow());
-        String reason = services.commands().get("buffer.closeLeft").unavailableReason();
+        String reason = services.commands().get("game.play").unavailableReason();
         assertNotNull(reason);
         assertFalse(call(reopen::isDisable), "not hidden, not dead: a tooltip shows on it");
         assertTrue(call(() -> reopen.getStyleClass().contains("unavailable")));

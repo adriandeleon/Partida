@@ -93,12 +93,6 @@ final class Commands {
             services.echo(services.settings().showStatusBar ? "status.statusBarOn" : "status.statusBarOff");
         });
 
-        r.register("view.toggleTabBar", () -> {
-            services.store().update(s -> s.showTabBar = !s.showTabBar);
-            services.echo(services.settings().showTabBar ? "status.tabBarOn" : "status.tabBarOff");
-        });
-
-        registerTabs(window, r);
         registerToolWindows(window, r);
         registerLibrary(window, services);
 
@@ -211,61 +205,12 @@ final class Commands {
     }
 
     /**
-     * Every tab operation is a command (TABS-01): bound to a chord, in the palette, a row in the Window menu,
-     * and the per-tab ones on the tab's right-click menu ({@link TabContextMenu}). Each acts on the selected
-     * tab. The ids are Editora's.
-     */
-    private static void registerTabs(MainWindow window, CommandRegistry r) {
-        r.register(
-                "buffer.close",
-                () -> window.onSelectedTab(t -> window.tabs().closeTab(t)),
-                () -> window.tabs().closeUnavailable());
-        for (String id : java.util.List.of(
-                "buffer.closeOthers",
-                "buffer.closeAll",
-                "buffer.closeUnmodified",
-                "buffer.closeLeft",
-                "buffer.closeRight")) {
-            r.register(
-                    id,
-                    () -> window.onSelectedTab(t -> {
-                        switch (id) {
-                            case "buffer.closeOthers" -> window.tabs().closeOtherTabs(t);
-                            case "buffer.closeAll" -> window.tabs().closeAllTabs();
-                            case "buffer.closeUnmodified" -> window.tabs().closeUnmodifiedTabs();
-                            case "buffer.closeLeft" -> window.tabs().closeTabsToLeft(t);
-                            default -> window.tabs().closeTabsToRight(t);
-                        }
-                    }),
-                    () -> window.tabs().nothingToClose(id));
-        }
-        r.register(
-                "buffer.togglePin",
-                () -> window.onSelectedTab(t -> window.tabs().togglePin(t)),
-                () -> window.tabs().closeUnavailable());
-        r.register(
-                "buffer.reopenClosed",
-                () -> window.tabs().reopenClosed(),
-                () -> window.tabs().reopenUnavailable());
-        r.register(
-                "buffer.next",
-                () -> window.tabs().selectNext(1),
-                () -> window.tabs().cycleUnavailable());
-        r.register(
-                "buffer.previous",
-                () -> window.tabs().selectNext(-1),
-                () -> window.tabs().cycleUnavailable());
-        r.register("switcher.show", window::showSwitcher, () -> window.tabs().closeUnavailable());
-        r.register("view.welcome", () -> window.tabs().showWelcome());
-    }
-
-    /**
      * Each tool window's {@code tool.<id>} command (TABS-13), which its stripe button runs, and the commands
      * that float, maximize, resize, close and re-show them from the keyboard (TABS-18). Those act on the
      * window whose stripe menu or header was used, else the one holding focus, else the last one opened.
      */
     private static void registerToolWindows(MainWindow window, CommandRegistry r) {
-        for (String id : java.util.List.of("systems", "game", "retroarch")) {
+        for (String id : java.util.List.of("systems", "retroarch")) {
             r.register(
                     "tool." + id,
                     () -> window.toolWindows().toggle(toolWindow(window, id)),

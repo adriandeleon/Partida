@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 
 import javafx.scene.Node;
-import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Separator;
@@ -169,7 +168,6 @@ class ToolbarAndModesFxTest {
         Node menuBar = window.menuBar();
         Node bar = toolbar.node();
         Node status = window.statusBar();
-        Parent tabPane = window.tabs().tabPane();
         Node stripe = window.toolWindows().stripe(ToolWindow.Side.LEFT);
         boolean stripeBefore = call(stripe::isVisible);
 
@@ -179,7 +177,6 @@ class ToolbarAndModesFxTest {
             assertFalse(call(hidden::isVisible), hidden + " shows in Zen mode");
             assertFalse(call(hidden::isManaged));
         }
-        assertTrue(tabPane.getStyleClass().contains("no-tab-header"), "the tab strip shows in Zen mode");
 
         // Expert from Zen: the status bar comes back, nothing else.
         assertTrue(call(() -> services.commands().run("view.toggleExpertMode")));
@@ -196,7 +193,6 @@ class ToolbarAndModesFxTest {
         assertTrue(call(bar::isVisible));
         assertTrue(call(status::isVisible));
         assertEquals(stripeBefore, call(stripe::isVisible));
-        assertFalse(tabPane.getStyleClass().contains("no-tab-header"));
         assertTrue(services.settings().showToolbar && services.settings().showStatusBar);
 
         // Both modes are rows of the View menu.

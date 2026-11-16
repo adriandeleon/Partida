@@ -93,6 +93,7 @@ class BrowserFxTest {
                             showHidden::get,
                             new BoxArt(() -> null),
                             () -> null,
+                            () -> null,
                             () -> null));
             new Scene(made.node(), 900, 600);
             return made;
@@ -216,7 +217,18 @@ class BrowserFxTest {
         assertEquals(1, (int) call(() -> view.grid().getItems().size()), "three games, one row");
         List<Node> tiles = call(view::tiles);
         assertEquals(3, tiles.size());
-        assertTrue(tiles.getFirst().getStyleClass().contains("selected"), "the selected game's tile");
+        assertTrue(
+                tiles.getFirst().getPseudoClassStates().contains(javafx.css.PseudoClass.getPseudoClass("selected")),
+                "the selected game's tile");
+        // ACC-01, ACC-02: a row reads as its games, a tile as a button whose press plays.
+        assertEquals(javafx.scene.AccessibleRole.BUTTON, tiles.getFirst().getAccessibleRole());
+        assertTrue(call(() -> tiles.getFirst().getAccessibleText()).startsWith("Castlevania"));
+        assertEquals(
+                "Castlevania, Contra, Super Mario Bros.",
+                call(() -> view.grid().lookup(".tile-row").getAccessibleText()));
+        run(() -> tiles.getFirst().executeAccessibleAction(javafx.scene.AccessibleAction.FIRE));
+        assertEquals(1, p.plays().get(), "a screen reader's press plays");
+        p.plays().set(0);
 
         run(() -> key(view.grid(), KeyCode.RIGHT));
         assertEquals("Contra", call(() -> view.selectedTitle().title()));
@@ -268,8 +280,8 @@ class BrowserFxTest {
         FakeLibrary.load(services, dir);
         assertNotNull(services.commands().get("library.toggleGrid").unavailableReason(), "no system open");
         var nes = FakeLibrary.collection(services, 4);
-        run(() -> window.tabs().open(nes));
-        SystemView view = Objects.requireNonNull(call(() -> window.tabs().activeView()));
+        run(() -> window.browser().open(nes));
+        SystemView view = Objects.requireNonNull(call(() -> window.browser().activeView()));
         assertNull(services.commands().get("library.toggleGrid").unavailableReason());
         assertTrue(call(() -> services.commands().run("library.toggleGrid")));
         assertTrue(services.settings().library.gridSystems.contains(nes.name()));
@@ -285,8 +297,8 @@ class BrowserFxTest {
 
         // Play This ROM starts the ROM selected in the details; Play, the one it picks: here the same.
         assertEquals(
-                call(() -> window.tabs().selectedGame()),
-                call(() -> window.tabs().selectedRom()));
+                call(() -> window.browser().selectedGame()),
+                call(() -> window.browser().selectedRom()));
         assertNull(services.commands().get("library.playRom").unavailableReason());
         run(() -> view.details().roms().getSelectionModel().clearSelection());
         assertNotNull(services.commands().get("library.playRom").unavailableReason());

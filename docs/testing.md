@@ -36,7 +36,8 @@
 | Test | Guards |
 |---|---|
 | `CommandSweepFxTest` | Every registered command runs in a real headless window, and has a title and description |
-| `TabsAndPanelsTest`, `TabsAndPanelsFxTest` | Pauta's Tabs and tool panels, a test per rule a test can check: bulk closes skip pinned tabs, Reopen Closed Tab's list, no tool window built before the first paint, the arrangement back after a restart, the stripe's first icon on the first line of text |
+| `TabsAndPanelsTest`, `TabsAndPanelsFxTest` | Pauta's tool panels, a test per rule a test can check: the Systems list shows each system it walks onto, no closed tool window built before the first paint, the arrangement back after a restart, the stripe's first icon on the first line of text |
+| `BrowseRulesTest`, `BrowserFxTest` | The game browser (decision 3): a game's ROMs as one entry, hidden ROMs, the details and the ROM Play starts, type-ahead, the grid's tiles and keys, and its commands |
 | `SimpleModeFxTest` | Simple mode, a test per rule it shows: a shorter menu rebuilt only when the mode changes (MENU-04), hidden groups take their gaps (TBAR-05), the toggle lit while on (TBAR-07), the toggle just before Settings (TBAR-16), the bar's height kept (TBAR-19) |
 | `MenuLookFxTest` | Every menu, opened from the toolbar, a tab, a list row, a console or the menu bar, draws in Inter 14 px; chords are Inter 11 px in `-state-key`, follow the keymap, and that color reads at 4.5:1 on both themes |
 | `MessagesTest` | Every catalog has every key; apostrophes follow the pattern rule; translations are not English copies |
@@ -44,12 +45,12 @@
 | `ConfigStoreTest#outOfRangeAndUnknownValuesAreCorrectedAsTheFileIsRead` | Every value read from `settings.json` is clamped or falls back to its default |
 | `MigrationsTest`, `SyncTest#theSyncFilesCarryAVersionAndAnOldBareFileIsMigrated` | Every schema version of `settings.json` and of Settings Sync's files has a migration step |
 | `StartupDeferralFxTest` | The start's file work runs off the FX thread; nothing nobody waits for, Settings Sync included, starts before the first paint |
-| `LogSearchTest`, `FindBarFxTest` | Every find bar (a system tab's, the RetroArch console's, the Debug Log's) is in its window, searches as you type off the FX thread, applies only its latest search, narrows a growing query without searching again, steps with Enter and Shift+Enter, and gives the focus back on Escape; its command, run again, finds the next match, and every keymap binds `find.show` |
+| `LogSearchTest`, `FindBarFxTest` | Every find bar (the browser's filter box, the RetroArch console's, the Debug Log's) is in its window, searches as you type off the FX thread, applies only its latest search, narrows a growing query without searching again, steps with Enter and Shift+Enter, and gives the focus back on Escape; its command, run again, finds the next match, and every keymap binds `find.show` |
 | `NamedControlsFxTest` | Every control in every window and dialog, every Settings page and the palette has a name a screen reader says, and every menu row reads as its title and wears a glyph (ACC-01, MENU-14) |
 | `SameOnEveryOsFxTest`, `OsTest` | Run as Windows, macOS and Linux through `Os.override`, the app has the same commands, menu rows and Settings (OS-01, OS-03); `Os` is the one reader of `os.name` (OS-02) |
 | `UiZoomTest`, `MenuLookFxTest#theUiZoomScalesEveryMenu` | The UI zoom's steps and range, the stylesheets it scales, and every menu at the zoomed size (WIN-12, MENU-16) |
 | `DialogsFxTest` | Cancel is the confirm question's default; every dialog has one button order with Cancel first and its stock buttons worded from the catalog (CONF-13, WIN-11, CONF-14) |
-| `SessionAndWelcomeFxTest` | `session.json` apart from `settings.json`; the open systems come back, `--no-session` leaves them; the Welcome page in Help, Close alone, rebuilt on show; the text zoom on its own (SET-08, WIN-08, WELC-03/05/11, WIN-09) |
+| `SessionAndWelcomeFxTest` | `session.json` apart from `settings.json`; the system shown comes back, `--no-session` leaves it; the empty state's ways in and their chords, rebuilt on show; the text zoom on its own (SET-08, WIN-08, WELC-02/05, WIN-09) |
 | `SettingsRoundTripFxTest` | Every switch, number and choice of every Settings page survives a restart (QUAL-13) |
 | `PickerFxTest`, `TextInputKeysTest` | The palette's matching, its keymap moves, help chord, title and current value; a text field's editing keys (KBD-06, PAL-06/08, QOPEN-02/04/06, FIND-09) |
 | `AccountPinTest`, `ShellPathTest`, `DoctorTest`, `FxSamplerTest`, `StyleCompilerTest` | The account a sync clone uses, the login shell's PATH, the Doctor's rows, the FX-thread sampler, the `.bss` stylesheets (SET-18, CLI-10, DIAG-07, PERF-20, PERF-17) |
@@ -72,6 +73,7 @@ the whole build, and below each package's own line floor:
 | `com.partida.config` | 0.94 |
 | `com.partida.i18n` | 0.94 |
 | `com.partida.instance` | 0.95 |
+| `com.partida.library` | 0.95 |
 | `com.partida.report` | 0.84 |
 | `com.partida.retroarch` | 0.89 |
 | `com.partida.sync` | 0.89 |

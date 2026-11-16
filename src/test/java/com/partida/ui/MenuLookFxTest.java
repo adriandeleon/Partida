@@ -116,20 +116,20 @@ class MenuLookFxTest {
 
     @Test
     void aRightClickMenuShowsEachChordInTheKeyColorAndFollowsTheKeymap() throws Exception {
-        CommandMenu tabMenu = call(() -> window.tabs().menu());
-        Node tab = call(() -> window.tabs().tabPane().lookup(".tab"));
+        CommandMenu tabMenu = call(() -> window.browser().gameMenu());
+        Node tab = call(() -> window.toolbar().bar());
         // A binding of the user's own, and one from the keymap.
-        run(() -> services.store().update(s -> s.keybindings.put("buffer.closeOthers", "Shortcut+Alt+O")));
+        run(() -> services.store().update(s -> s.keybindings.put("game.play", "Shortcut+Alt+O")));
         run(() -> showFrom(tabMenu, tab));
 
         String[] cua = new String[2];
         run(() -> {
-            Label own = label(row(tabMenu, "buffer.closeOthers"), "menu-item-chord");
-            Label base = label(row(tabMenu, "buffer.close"), "menu-item-chord");
+            Label own = label(row(tabMenu, "game.play"), "menu-item-chord");
+            Label base = label(row(tabMenu, "find.show"), "menu-item-chord");
             cua[0] = own.getText();
             cua[1] = base.getText();
-            assertEquals(services.keybindings().label("buffer.closeOthers"), own.getText());
-            assertEquals(services.keybindings().label("buffer.close"), base.getText());
+            assertEquals(services.keybindings().label("game.play"), own.getText());
+            assertEquals(services.keybindings().label("find.show"), base.getText());
             assertFalse(own.getText().isEmpty());
             assertFalse(base.getText().isEmpty());
             // Inter 11 px in -state-key, as in the menu bar.
@@ -138,19 +138,18 @@ class MenuLookFxTest {
             assertEquals(11, base.getFont().getSize(), 0.01);
         });
         // An unbound command leaves the cell empty, never a wrong chord.
-        run(() -> services.store().update(s -> s.keybindings.put("buffer.closeOthers", "")));
+        run(() -> services.store().update(s -> s.keybindings.put("game.play", "")));
         run(() -> showFrom(tabMenu, tab));
         assertEquals(
                 "",
-                call(() -> label(row(tabMenu, "buffer.closeOthers"), "menu-item-chord")
-                        .getText()));
+                call(() -> label(row(tabMenu, "game.play"), "menu-item-chord").getText()));
 
         // A keymap switch rewrites every cell.
         run(() -> services.store().update(s -> s.keymap = "emacs"));
         run(() -> showFrom(tabMenu, tab));
-        String emacs = call(
-                () -> label(row(tabMenu, "buffer.close"), "menu-item-chord").getText());
-        assertEquals(call(() -> services.keybindings().label("buffer.close")), emacs);
+        String emacs =
+                call(() -> label(row(tabMenu, "find.show"), "menu-item-chord").getText());
+        assertEquals(call(() -> services.keybindings().label("find.show")), emacs);
         assertNotEquals(cua[1], emacs, "the chord did not follow the keymap");
     }
 
@@ -164,12 +163,13 @@ class MenuLookFxTest {
                 "toolbar",
                 call(() -> window.toolbar().menu()),
                 call(() -> window.toolbar().bar()));
-        // From a tab, a list row (the Message Log's) and a monospaced console (the Debug Log's).
+        // From the browser (a game's row menu), a list row (the Message Log's) and a monospaced console (the
+        // Debug Log's).
         check(
                 seen,
-                "tab",
-                call(() -> window.tabs().menu()),
-                call(() -> window.tabs().tabPane().lookup(".tab")));
+                "game row",
+                call(() -> window.browser().gameMenu()),
+                call(() -> window.browser().node()));
         Node row = call(() -> window.messageLog().list().lookup(".list-cell"));
         check(seen, "list row", call(() -> window.messageLog().rowMenu()), row);
         run(window::openDebugLog);
@@ -196,7 +196,7 @@ class MenuLookFxTest {
                 }
             });
         }
-        List<String> drawn = new ArrayList<>(List.of("toolbar", "tab", "list row", "console"));
+        List<String> drawn = new ArrayList<>(List.of("toolbar", "game row", "list row", "console"));
         if (!screenMenu) drawn.add("menu bar");
         assertTrue(seen.containsAll(drawn), seen.toString());
     }
@@ -235,9 +235,9 @@ class MenuLookFxTest {
                 1.2);
         check(
                 seen,
-                "tab",
-                call(() -> window.tabs().menu()),
-                call(() -> window.tabs().tabPane().lookup(".tab")),
+                "game row",
+                call(() -> window.browser().gameMenu()),
+                call(() -> window.browser().node()),
                 1.2);
         assertTrue(call(() -> services.commands().run("view.uiZoomReset")));
         FxTestSupport.waitUntil(() -> Themes.zoom() == 100);

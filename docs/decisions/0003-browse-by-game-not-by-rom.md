@@ -1,7 +1,7 @@
 # 3. Browse by game, with its ROMs under it, in one library browser
 
-- Status: accepted; phases 1 (the name parser and the grouping), 2 (the ROM Play starts) and 3 (the game
-  view) are built, phase 4 is planned
+- Status: accepted; built in four phases: the name parser and the grouping, the ROM Play starts, the game
+  view, and one browser in place of the system tabs
 - Date: 2026-11-16
 
 ## Context
@@ -32,13 +32,18 @@ became a list of a thousand rows, most of them variants nobody browses for.
   box-art grid (remembered per system), and on the right the selected game's box art, a Play button and its
   ROMs, each of which can be played.
 
-Phase 3 builds the game view inside each system's tab, beside the Systems tool window, so the three panes
+Phase 3 built the game view inside each system's tab, beside the Systems tool window, so the three panes
 are on screen before phase 4 retires the tabs: the games as a list or a box-art grid (`SystemView`; Toggle
 Grid View, kept per system in `library.gridSystems`), type-ahead by title, and the selected game's details
 (`GameDetails`): its box art, Play with the ROM it starts, and its ROMs, the hidden ones dimmed, any of them
 played with Play This ROM. Show hidden ROMs is a setting with its command. The Systems window counts games.
 
-The work goes in four phases: (1) `RomName` and `GameTitle`, pure and tested; (2) the ROM Play picks: the
+Phase 4 retired the tabs: `Browser` shows one system at a time, chosen in the Systems tool window (open from
+the first run, its selection showing each system as the user walks it), and the Game tool window's core
+choice and BIOS warnings moved into the details. The Welcome page became the browser's empty state, with the
+ways in and their chords (WELC-02); the tab commands, the tab switcher and Toggle Tab Bar went with the tabs.
+
+The work went in four phases: (1) `RomName` and `GameTitle`, pure and tested; (2) the ROM Play picks: the
 last one played, read from RetroArch's history too, else the best; (3) the browser; (4) retiring the system
 tabs and the Game tool window, then the commands, menus, docs and catalogs, and a new Pauta audit.
 
@@ -48,5 +53,6 @@ The library is browsed by what people look for, a game, and a set of a thousand 
 games. Grouping is by name only: two games with the same name on one system (rare, and usually a re-release)
 are one entry, and a game whose variants are named differently (`Pokemon Red` and `Pokemon - Red Version`)
 is two. Matching by checksum against libretro-database, already in TODO.md for box art, would settle both.
-The system tabs, the Game tool window and the rules they meet (the TABS and tool window pages) change in
-phase 4, so the Pauta audit is run again then.
+With no tabs the user opens and closes, Pauta's Tabs rules (TABS-01 to TABS-12) and the Welcome page's
+(WELC-01, WELC-03, WELC-04, WELC-11) no longer apply; WELC-02, the empty state, does. The Pauta audit was run
+again after phase 4.
